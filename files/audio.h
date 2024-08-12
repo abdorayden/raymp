@@ -1,27 +1,57 @@
+/*
+ *	Audio.h is header only lib and part of raymp software
+ *
+ *	I stole all this code from raylib raudio.c file (raylib is a simple and easy-to-use library to enjoy videogames programming.)
+ *	Link : https://www.raylib.com/
+ *	Github Repo : https://github.com/raysan5/raylib
+ *	Raylib Version : raylib v5.0
+ *	RayLib LICENSE :
+ *			Copyright (c) 2013-2024 Ramon Santamaria (@raysan5)
+ *
+ *	   This software is provided "as-is", without any express or implied warranty. In no event
+ *	   will the authors be held liable for any damages arising from the use of this software.
+ *	   
+ *	   Permission is granted to anyone to use this software for any purpose, including commercial
+ *	   applications, and to alter it and redistribute it freely, subject to the following restrictions:
+ *	   
+ *	     1. The origin of this software must not be misrepresented; you must not claim that you
+ *	     wrote the original software. If you use this software in a product, an acknowledgment
+ *	     in the product documentation would be appreciated but is not required.
+ *	   
+ *	     2. Altered source versions must be plainly marked as such, and must not be misrepresented
+ *	     as being the original software.
+ *	   
+ *	     3. This notice may not be removed or altered from any source distribution.
+ *
+ * 	
+ * 	it's really understandable function and hight level
+ * */
+
+
 #ifndef AUDIO_H_
 #define AUDIO_H_
 
-#define MINIAUDIO_IMPLEMENTATION
-#include "./third_party/miniaudio.h"
+//#define MINIAUDIO_IMPLEMENTATION
+//#include "./third_party/miniaudio.h"
 
 typedef void (*AudioCallback)(void *bufferData, unsigned int frames);
 
 #define TEXT_BYTES_PER_LINE     20
 
 #ifndef AUDIO_DEVICE_FORMAT
-    #define AUDIO_DEVICE_FORMAT    ma_format_f32    // Device output format (float-32bit)
+    #define AUDIO_DEVICE_FORMAT    ma_format_f32    
 #endif
 
 #ifndef AUDIO_DEVICE_CHANNELS
-    #define AUDIO_DEVICE_CHANNELS              2    // Device output channels: stereo
+    #define AUDIO_DEVICE_CHANNELS              2   
 #endif
 
 #ifndef AUDIO_DEVICE_SAMPLE_RATE
-    #define AUDIO_DEVICE_SAMPLE_RATE           0    // Device output sample rate
+    #define AUDIO_DEVICE_SAMPLE_RATE           0  
 #endif
 
 #ifndef MAX_AUDIO_BUFFER_POOL_CHANNELS
-    #define MAX_AUDIO_BUFFER_POOL_CHANNELS    16    // Audio pool channels
+    #define MAX_AUDIO_BUFFER_POOL_CHANNELS    16 
 #endif
 
 typedef enum{
@@ -31,13 +61,14 @@ typedef enum{
 	init_playback_device_f = -2,
 	init_create_mutex_mixing_f = -3,
 	init_start_playback_device = -4,
+	init_not_initialized = -5,
 
-	sound_create_buffer = -5 ,//TRACELOG(LOG_WARNING, "SOUND: Failed to create buffer");
-	sound_format_conversion = -6,	//TRACELOG(LOG_WARNING, "SOUND: Failed format conversion");
+	sound_create_buffer = -6 ,
+	sound_format_conversion = -7,
 
 }Error;
 
-char* get_err(Err code){
+char* get_err(Error code){
 	switch(code){
 		case init_context_f : {
 			return "AUDIO: Failed to initialize context";
@@ -51,6 +82,10 @@ char* get_err(Err code){
                 case init_start_playback_device : {
 			return "AUDIO: Failed to start playback device";
 		}
+		case init_not_initialized : {
+			return "AUDIO: Device could not be closed, not currently initialized";
+		}
+
 		case sound_create_buffer : {
 			return "SOUND: Failed to create buffer";
 		}
@@ -63,54 +98,54 @@ char* get_err(Err code){
 typedef struct rAudioProcessor rAudioProcessor;
 
 struct rAudioProcessor {
-    AudioCallback process;          // Processor callback function
-    rAudioProcessor *next;          // Next audio processor on the list
-    rAudioProcessor *prev;          // Previous audio processor on the list
+    AudioCallback process; 
+    rAudioProcessor *next;  
+    rAudioProcessor *prev;          
 };
 
 typedef struct rAudioBuffer rAudioBuffer;
 
 struct rAudioBuffer {
-    ma_data_converter converter;    // Audio data converter
+    ma_data_converter converter;    
 
-    AudioCallback callback;         // Audio buffer callback for buffer filling on audio threads
-    rAudioProcessor *processor;     // Audio processor
+    AudioCallback callback;         
+    rAudioProcessor *processor;     
 
-    float volume;                   // Audio buffer volume
-    float pitch;                    // Audio buffer pitch
-    float pan;                      // Audio buffer pan (0.0f to 1.0f)
+    float volume;                   
+    float pitch;                    
+    float pan;                      
 
-    bool playing;                   // Audio buffer state: AUDIO_PLAYING
-    bool paused;                    // Audio buffer state: AUDIO_PAUSED
-    bool looping;                   // Audio buffer looping, default to true for AudioStreams
-    int usage;                      // Audio buffer usage mode: STATIC or STREAM
+    bool playing;                   
+    bool paused;                    
+    bool looping;                   
+    int usage;                      
 
-    bool isSubBufferProcessed[2];   // SubBuffer processed (virtual double buffer)
-    unsigned int sizeInFrames;      // Total buffer size in frames
-    unsigned int frameCursorPos;    // Frame cursor position
-    unsigned int framesProcessed;   // Total frames processed in this buffer (required for play timing)
+    bool isSubBufferProcessed[2];   
+    unsigned int sizeInFrames;      
+    unsigned int frameCursorPos;    
+    unsigned int framesProcessed;   
 
-    unsigned char *data;            // Data buffer, on music stream keeps filling
+    unsigned char *data; 
 
-    rAudioBuffer *next;             // Next audio buffer on the list
-    rAudioBuffer *prev;             // Previous audio buffer on the list
+    rAudioBuffer *next;             
+    rAudioBuffer *prev;             
 };
 
 typedef rAudioBuffer AudioBuffer;
 
 typedef struct AudioData {
     struct {
-        ma_context context;         // miniaudio context data
-        ma_device device;           // miniaudio device
-        ma_mutex lock;              // miniaudio mutex lock
-        bool isReady;               // Check if audio device is ready
-        size_t pcmBufferSize;       // Pre-allocated buffer size
-        void *pcmBuffer;            // Pre-allocated buffer to read audio data from file/memory
+        ma_context context;         
+        ma_device device;           
+        ma_mutex lock;              
+        bool isReady;               
+        size_t pcmBufferSize;       
+        void *pcmBuffer;            
     } System;
     struct {
-        AudioBuffer *first;         // Pointer to first AudioBuffer in the list
-        AudioBuffer *last;          // Pointer to last AudioBuffer in the list
-        int defaultSize;            // Default audio buffer size for audio streams
+        AudioBuffer *first;         
+        AudioBuffer *last;          
+        int defaultSize;            
     } Buffer;
     rAudioProcessor *mixedProcessor;
 } AudioData;
@@ -126,29 +161,29 @@ typedef enum {
 } AudioBufferUsage;
 
 typedef struct Wave {
-    unsigned int frameCount;    // Total number of frames (considering channels)
-    unsigned int sampleRate;    // Frequency (samples per second)
-    unsigned int sampleSize;    // Bit depth (bits per sample): 8, 16, 32 (24 not supported)
-    unsigned int channels;      // Number of channels (1-mono, 2-stereo, ...)
-    void *data;                 // Buffer data pointer
+    unsigned int frameCount;    
+    unsigned int sampleRate;    
+    unsigned int sampleSize;    
+    unsigned int channels;      
+    void *data;                 
 } Wave;
 
 typedef struct AudioStream {
-    rAudioBuffer *buffer;       // Pointer to internal data used by the audio system
-    rAudioProcessor *processor; // Pointer to internal data processor, useful for audio effects
+    rAudioBuffer *buffer;       
+    rAudioProcessor *processor; 
 
-    unsigned int sampleRate;    // Frequency (samples per second)
-    unsigned int sampleSize;    // Bit depth (bits per sample): 8, 16, 32 (24 not supported)
-    unsigned int channels;      // Number of channels (1-mono, 2-stereo, ...)
+    unsigned int sampleRate;    
+    unsigned int sampleSize;    
+    unsigned int channels;      
 } AudioStream;
 
 typedef struct Sound {
-    AudioStream stream;         // Audio stream
-    unsigned int frameCount;    // Total number of frames (considering channels)
+    AudioStream stream;         
+    unsigned int frameCount;    
 } Sound;
 
-int InitAudioDevice(void);
-int CloseAudioDevice(void);
+Error InitAudioDevice(void);
+Error CloseAudioDevice(void);
 bool IsAudioDeviceReady(void);
 void SetMasterVolume(float volume);
 float GetMasterVolume(void);
@@ -158,8 +193,8 @@ void UnloadFileData(unsigned char *data);
 Wave LoadWave(const char *fileName);
 Wave LoadWaveFromMemory(const char *fileType, const unsigned char *fileData, int dataSize);
 bool IsWaveReady(Wave wave);
-int LoadSound(const char *fileName, Sound* sound);
-int LoadSoundFromWave(Wave wave , Sound* sound);
+Error LoadSound(const char *fileName, Sound* sound);
+Error LoadSoundFromWave(Wave wave , Sound* sound);
 Sound LoadSoundAlias(Sound source);
 bool IsSoundReady(Sound sound);
 void UpdateSound(Sound sound, const void *data, int sampleCount);
@@ -185,9 +220,6 @@ void SetAudioStreamBufferSizeDefault(int size);
 void SetAudioStreamVolume(AudioStream stream, float volume);
 void SetAudioStreamPitch(AudioStream stream, float pitch);
 void SetAudioStreamPan(AudioStream stream, float pan);
-
-
-
 
 AudioBuffer *LoadAudioBuffer(ma_format format, ma_uint32 channels, ma_uint32 sampleRate, ma_uint32 sizeInFrames, int usage);
 void UnloadAudioBuffer(AudioBuffer *buffer);
@@ -239,7 +271,7 @@ void UnloadWaveSamples(float *samples);
 
 #define MA_COINIT_VALUE  2
 
-int InitAudioDevice(void)
+Error InitAudioDevice(void)
 {
     ma_context_config ctxConfig = ma_context_config_init();
     ma_log_callback_init(OnLog, NULL);
@@ -247,12 +279,9 @@ int InitAudioDevice(void)
     ma_result result = ma_context_init(NULL, 0, &ctxConfig, &AUDIO.System.context);
     if (result != MA_SUCCESS)
     {
-        // -1 : //TRACELOG(LOG_WARNING, "AUDIO: Failed to initialize context");
-        return -1;
+        return init_context_f;
     }
 
-    // Init audio device
-    // NOTE: Using the default device. Format is floating point because it simplifies mixing
     ma_device_config config = ma_device_config_init(ma_device_type_playback);
     config.playback.pDeviceID = NULL;  // NULL for the default playback AUDIO.System.device
     config.playback.format = AUDIO_DEVICE_FORMAT;
@@ -267,33 +296,26 @@ int InitAudioDevice(void)
     result = ma_device_init(&AUDIO.System.context, &config, &AUDIO.System.device);
     if (result != MA_SUCCESS)
     {
-        // -2 : //TRACELOG(LOG_WARNING, "AUDIO: Failed to initialize playback device");
         ma_context_uninit(&AUDIO.System.context);
-        return -2;
+        return init_playback_device_f;
     }
 
-    // Mixing happens on a separate thread which means we need to synchronize. I'm using a mutex here to make things simple, but may
-    // want to look at something a bit smarter later on to keep everything real-time, if that's necessary
     if (ma_mutex_init(&AUDIO.System.lock) != MA_SUCCESS)
     {
-        // -3 : //TRACELOG(LOG_WARNING, "AUDIO: Failed to create mutex for mixing");
         ma_device_uninit(&AUDIO.System.device);
         ma_context_uninit(&AUDIO.System.context);
-        return -3;
+        return init_create_mutex_mixing_f;
     }
 
-    // Keep the device running the whole time. May want to consider doing something a bit smarter and only have the device running
-    // while there's at least one sound being played
     result = ma_device_start(&AUDIO.System.device);
     if (result != MA_SUCCESS)
     {
-        // -4 : //TRACELOG(LOG_WARNING, "AUDIO: Failed to start playback device");
         ma_device_uninit(&AUDIO.System.device);
         ma_context_uninit(&AUDIO.System.context);
-        return -4;
+        return init_start_playback_device;
     }
     AUDIO.System.isReady = true;
-    return 0;
+    return init_success;
 }
 
 void UnloadFileData(unsigned char *data)
@@ -301,7 +323,7 @@ void UnloadFileData(unsigned char *data)
     free(data);
 }
 
-int CloseAudioDevice(void)
+Error CloseAudioDevice(void)
 {
     if (AUDIO.System.isReady)
     {
@@ -313,26 +335,21 @@ int CloseAudioDevice(void)
         free(AUDIO.System.pcmBuffer);
         AUDIO.System.pcmBuffer = NULL;
         AUDIO.System.pcmBufferSize = 0;
-
-        // 0 : //TRACELOG(LOG_INFO, "AUDIO: Device closed successfully");
-	return 0;
+	return init_success;
     }
-    else return -1 ;// -1 : //TRACELOG(LOG_WARNING, "AUDIO: Device could not be closed, not currently initialized");
+    else return init_not_initialized;
 }
 
-// Check if device has been initialized successfully
 bool IsAudioDeviceReady(void)
 {
     return AUDIO.System.isReady;
 }
 
-// Set master volume (listener)
 void SetMasterVolume(float volume)
 {
     ma_device_set_master_volume(&AUDIO.System.device, volume);
 }
 
-// Get master volume (listener)
 float GetMasterVolume(void)
 {
     float volume = 0.0f;
@@ -352,7 +369,6 @@ AudioBuffer *LoadAudioBuffer(ma_format format, ma_uint32 channels, ma_uint32 sam
 
     if (sizeInFrames > 0) audioBuffer->data = calloc(sizeInFrames*channels*ma_get_bytes_per_sample(format), 1);
 
-    // Audio data runs through a format converter
     ma_data_converter_config converterConfig = ma_data_converter_config_init(format, AUDIO_DEVICE_FORMAT, channels, AUDIO_DEVICE_CHANNELS, sampleRate, AUDIO.System.device.sampleRate);
     converterConfig.allowDynamicSampleRate = true;
 
@@ -365,7 +381,6 @@ AudioBuffer *LoadAudioBuffer(ma_format format, ma_uint32 channels, ma_uint32 sam
         return NULL;
     }
 
-    // Init audio buffer values
     audioBuffer->volume = 1.0f;
     audioBuffer->pitch = 1.0f;
     audioBuffer->pan = 0.5f;
@@ -381,18 +396,14 @@ AudioBuffer *LoadAudioBuffer(ma_format format, ma_uint32 channels, ma_uint32 sam
     audioBuffer->frameCursorPos = 0;
     audioBuffer->sizeInFrames = sizeInFrames;
 
-    // Buffers should be marked as processed by default so that a call to
-    // UpdateAudioStream() immediately after initialization works correctly
     audioBuffer->isSubBufferProcessed[0] = true;
     audioBuffer->isSubBufferProcessed[1] = true;
 
-    // Track audio buffer to linked list next position
     TrackAudioBuffer(audioBuffer);
 
     return audioBuffer;
 }
 
-// Delete an audio buffer
 void UnloadAudioBuffer(AudioBuffer *buffer)
 {
     if (buffer != NULL)
@@ -404,7 +415,6 @@ void UnloadAudioBuffer(AudioBuffer *buffer)
     }
 }
 
-// Check if an audio buffer is playing from a program state without lock
 bool IsAudioBufferPlaying(AudioBuffer *buffer)
 {
     bool result = false;
@@ -540,15 +550,12 @@ Wave LoadWave(const char *fileName)
 {
     Wave wave = { 0 };
 
-    // Loading file to memory
     int dataSize = 0;
     unsigned char *fileData = LoadFileData(fileName, &dataSize);
 
-    // Loading wave from memory data
     if (fileData != NULL) wave = LoadWaveFromMemory(GetFileExtension(fileName), fileData, dataSize);
 
     UnloadFileData(fileData);
-
     return wave;
 }
 
