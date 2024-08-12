@@ -3,9 +3,9 @@
 </p>
 
 # Ray Music Player (RayMP)
-. CLI music player written in C
-. contain a beatiful ui 
-. simple to use
+1. CLI music player written in C
+2. contain a beatiful ui 
+3. simple to use
 
 # Note 
 . this software only tested on linux (Debian) if you see this software is useful , you can help to create a windows version or other OS versions , wekcome to contributions 
