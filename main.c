@@ -6,7 +6,6 @@
 //#include <sys/ioctl.h>
 //#include <unistd.h>
 
-
 #define DIR_ON
 #define UI_C_
 #define MINIAUDIO_IMPLEMENTATION
@@ -15,7 +14,7 @@
 #define DR_FLAC_IMPLEMENTATION
 #define DR_WAV_IMPLEMENTATION
 
-#include "./files/rdirectorys.h"
+//#include "./files/rdirectorys.h"
 #include "./files/third_party/dr_mp3.h"
 #include "./files/third_party/dr_flac.h"
 #include "./files/third_party/dr_wav.h"
@@ -29,7 +28,6 @@
 // TODO: UI  
 // TODO: pause , run , next , volume
 // TODO: search over internet
-
 
 int main(void)
 {
@@ -62,25 +60,140 @@ int main(void)
 	//}
 	//CloseAudioDevice();
 
-	//struct termios* term = NULL;
-	UI ui = UI_Window_Init();
-	//printf("ui.box_col_pos_left_size = %d\n" ,ui.box_col_pos_left_size );
-	//printf("ui.box_col_pos_right_size = %d\n",ui.box_col_pos_right_size);
-	//printf("ui.box_row_pos_size_top = %d\n",ui.box_row_pos_size_top);
-	//printf("ui.box_row_pos_size_buttom = %d\n",ui.box_row_pos_size_buttom);
-	//printf("ui.cursor_position_col = %d\n",ui.cursor_position_col);
-	//printf("ui.cursor_position_row = %d\n",ui.cursor_position_row);
-	//printf("ui.show_albom = %d",ui.show_albom);
-	move_cursor(ui.box_col_pos_left_size , ui.box_row_pos_size_top);
-	printf("*");
-	move_cursor(ui.box_col_pos_left_size , ui.box_row_pos_size_buttom);
-	printf("*");
-	move_cursor(ui.box_col_pos_right_size , ui.box_row_pos_size_top);
-	printf("*");
-	move_cursor(ui.box_col_pos_right_size , ui.box_row_pos_size_buttom);
-	printf("*");
-	ui.flush();
-	sleep(50);
-	UI_Window_Final(NULL);
+
+
+	bool quit = false;
+	bool explorer = false;
+	Term term;
+	UI ui = UI_Window_Init(&term);
+	char ch;
+	while(!quit)
+	{
+		if(explorer){
+			DrawBox(ui , NULL);
+			Explorer(&ui , NULL);
+			//Dump_files();
+		}
+		else
+			DrawBox(ui ,NULL);
+		ch = getchar();
+		/*
+		 *	keys : 
+		 *		q : for quit
+		 *		u : update ui (im gonna handle it later)
+		 *		e : open file explorer
+		 *		f : add song to favorit
+		 *		p : pause and play
+		 *		+ : increase the volume
+		 *		j : move cursor down
+		 *		k : move cursor up
+		 *		- : reduce volume
+		 *		n : next
+		 *		N : prev
+		 *		i : change style window or switch to style window (file explorer enabled)
+		 *		a : open favorit songs
+		 *		s : search songs on locale device
+		 *		S : for search on internet
+		 *		? : show help list
+		 * */ 
+		switch(ch){
+			case 'f':{
+				Error_Box(" f key is not implemented ");
+				ui.Flush();
+				sleep(3);
+				quit = true;
+			}break;
+			case 'j':{
+				Error_Box(" j key is not implemented , check if explorer is true ");
+				ui.Flush();
+				sleep(3);
+				quit = true;
+			}break;
+			case 'k' : {
+				Error_Box(" k key is not implemented , check if explorer is true");
+				ui.Flush();
+				sleep(3);
+				quit = true;
+			}break;
+			case 'p':{
+				Error_Box(" p key is not implemented ");
+				ui.Flush();
+				sleep(3);
+				quit = true;
+			}break;
+			case '+':{
+				Error_Box(" + key is not implemented ");
+				ui.Flush();
+				sleep(3);
+				quit = true;
+			}break;
+			case '-':{
+				Error_Box(" - key is not implemented ");
+				ui.Flush();
+				sleep(3);
+				quit = true;
+			}break;
+			case 'n':{
+				Error_Box(" n key is not implemented ");
+				ui.Flush();
+				sleep(3);
+				quit = true;
+			}break;
+			case 'N':{
+				Error_Box(" N key is not implemented ");
+				ui.Flush();
+				sleep(3);
+				quit = true;
+			}break;
+			case 'i':{
+				Error_Box(" i key is not implemented ");
+				ui.Flush();
+				sleep(3);
+				quit = true;
+			}break;
+			case 'a':{
+				Error_Box(" a key is not implemented ");
+				ui.Flush();
+				sleep(3);
+				quit = true;
+			}break;
+			case 's':{
+				Error_Box(" s key is not implemented ");
+				ui.Flush();
+				sleep(3);
+				quit = true;
+			}break;
+			case 'S':{
+				Error_Box(" S key is not implemented ");
+				ui.Flush();
+				sleep(3);
+				quit = true;
+			}break;
+			case '?':{
+				Error_Box(" ? key is not implemented \n exiting");
+				ui.Flush();
+				sleep(3);
+				quit = true;
+			}break;
+			case 'u' : {
+				UI_Window_Update(&ui , explorer);
+			}break;
+			case 'e' : {
+				if(explorer)
+					explorer = false;
+				else
+					explorer = true;
+				ui.explorer = explorer;
+				//DrawBox(ui , NULL);
+				//Explorer(&ui , NULL);
+				//Dump_files();
+			}break;
+			case 'q' : {
+				quit = true;
+			}
+		}
+		ui.Flush();
+	}
+	UI_Window_Final(&term);
 	return 0;
 }

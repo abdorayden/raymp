@@ -37,6 +37,19 @@ typedef struct winsize Size;
 #define nine	"╚"
 #define ten	"╣"
 
+
+// characters
+// get them from : https://symbl.cc/en/unicode-table/#geometric-shapes
+
+#define pause_start	"⏯"
+#define next	"⏵"
+#define prev	"⏴"
+#define ext	"⏻"
+#define repeate "⭯"
+
+#define snow	"❆"
+#define stars	"✨"
+
 // Lines
 #define Underline 	"\033[4;37m" 	//Underline
 #define Italic		"\033[3;37m" 	//Italic
@@ -48,7 +61,7 @@ typedef struct winsize Size;
 #define Red		"\033[0;31m" 	//Red
 #define Green		"\033[0;32m" 	//Green
 #define Yellow		"\033[0;33m" 	//Yello
-#define Blue		"\033[0;34m" 	//Blue
+#define Blue		"\033[1;34m" 	//Blue
 #define Magenta		"\033[0;35m" 	//Magenta
 #define Cyan		"\033[0;36m" 	//Cyan
 #define White		"\033[0;37m" 	//White
@@ -94,14 +107,23 @@ typedef struct {
 
 	unsigned short cursor_position_col;
 	unsigned short cursor_position_row;
+	bool explorer;
 	bool show_albom;
-	int (*flush)(void);
+	int (*Flush)(void);
 
 }UI;
 
-UI   UI_Window_Init(void);
-void UI_Window_Update(UI* ui);
-void UI_Window_Final(Term* saved_tattr);
+// even file explorer
+typedef void(*Function_Style)(UI ui);
+
+UI   UI_Window_Init(Term*);
+void UI_Window_Update(UI* ui , bool enable_explorer);
+void UI_Window_Final(Term*);
+void DrawBox(UI ui , Function_Style call_back_function_style);
+
+void Explorer(UI* ui ,char* path);
+void Default_Style(UI ui);
+void Error_Box(const char* error);
 
 #endif //UI_H_
 
@@ -111,6 +133,14 @@ void UI_Window_Final(Term* saved_tattr);
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define DIR_ON
+#define ERROR_C_
+
+#include "rdirectorys.h"
+#include "error.h"
 
 static void 		input_mode_enable(Term* tattr);
 static void 		input_mode_reset(Term* tattr);
@@ -121,40 +151,167 @@ static unsigned short 	calc_box_col_pos_left_size(Size term_size);
 static unsigned short 	calc_box_row_pos_size_top(Size term_size);
 static unsigned short 	calc_box_row_pos_size_buttom(Size term_size);
 static int 		flush_file(void);	
+static void		main_box(Size term_size);
+static void 		print_keys(UI ui , Size size);
 
-UI UI_Window_Init(){
+UI UI_Window_Init(Term* term){
 	UI ui;
 	clearscreen();
+	input_mode_enable(term);
 	hide_cursor();
-
+	main_box(get_term_size());
 	ui.box_col_pos_left_size 	= calc_box_col_pos_left_size(get_term_size());
 	ui.box_col_pos_right_size	= calc_box_col_pos_right_size(get_term_size());
 	ui.box_row_pos_size_top 	= calc_box_row_pos_size_top(get_term_size());
-	ui.box_row_pos_size_buttom 	= calc_box_row_pos_size_buttom(get_term_size());
-	ui.cursor_position_col 		= 0;
-	ui.cursor_position_row 		= 0;
+	ui.box_row_pos_size_buttom 	= calc_box_row_pos_size_buttom(get_term_size()) + 2;
+	ui.cursor_position_col 		= ui.box_col_pos_left_size + 1;
+	ui.cursor_position_row 		= ui.box_row_pos_size_top + 1;
+	ui.explorer			= false;
 	ui.show_albom 			= false;
-	ui.flush			= flush_file;
+	ui.Flush			= flush_file;
+	//print_keys(ui , get_term_size());
 	return ui;
 }
 
-void UI_Window_Update(UI* ui)
+void UI_Window_Update(UI* ui, bool enable_explorer)
 {
+	clearscreen();
+	main_box(get_term_size());
 	ui->box_col_pos_left_size 	= calc_box_col_pos_left_size(get_term_size());
 	ui->box_col_pos_right_size	= calc_box_col_pos_right_size(get_term_size());
-	ui->box_row_pos_size_top 	= calc_box_row_pos_size_top(get_term_size()),
+	ui->box_row_pos_size_top 	= calc_box_row_pos_size_top(get_term_size());
 	ui->box_row_pos_size_buttom 	= calc_box_row_pos_size_buttom(get_term_size());
 	ui->cursor_position_col 	= 0;
 	ui->cursor_position_row 	= 0;
+	ui->explorer			= enable_explorer;
 	ui->show_albom 			= false;
+	//print_keys(*ui , get_term_size());
 }
 
 void UI_Window_Final(Term* saved_tattr)
 {
-	show_cursor();
 	if(saved_tattr != NULL)
 		input_mode_disable(saved_tattr);
+	input_mode_reset(saved_tattr);
+	show_cursor();
 	clearscreen();
+}
+
+void DrawBox(UI ui , Function_Style call_back_function_style)
+{
+	// TODO: handle function style
+	(void) call_back_function_style;
+	int i = 1;
+	for(int row = ui.box_row_pos_size_top ; row <= ui.box_row_pos_size_buttom ; row++){
+		move_cursor(ui.box_col_pos_left_size , ui.box_row_pos_size_top + i++);
+		for(int col = ui.box_col_pos_left_size ; col <= ui.box_col_pos_right_size ; col++){
+			if(
+					row == ui.box_row_pos_size_top && 
+					col == ui.box_col_pos_left_size
+			)		
+				printf("%s" , five);
+			else if(
+					row == ui.box_row_pos_size_top && 
+					col == ui.box_col_pos_right_size
+			)	
+				printf("%s" , four);
+			else if(
+				row == ui.box_row_pos_size_buttom && col == ui.box_col_pos_left_size
+			)
+				printf("%s", nine);
+			else if(
+				row == ui.box_row_pos_size_buttom && col == ui.box_col_pos_right_size
+			)
+				printf("%s" ,eit);
+			else if(
+					(
+					 	row == ui.box_row_pos_size_top && 
+							(
+							 	col < ui.box_col_pos_right_size || 
+					 			col > ui.box_col_pos_left_size
+					 		)
+					) || 
+					(
+					 	row == ui.box_row_pos_size_buttom &&
+							(
+						 		col < ui.box_col_pos_right_size || 
+					 			col > ui.box_col_pos_left_size
+							)
+					 )
+			)
+				printf("%s" , one);
+			else if(
+				(row < ui.box_row_pos_size_buttom && row > ui.box_row_pos_size_top) && 
+				(col == ui.box_col_pos_right_size || col == ui.box_col_pos_left_size)
+			)
+				printf("%s" , two);
+			else 	printf(" ");
+		}
+	}
+	if(ui.explorer){
+		move_cursor(ui.box_col_pos_left_size + ((ui.box_col_pos_right_size - ui.box_col_pos_left_size) / 4) , ui.box_row_pos_size_top + 1);
+		printf("Explorer");
+	}
+}
+
+void Default_Style(UI ui)
+{
+	// this function will printing the style in the box 
+	// you can add your own function 
+	(void)ui;
+}
+
+void Error_Box(const char* error)
+{
+	Size size = get_term_size(); 
+	int i = 1;
+	for(int row = ((size.ws_row/2) - size.ws_row/4) ; row <= ((size.ws_row/2) + size.ws_row/4) ; row++){
+		move_cursor((size.ws_col/2)-(size.ws_col/4), ((size.ws_row/2) - size.ws_row/4) + i++);
+		for(int col = (size.ws_col/2)-(size.ws_col/4) ; col <= ((size.ws_col/2)+(size.ws_col/4)) ; col++){
+			if(row == ((size.ws_row/2) - size.ws_row/4) && col == (size.ws_col/2)-(size.ws_col/4))	printf("%s" , five);
+			else if(row == ((size.ws_row/2) - size.ws_row/4) && col == ((size.ws_col/2)+(size.ws_col/4)))	printf("%s" , four);
+			else if(row == ((size.ws_row/2) + size.ws_row/4) && col == (size.ws_col/2)-(size.ws_col/4)) 	printf("%s" , nine);
+			else if(row == ((size.ws_row/2) + size.ws_row/4) && col == ((size.ws_col/2)+(size.ws_col/4)))	printf("%s" ,eit);
+			else if((row == ((size.ws_row/2) - size.ws_row/4) && (col < ((size.ws_col/2)+(size.ws_col/4)) || col > (size.ws_col/2)-(size.ws_col/4))) || (row == ((size.ws_row/2) + size.ws_row/4) && (col < ((size.ws_col/2)+(size.ws_col/4)) || col > (size.ws_col/2)-(size.ws_col/4))))
+				printf("%s" , one);
+			else if((row < ((size.ws_row/2) + size.ws_row/4) && row > ((size.ws_row/2) - size.ws_row/4)) && (col == (size.ws_col/2)-(size.ws_col/4) || col == ((size.ws_col/2)+(size.ws_col/4))))	printf("%s" , two);
+			else 	printf(" ");
+		}
+	}
+	move_cursor((size.ws_col/2)-(size.ws_col/4)+1 ,((size.ws_row/2) - size.ws_row/4) + 2);
+	printf("%s%sError%s%s : %s", Bold , Red ,Regular, Default , error);
+	return ;
+}
+//void Dump_files(void){
+//	for(int e = 0 ; e < idx ; e++){
+//		printf("%d - %s\t:%zu\t:%s\n" ,__dirs[e].file_idx ,__dirs[e].filename , __dirs[e].file_size , __dirs[e].is_dir ? "(dir)" : "(file)");
+//	}
+//}
+
+void Explorer(UI* ui ,char* path)
+{
+	if(path == NULL){
+		Init_Dir();
+		List_Dir(".");
+	}else{
+		Init_Dir();
+		List_Dir(path);
+	}
+	if(is_error != success){
+		Error_Box(GetError(is_error));
+		exit(1);
+	}
+	int i = 2;
+	int index = 0;
+	move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + 1);
+	for(int row = 0 ; row < ((idx < (ui->box_row_pos_size_buttom - ui->box_row_pos_size_top)) ? idx : (ui->box_row_pos_size_buttom - ui->box_row_pos_size_top - 1)) ; row++)
+	{
+		move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + i++);
+		printf("%d - %s%s%s%s\t:%zu\t:%s\n" ,__dirs[index].file_idx,/*__dirs[index].is_dir ? Bold : Regular,*/ __dirs[index].is_dir ? Blue : Default ,__dirs[index].filename , Default , Regular, __dirs[index].file_size , __dirs[index].is_dir ? "(dir)" : "(file)");
+		index++;
+	}
+	move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + 1);
+	i = 2;
 }
 
 static void input_mode_disable(Term* saved_tattr){
@@ -207,6 +364,50 @@ static unsigned short calc_box_row_pos_size_buttom(Size term_size)
 static int flush_file()
 {
 	return fflush(stdout);
+}
+
+static void main_box(Size term_size)
+{
+	int i = 1;
+	for(int row = 1 ; row < term_size.ws_row ; row++){
+		move_cursor(1, i++);
+		for(int col = 1 ; col < term_size.ws_col ; col++){
+			if(row == 1 && col == 1)								printf("%s" , five);
+			else if(row == 1 && col == (term_size.ws_col - 1))						printf("%s" , four);
+			else if(row == (term_size.ws_row - 1) && col == 1)    					printf("%s" , nine);
+			else if(row == (term_size.ws_row - 1) && col == (term_size.ws_col - 1))				printf("%s" ,eit);
+			else if((row == 1 && (col < (term_size.ws_col - 1) || col > 1)) || (row == (term_size.ws_row - 1) && (col < (term_size.ws_col - 1) || col > 1)))
+				printf("%s" , one);
+			else if((row < (term_size.ws_row - 1) && row > 1) && (col == 1 || col == (term_size.ws_col - 1)))	printf("%s" , two);
+			else 	printf(" ");
+		}
+	}
+
+}
+static void print_keys(UI ui , Size size)
+{
+	int i = 0;
+	for(int row = (ui.box_row_pos_size_buttom + 3) ; row < (size.ws_row - 2) ; row++){
+		move_cursor( 4 , (ui.box_row_pos_size_buttom + 3) + i++);
+		for(int col = 4 ; col < (size.ws_col / 4) ; col++){
+			if(row == (ui.box_row_pos_size_buttom + 3) && col == 4)		
+				printf("%s" , five);
+			else if(row == (ui.box_row_pos_size_buttom + 3) && col == (size.ws_col / 4) -1)	
+				printf("%s" , four);
+			else if(row == (size.ws_row - 3) && col == 4)    	
+				printf("%s" , nine);
+			else if(row == (size.ws_row - 3) && col == (size.ws_col / 4) - 1)				
+				printf("%s" ,eit);
+			else if((row == (ui.box_row_pos_size_buttom + 3) && (col < (size.ws_col / 4) || col > 3)) || 
+					(row == (size.ws_row - 3) && (col < (size.ws_col / 4) || col > 4)))
+				printf("%s" , one);
+			else if(
+					(row < (size.ws_row - 3) && row > ui.box_row_pos_size_buttom + 3) && 
+					(col == 4 || col == (size.ws_col / 4) - 1))	
+				printf("%s" , two);
+			else 	printf(" ");
+		}
+	}
 }
 
 #endif

@@ -15,6 +15,13 @@ typedef enum{
 }bool;
 #endif
 
+typedef enum {
+	B ,
+	KB,
+	MB,
+	GB,
+	TB
+}Block;
 // this linked list contains file information  
 typedef struct directory {
 	char 	filename[256]	; 	// file name max length 256
@@ -23,11 +30,12 @@ typedef struct directory {
 	bool 	is_dir		;	// true if it's directory
 }Directoy;
 
-int idx = 0;
+int idx = 1;
 Directoy __dirs[200];
 
+void Init_Dir(void);
 // List directorys
-Err List_Dir(const char*);
+void List_Dir(const char*);
 void Dump_files(void);
 
 #endif //RDIR_H_
@@ -42,62 +50,28 @@ void Dump_files(void);
 #include <errno.h>
 #include <string.h>
 
-//#include "third_party/raylib-5.0_linux-amd64/include/raylib.h"
-
-static size_t get_file_size(char* filename){
-	size_t size = -1;
-	FILE* filep;
-	if((filep = fopen(filename , "r")) == NULL){
-		return size;
-	}
-        fseek(filep, 0, SEEK_END);
-	size = ftell(filep);
-        rewind(filep);
-	fclose(filep);
-	return size;
-}	
-
-typedef enum {
-	B ,
-	KB,
-	MB,
-	GB,
-	TB
-}Block;
+#include "error.h"
 
 char fmt[100];
-char* handle_size(size_t byte_size){
-	Block block = B;
-	while((byte_size / 1024) != 0){		
-		byte_size /= 1024;
-		block++;
-	};
-	switch(block){
-		case B :{
-			sprintf(fmt , "%zu B" , byte_size);
-		}break;
-		case KB :{
-			sprintf(fmt , "%zu KB" , byte_size);
-		}break;
-		case MB :{
-			sprintf(fmt , "%zu MB" , byte_size);
-		}break;
-		case GB :{
-			sprintf(fmt , "%zu GB" , byte_size);
-		}break;
-		case TB :{
-			sprintf(fmt , "%zu TB" , byte_size);
-		}break;
-	}
-	return fmt;
+
+static size_t get_file_size(char* filename);
+static char* handle_size(size_t byte_size);
+
+void Init_Dir(void)
+{
+	idx = 1;
+	strcpy(__dirs[0].filename , "..");
+	__dirs[0].file_size = 0;
+	__dirs[0].file_idx = 0;
+	__dirs[0].is_dir = true;
 }
 
-
-Err List_Dir(const char* dirname){
+void List_Dir(const char* dirname){
 	if(dirname == NULL)	return -1;
         DIR *dir = opendir(dirname);
 	if(dir == NULL){
-		return errno;
+		is_error = errno;
+		return ;
 	}
 	errno = 0;
 	Dirent* rdir= readdir(dir);
@@ -138,6 +112,45 @@ void Dump_files(void){
 	for(int e = 0 ; e < idx ; e++){
 		printf("%d - %s\t:%zu\t:%s\n" ,__dirs[e].file_idx ,__dirs[e].filename , __dirs[e].file_size , __dirs[e].is_dir ? "(dir)" : "(file)");
 	}
+}
+
+static size_t get_file_size(char* filename){
+	size_t size = -1;
+	FILE* filep;
+	if((filep = fopen(filename , "r")) == NULL){
+		return size;
+	}
+        fseek(filep, 0, SEEK_END);
+	size = ftell(filep);
+        rewind(filep);
+	fclose(filep);
+	return size;
+}	
+
+static char* handle_size(size_t byte_size){
+	Block block = B;
+	while((byte_size / 1024) != 0){		
+		byte_size /= 1024;
+		block++;
+	};
+	switch(block){
+		case B :{
+			sprintf(fmt , "%zu B" , byte_size);
+		}break;
+		case KB :{
+			sprintf(fmt , "%zu KB" , byte_size);
+		}break;
+		case MB :{
+			sprintf(fmt , "%zu MB" , byte_size);
+		}break;
+		case GB :{
+			sprintf(fmt , "%zu GB" , byte_size);
+		}break;
+		case TB :{
+			sprintf(fmt , "%zu TB" , byte_size);
+		}break;
+	}
+	return fmt;
 }
 
 #endif // DIR_ON

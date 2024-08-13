@@ -678,7 +678,7 @@ bool IsWaveReady(Wave wave)
 int LoadSound(const char *fileName , Sound* sound)
 {
     Wave wave = LoadWave(fileName);
-    Err err;
+    Error err;
     if((err = LoadSoundFromWave(wave , sound)) != 0){ 	
     		UnloadWave(wave);       // Sound is loaded, we can unload wave
 	    return err; 
