@@ -41,6 +41,7 @@ typedef struct winsize Size;
 // characters
 // get them from : https://symbl.cc/en/unicode-table/#geometric-shapes
 
+#define file_pos	"➯"
 #define pause_start	"⏯"
 #define next	"⏵"
 #define prev	"⏴"
@@ -54,7 +55,7 @@ typedef struct winsize Size;
 #define Underline 	"\033[4;37m" 	//Underline
 #define Italic		"\033[3;37m" 	//Italic
 #define Bold		"\033[1;37m" 	//Bold
-#define Regular		"\033[0;37m" 	//regular
+#define Regular		"\033[0m" 	//regular
 
 // colors
 #define Black		"\033[0;30m" 	//Black
@@ -64,7 +65,7 @@ typedef struct winsize Size;
 #define Blue		"\033[1;34m" 	//Blue
 #define Magenta		"\033[0;35m" 	//Magenta
 #define Cyan		"\033[0;36m" 	//Cyan
-#define White		"\033[0;37m" 	//White
+#define White		Regular 	//White
 #define Default		White		// Default (white)
 
 typedef struct termios Term;
@@ -121,7 +122,7 @@ void UI_Window_Update(UI* ui , bool enable_explorer);
 void UI_Window_Final(Term*);
 void DrawBox(UI ui , Function_Style call_back_function_style);
 
-void Explorer(UI* ui ,char* path);
+void Explorer(UI* ui ,char* path , int index);
 void Default_Style(UI ui);
 void Error_Box(const char* error);
 
@@ -181,8 +182,8 @@ void UI_Window_Update(UI* ui, bool enable_explorer)
 	ui->box_col_pos_right_size	= calc_box_col_pos_right_size(get_term_size());
 	ui->box_row_pos_size_top 	= calc_box_row_pos_size_top(get_term_size());
 	ui->box_row_pos_size_buttom 	= calc_box_row_pos_size_buttom(get_term_size());
-	ui->cursor_position_col 	= 0;
-	ui->cursor_position_row 	= 0;
+	ui->cursor_position_col 	= ui->box_col_pos_left_size + 1;
+	ui->cursor_position_row 	= ui->box_row_pos_size_top + 1;
 	ui->explorer			= enable_explorer;
 	ui->show_albom 			= false;
 	//print_keys(*ui , get_term_size());
@@ -282,19 +283,13 @@ void Error_Box(const char* error)
 	printf("%s%sError%s%s : %s", Bold , Red ,Regular, Default , error);
 	return ;
 }
-//void Dump_files(void){
-//	for(int e = 0 ; e < idx ; e++){
-//		printf("%d - %s\t:%zu\t:%s\n" ,__dirs[e].file_idx ,__dirs[e].filename , __dirs[e].file_size , __dirs[e].is_dir ? "(dir)" : "(file)");
-//	}
-//}
 
-void Explorer(UI* ui ,char* path)
+void Explorer(UI* ui ,char* path , int index)
 {
+	Init_Dir();
 	if(path == NULL){
-		Init_Dir();
 		List_Dir(".");
 	}else{
-		Init_Dir();
 		List_Dir(path);
 	}
 	if(is_error != success){
@@ -302,12 +297,15 @@ void Explorer(UI* ui ,char* path)
 		exit(1);
 	}
 	int i = 2;
-	int index = 0;
+	//int index = 0;
 	move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + 1);
-	for(int row = 0 ; row < ((idx < (ui->box_row_pos_size_buttom - ui->box_row_pos_size_top)) ? idx : (ui->box_row_pos_size_buttom - ui->box_row_pos_size_top - 1)) ; row++)
+	for(int row = 0 ; !__dirs[index].the_last && row < ((idx < (ui->box_row_pos_size_buttom - ui->box_row_pos_size_top)) ? idx : (ui->box_row_pos_size_buttom - ui->box_row_pos_size_top - 1)) ; row++)
 	{
 		move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + i++);
-		printf("%d - %s%s%s%s\t:%zu\t:%s\n" ,__dirs[index].file_idx,/*__dirs[index].is_dir ? Bold : Regular,*/ __dirs[index].is_dir ? Blue : Default ,__dirs[index].filename , Default , Regular, __dirs[index].file_size , __dirs[index].is_dir ? "(dir)" : "(file)");
+		if(ui->box_row_pos_size_top + (row + 1) == ui->cursor_position_row)
+			printf("%s %d - %s%s%s%s\t:%zu\t:%s\n",file_pos ,__dirs[index].file_idx,/*__dirs[index].is_dir ? Bold : Regular,*/ __dirs[index].is_dir ? Blue : Default ,__dirs[index].filename , Default , Regular, __dirs[index].file_size , __dirs[index].is_dir ? "(dir)" : "(file)");
+		else
+			printf("   %d - %s%s%s%s\t:%zu\t:%s\n",__dirs[index].file_idx,/*__dirs[index].is_dir ? Bold : Regular,*/ __dirs[index].is_dir ? Blue : Default ,__dirs[index].filename , Default , Regular, __dirs[index].file_size , __dirs[index].is_dir ? "(dir)" : "(file)");
 		index++;
 	}
 	move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + 1);
@@ -411,3 +409,4 @@ static void print_keys(UI ui , Size size)
 }
 
 #endif
+

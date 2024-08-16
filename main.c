@@ -6,7 +6,7 @@
 //#include <sys/ioctl.h>
 //#include <unistd.h>
 
-#define DIR_ON
+//#define DIR_ON
 #define UI_C_
 #define MINIAUDIO_IMPLEMENTATION
 #define AUDIO_C_
@@ -14,7 +14,7 @@
 #define DR_FLAC_IMPLEMENTATION
 #define DR_WAV_IMPLEMENTATION
 
-//#include "./files/rdirectorys.h"
+#include "./files/rdirectorys.h"
 #include "./files/third_party/dr_mp3.h"
 #include "./files/third_party/dr_flac.h"
 #include "./files/third_party/dr_wav.h"
@@ -63,15 +63,15 @@ int main(void)
 
 
 	bool quit = false;
-	bool explorer = false;
 	Term term;
+	int index = 0;
 	UI ui = UI_Window_Init(&term);
 	char ch;
 	while(!quit)
 	{
-		if(explorer){
+		if(ui.explorer){
 			DrawBox(ui , NULL);
-			Explorer(&ui , NULL);
+			Explorer(&ui , NULL , index);
 			//Dump_files();
 		}
 		else
@@ -97,6 +97,9 @@ int main(void)
 		 *		? : show help list
 		 * */ 
 		switch(ch){
+			case 10 : {
+				printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nDebug : ui.cursor_position_row = %d\nidx = %d\n(ui.box_row_pos_size_buttom - ui.box_row_pos_size_top) = %di\n index = %d" , ui.cursor_position_row, idx ,(ui.box_row_pos_size_buttom - ui.box_row_pos_size_top) , index);
+			}break;
 			case 'f':{
 				Error_Box(" f key is not implemented ");
 				ui.Flush();
@@ -104,16 +107,37 @@ int main(void)
 				quit = true;
 			}break;
 			case 'j':{
-				Error_Box(" j key is not implemented , check if explorer is true ");
-				ui.Flush();
-				sleep(3);
-				quit = true;
+				if(idx < (ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 1)){
+					if(ui.explorer && (ui.cursor_position_row < (idx + ui.box_row_pos_size_top)))
+						ui.cursor_position_row += 1;
+				}else if(idx > (ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 1)){
+					if(ui.cursor_position_row == (ui.box_row_pos_size_buttom - 1) && 
+							((ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 1) < idx)){
+						ui.cursor_position_row = ui.box_row_pos_size_top + 1;
+						if((index + (ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 1)) <= idx){
+							index += (ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 2);
+							idx -= (ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 2);
+						}
+						else{
+							index += (idx - index);
+						}
+						continue;
+					}
+					if(ui.explorer && (ui.cursor_position_row < (idx - index + ui.box_row_pos_size_top)/*(ui.box_row_pos_size_buttom - 1)*/)){
+							ui.cursor_position_row += 1;
+					}
+				}
 			}break;
 			case 'k' : {
-				Error_Box(" k key is not implemented , check if explorer is true");
-				ui.Flush();
-				sleep(3);
-				quit = true;
+				if((idx < (ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 1)) || (idx > (ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 1))){
+					if((ui.cursor_position_row == (ui.box_row_pos_size_top + 1)) && (index > 0)){
+						ui.cursor_position_row = ui.box_row_pos_size_buttom - 1;
+						index -= (ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 2);
+					}
+					if(ui.explorer && (ui.cursor_position_row > (ui.box_row_pos_size_top + 1))){
+						ui.cursor_position_row -= 1;
+					}
+				}
 			}break;
 			case 'p':{
 				Error_Box(" p key is not implemented ");
@@ -176,14 +200,13 @@ int main(void)
 				quit = true;
 			}break;
 			case 'u' : {
-				UI_Window_Update(&ui , explorer);
+				UI_Window_Update(&ui , ui.explorer);
 			}break;
 			case 'e' : {
-				if(explorer)
-					explorer = false;
+				if(ui.explorer)
+					ui.explorer = false;
 				else
-					explorer = true;
-				ui.explorer = explorer;
+					ui.explorer = true;
 				//DrawBox(ui , NULL);
 				//Explorer(&ui , NULL);
 				//Dump_files();
@@ -197,3 +220,4 @@ int main(void)
 	UI_Window_Final(&term);
 	return 0;
 }
+

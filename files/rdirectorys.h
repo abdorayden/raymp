@@ -28,13 +28,13 @@ typedef struct directory {
 	size_t 	file_size	; 	// file size
 	int 	file_idx	; 	// file index 
 	bool 	is_dir		;	// true if it's directory
+	bool	the_last	;
 }Directoy;
 
 int idx = 1;
 Directoy __dirs[200];
 
 void Init_Dir(void);
-// List directorys
 void List_Dir(const char*);
 void Dump_files(void);
 
@@ -64,10 +64,11 @@ void Init_Dir(void)
 	__dirs[0].file_size = 0;
 	__dirs[0].file_idx = 0;
 	__dirs[0].is_dir = true;
+	__dirs[0].the_last = false;
 }
 
 void List_Dir(const char* dirname){
-	if(dirname == NULL)	return -1;
+	if(dirname == NULL)	return;
         DIR *dir = opendir(dirname);
 	if(dir == NULL){
 		is_error = errno;
@@ -102,10 +103,11 @@ void List_Dir(const char* dirname){
 		if(dir)	
 			closedir(dir);
 
-		return errno;
+		return;
 	}
 	closedir(dir);
-	return 0;
+	__dirs[idx].the_last = true;
+	return;
 }
 
 void Dump_files(void){
