@@ -124,24 +124,25 @@ void DrawBox(UI ui , Function_Style call_back_function_style);
 
 void Explorer(UI* ui ,char* path , int index);
 void Default_Style(UI ui);
-void Error_Box(const char* error);
+void Error_Box(char*);
 
 #endif //UI_H_
 
 #ifdef UI_C_
 
-#include <termios.h>
-#include <sys/ioctl.h>
-#include <unistd.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <time.h>
+int idx;
+Directoy __dirs[200];
+//#include <termios.h>
+//#include <sys/ioctl.h>
+//#include <unistd.h>
+//#include <stdbool.h>
+//#include <stdlib.h>
+//#include <time.h>
 
-#define DIR_ON
-#define ERROR_C_
-
-#include "rdirectorys.h"
-#include "error.h"
+//#define DIR_ON
+//
+//#include "rdirectorys.h"
+//#include "error.h"
 
 static void 		input_mode_enable(Term* tattr);
 static void 		input_mode_reset(Term* tattr);
@@ -262,7 +263,7 @@ void Default_Style(UI ui)
 	(void)ui;
 }
 
-void Error_Box(const char* error)
+void Error_Box(char* error)
 {
 	Size size = get_term_size(); 
 	int i = 1;
@@ -281,31 +282,26 @@ void Error_Box(const char* error)
 	}
 	move_cursor((size.ws_col/2)-(size.ws_col/4)+1 ,((size.ws_row/2) - size.ws_row/4) + 2);
 	printf("%s%sError%s%s : %s", Bold , Red ,Regular, Default , error);
-	return ;
+	exit(1);
 }
 
 void Explorer(UI* ui ,char* path , int index)
 {
 	Init_Dir();
-	if(path == NULL){
-		List_Dir(".");
-	}else{
-		List_Dir(path);
-	}
+	List_Dir(path);
 	if(is_error != success){
 		Error_Box(GetError(is_error));
 		exit(1);
 	}
 	int i = 2;
-	//int index = 0;
 	move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + 1);
-	for(int row = 0 ; !__dirs[index].the_last && row < ((idx < (ui->box_row_pos_size_buttom - ui->box_row_pos_size_top)) ? idx : (ui->box_row_pos_size_buttom - ui->box_row_pos_size_top - 1)) ; row++)
+	for(int row = 0 ; !__dirs[index].the_last &&  row < ((idx < (ui->box_row_pos_size_buttom - ui->box_row_pos_size_top)) ? idx : (ui->box_row_pos_size_buttom - ui->box_row_pos_size_top - 1)) ; row++)
 	{
 		move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + i++);
 		if(ui->box_row_pos_size_top + (row + 1) == ui->cursor_position_row)
-			printf("%s %d - %s%s%s%s\t:%zu\t:%s\n",file_pos ,__dirs[index].file_idx,/*__dirs[index].is_dir ? Bold : Regular,*/ __dirs[index].is_dir ? Blue : Default ,__dirs[index].filename , Default , Regular, __dirs[index].file_size , __dirs[index].is_dir ? "(dir)" : "(file)");
+			printf("%s %d - %s%s%s%s\t:%zu\t:%s\n",file_pos ,__dirs[index].file_idx,__dirs[index].is_dir ? Blue : Default ,__dirs[index].filename , Default , Regular, __dirs[index].file_size , __dirs[index].is_dir ? "(dir)" : "(file)");
 		else
-			printf("   %d - %s%s%s%s\t:%zu\t:%s\n",__dirs[index].file_idx,/*__dirs[index].is_dir ? Bold : Regular,*/ __dirs[index].is_dir ? Blue : Default ,__dirs[index].filename , Default , Regular, __dirs[index].file_size , __dirs[index].is_dir ? "(dir)" : "(file)");
+			printf("   %d - %s%s%s%s\t:%zu\t:%s\n",__dirs[index].file_idx,__dirs[index].is_dir ? Blue : Default ,__dirs[index].filename , Default , Regular, __dirs[index].file_size , __dirs[index].is_dir ? "(dir)" : "(file)");
 		index++;
 	}
 	move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + 1);

@@ -1,11 +1,12 @@
 #ifndef  ERROR_H_
 #define  ERROR_H_
 
-#include <stdbool.h>
-#include <string.h>
+//#include <stdbool.h>
+//#include <string.h>
 
 typedef enum{
 	success = 0,
+	// directory list failed
 	list_dirs_f,
 	f_not_implemented,
 	p_not_implemented,
@@ -18,10 +19,19 @@ typedef enum{
 	s_not_implemented,
 	S_not_implemented,
 	quastion_not_implemented,
+	// for audio
+	init_audio_engine,
+	init_audio_sound_from_file,
+	get_cursor_pcm_frames,
+	get_length_audio
+
+
 
 }error_e;
-//char* GetError(error_e e);
+char* GetError(error_e e);
 error_e is_error = success;
+
+#endif //ERROR_H_
 
 char* GetError(error_e e){
 	switch(e){
@@ -38,13 +48,11 @@ char* GetError(error_e e){
 		case s_not_implemented : return "s key is not implemented";
 		case S_not_implemented : return "S key is not implemented";
 		case quastion_not_implemented : return "? key is not implemented";
+		case init_audio_engine : return "Failed to init engine";
+		case init_audio_sound_from_file : return "Failed to init sound from file (is not song)";
+		case get_cursor_pcm_frames : return "Failed to get cursor position";
+		case get_length_audio : return "Failed to get song length";
 		default : return strerror(is_error);
 	}
 }
 
-#endif //ERROR_H_
-
-#ifdef ERROR_C_
-
-
-#endif //ERROR_C_
