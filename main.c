@@ -71,16 +71,18 @@ int main(void)
 		switch(ch){
 			case 10 : {
 				//printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nDebug : file = %s\nidx = %d" , __dirs[index + ui.cursor_position_row - ui.box_row_pos_size_top - 1].filename , idx);
-				if(__dirs[index + ui.cursor_position_row - ui.box_row_pos_size_top - 1].is_dir)
-				{
-					printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nDebug : current_directory = %s\n" , current_directory);
-					current_directory[0] = '\0';
-					strcpy(current_directory , __dirs[index + ui.cursor_position_row - ui.box_row_pos_size_top - 1].filename) ;
-					index = 0;
-				}else
-				{
-					MP_Update_Audio(&audio , __dirs[index + ui.cursor_position_row - ui.box_row_pos_size_top - 1].filename);
-					PlayMusic(&audio);
+				if(ui.explorer){
+					if(__dirs[index + ui.cursor_position_row - ui.box_row_pos_size_top - 1].is_dir)
+					{
+						printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nDebug : current_directory = %s\n" , current_directory);
+						current_directory[0] = '\0';
+						strcpy(current_directory , __dirs[index + ui.cursor_position_row - ui.box_row_pos_size_top - 1].filename) ;
+						index = 0;
+					}else
+					{
+						MP_Update_Audio(&audio , __dirs[index + ui.cursor_position_row - ui.box_row_pos_size_top - 1].filename);
+						PlayMusic(&audio);
+					}
 				}
 			}break;
 			case 'f':{
