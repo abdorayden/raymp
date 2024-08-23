@@ -31,13 +31,14 @@ typedef struct directory {
 	bool	the_last	;
 }Directoy;
 
-extern int idx;
-extern Directoy __dirs[200];
+int idx;
+Directoy __dirs[200];
 
 void Init_Dir(void);
 void List_Dir(const char*);
 // used for debuging
 void Dump_files(void);
+char* handle_size(size_t byte_size);
 
 
 #endif //RDIR_H_
@@ -67,7 +68,8 @@ static size_t get_file_size(char* filename){
 	fclose(filep);
 	return size;
 }
-static char* handle_size(size_t byte_size){
+char* handle_size(size_t byte_size){
+	if(byte_size == 0)	return "0 B";
 	Block block = B;
 	while((byte_size / 1024) != 0){		
 		byte_size /= 1024;

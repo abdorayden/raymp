@@ -9,6 +9,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <time.h>
+#include <pthread.h>
 
 #define DIR_ON
 #define UI_C_
@@ -28,23 +29,34 @@
 // TODO: pause , run , next , volume
 // TODO: search over internet
 
+void* audio_always_update(void*);
+
 int main(void)
 {
-#if 1
 	bool quit = false;
 	Term term;
 	MP_Audio audio = MP_Init_Audio();
 	int index = 0;
 	UI ui = UI_Window_Init(&term);
 	char ch;
+	bool ones = true;
 	char current_directory[256];
-	current_directory[0] = '.';
+
 	while(!quit)
 	{
+		ui.volume = audio.volume * 100;
+		ui.is_pause = audio.is_audio_playing;
+		ui.cursor = audio.cursor;
+		ui.total_length = audio.song_length;
+		ui.repeate = true; // by default
+		UI_Window_Update(&ui);
+
+		if(getcwd(current_directory , 256) == NULL){
+			Error_Box(GetError(errno));
+		}
 		if(ui.explorer){
 			DrawBox(ui , NULL);
 			Explorer(&ui , current_directory , index);
-			//Dump_files();
 		}
 		else
 			DrawBox(ui ,NULL);
@@ -70,19 +82,55 @@ int main(void)
 		 * */ 
 		switch(ch){
 			case 10 : {
-				//printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nDebug : file = %s\nidx = %d" , __dirs[index + ui.cursor_position_row - ui.box_row_pos_size_top - 1].filename , idx);
 				if(ui.explorer){
 					if(__dirs[index + ui.cursor_position_row - ui.box_row_pos_size_top - 1].is_dir)
 					{
-						printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nDebug : current_directory = %s\n" , current_directory);
-						current_directory[0] = '\0';
-						strcpy(current_directory , __dirs[index + ui.cursor_position_row - ui.box_row_pos_size_top - 1].filename) ;
+						if(chdir(__dirs[index + ui.cursor_position_row - ui.box_row_pos_size_top - 1].filename) < 0){
+							Error_Box(GetError(errno));
+						}
 						index = 0;
+						ui.cursor_position_row = ui.box_row_pos_size_top + 1;
 					}else
 					{
 						MP_Update_Audio(&audio , __dirs[index + ui.cursor_position_row - ui.box_row_pos_size_top - 1].filename);
 						PlayMusic(&audio);
+						if(ones){
+							pthread_t thread;
+							if( pthread_create(&thread , NULL , audio_always_update , (void*)&audio ) != 0)
+							{
+								Error_Box("failed to create thread !");
+							}
+							(void)thread;
+							ones = !ones;
+						}
 					}
+				}
+			}break;
+			case '\033' :{
+				getchar();
+				switch(getchar()){
+					// up
+					case 'A' : {
+						//printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n test up");
+					}break;
+					// down
+					case 'B' : {
+						//printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n test down");
+					}break;
+					// right
+					case 'C' : {
+						if(audio.cursor < audio.song_length)
+							audio.cursor += audio.seek_time;
+						SeekPosition(&audio);
+						MP_Update_Audio(&audio , NULL);
+					}break;
+					// left
+					case 'D' : {
+						if(audio.cursor > 0)
+							audio.cursor -= audio.seek_time;
+						SeekPosition(&audio);
+						MP_Update_Audio(&audio , NULL);
+					}break;
 				}
 			}break;
 			case 'f':{
@@ -132,12 +180,12 @@ int main(void)
 			}break;
 			case '+':{
 				if(audio.volume <= 1)
-					audio.volume += 0.1;
+					audio.volume += 0.01;
 				SetVolume(&audio);
 			}break;
 			case '-':{
 				if(audio.volume >= 0)
-					audio.volume -= 0.1;
+					audio.volume -= 0.01;
 				SetVolume(&audio);
 			}break;
 			case 'n':{
@@ -183,7 +231,7 @@ int main(void)
 				quit = true;
 			}break;
 			case 'u' : {
-				UI_Window_Update(&ui , ui.explorer);
+				UI_Window_Update(&ui);
 			}break;
 			case 'e' : {
 				if(ui.explorer)
@@ -200,10 +248,18 @@ int main(void)
 	UI_Window_Final(&term);
 	MP_Final_Audio(&audio);
 	return 0;
-#else
-	Init_Dir();
-	List_Dir("./.");
-	Dump_files();
-#endif
 }
 
+void* audio_always_update(void* param)
+{
+	MP_Audio* audio = (MP_Audio*)param;
+	while(true)
+	{
+		if(audio->cursor == audio->song_length){
+			PlayMusic(audio);
+			audio->cursor = 0;
+		}
+		audio->cursor++;
+		sleep(1);
+	}
+}

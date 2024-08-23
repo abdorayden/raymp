@@ -23,6 +23,15 @@ typedef struct winsize Size;
 #define hide_cursor() 	printf("\033[?25l");
 #define show_cursor()	printf("\033[?25h");
 
+#define song_char_1	"♩"
+#define song_char_2	"♪"
+#define song_char_3	"♫"
+#define song_char_4	"♬"
+
+#define bar_1		"❚"
+#define bar_2		"❙"
+#define bar_3		"❘"
+
 // font style
 #define one	"═"
 #define two	"║"
@@ -46,7 +55,12 @@ typedef struct winsize Size;
 #define next	"⏵"
 #define prev	"⏴"
 #define ext	"⏻"
-#define repeate "⭯"
+#define rep "⭯"
+#define pause   "⏸"
+#define volume_max	"🔊"
+#define volume_mute	"🔇"
+#define volume_low	"🔈"
+#define volume_med	"🔉"
 
 #define snow	"❆"
 #define stars	"✨"
@@ -112,13 +126,19 @@ typedef struct {
 	bool show_albom;
 	int (*Flush)(void);
 
+	// audio icons
+	float volume;
+	bool is_pause;
+	float cursor;
+	float total_length;
+	bool repeate;
 }UI;
 
 // even file explorer
 typedef void(*Function_Style)(UI ui);
 
 UI   UI_Window_Init(Term*);
-void UI_Window_Update(UI* ui , bool enable_explorer);
+void UI_Window_Update(UI* ui);
 void UI_Window_Final(Term*);
 void DrawBox(UI ui , Function_Style call_back_function_style);
 
@@ -130,8 +150,8 @@ void Error_Box(char*);
 
 #ifdef UI_C_
 
-int idx;
-Directoy __dirs[200];
+extern int idx;
+extern Directoy __dirs[200];
 //#include <termios.h>
 //#include <sys/ioctl.h>
 //#include <unistd.h>
@@ -171,23 +191,23 @@ UI UI_Window_Init(Term* term){
 	ui.explorer			= false;
 	ui.show_albom 			= false;
 	ui.Flush			= flush_file;
-	//print_keys(ui , get_term_size());
+	print_keys(ui , get_term_size());
 	return ui;
 }
 
-void UI_Window_Update(UI* ui, bool enable_explorer)
+void UI_Window_Update(UI* ui)
 {
-	clearscreen();
-	main_box(get_term_size());
 	ui->box_col_pos_left_size 	= calc_box_col_pos_left_size(get_term_size());
 	ui->box_col_pos_right_size	= calc_box_col_pos_right_size(get_term_size());
 	ui->box_row_pos_size_top 	= calc_box_row_pos_size_top(get_term_size());
 	ui->box_row_pos_size_buttom 	= calc_box_row_pos_size_buttom(get_term_size());
-	ui->cursor_position_col 	= ui->box_col_pos_left_size + 1;
-	ui->cursor_position_row 	= ui->box_row_pos_size_top + 1;
-	ui->explorer			= enable_explorer;
+	//ui->cursor_position_col 	= ui->box_col_pos_left_size + 1;
+	//ui->cursor_position_row 	= ui->box_row_pos_size_top + 1;
+	//ui->explorer			= enable_explorer;
 	ui->show_albom 			= false;
-	//print_keys(*ui , get_term_size());
+	clearscreen();
+	main_box(get_term_size());
+	print_keys(*ui , get_term_size());
 }
 
 void UI_Window_Final(Term* saved_tattr)
@@ -289,23 +309,19 @@ void Explorer(UI* ui ,char* path , int index)
 {
 	Init_Dir();
 	List_Dir(path);
-	if(is_error != success){
-		Error_Box(GetError(is_error));
-		exit(1);
-	}
-	int i = 2;
+	int local_idx = idx;
 	move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + 1);
-	for(int row = 0 ; !__dirs[index].the_last &&  row < ((idx < (ui->box_row_pos_size_buttom - ui->box_row_pos_size_top)) ? idx : (ui->box_row_pos_size_buttom - ui->box_row_pos_size_top - 1)) ; row++)
+	int max_row = ((idx < (ui->box_row_pos_size_buttom - ui->box_row_pos_size_top)) ? idx : (ui->box_row_pos_size_buttom - ui->box_row_pos_size_top - 1));
+	for(int row = 0 ; *__dirs[index].filename != '\0' &&  row < max_row ; row++)
 	{
-		move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + i++);
+		move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + row + 2);
 		if(ui->box_row_pos_size_top + (row + 1) == ui->cursor_position_row)
-			printf("%s %d - %s%s%s%s\t:%zu\t:%s\n",file_pos ,__dirs[index].file_idx,__dirs[index].is_dir ? Blue : Default ,__dirs[index].filename , Default , Regular, __dirs[index].file_size , __dirs[index].is_dir ? "(dir)" : "(file)");
+			printf("%s %.2d -%c- %s%s%s%s\t:%s\n",file_pos ,__dirs[index].file_idx , __dirs[index].is_dir ? 'd' : 'f',__dirs[index].is_dir ? Blue : Default ,strrchr(__dirs[index].filename , '/') , Default , Regular, handle_size(__dirs[index].file_size));
 		else
-			printf("   %d - %s%s%s%s\t:%zu\t:%s\n",__dirs[index].file_idx,__dirs[index].is_dir ? Blue : Default ,__dirs[index].filename , Default , Regular, __dirs[index].file_size , __dirs[index].is_dir ? "(dir)" : "(file)");
+			printf("   %.2d -%c- %s%s%s%s\t:%s\n",__dirs[index].file_idx , __dirs[index].is_dir ? 'd' : 'f',__dirs[index].is_dir ? Blue : Default ,strrchr(__dirs[index].filename, '/') , Default , Regular, handle_size(__dirs[index].file_size));
 		index++;
 	}
 	move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + 1);
-	i = 2;
 }
 
 static void input_mode_disable(Term* saved_tattr){
@@ -378,31 +394,74 @@ static void main_box(Size term_size)
 	}
 
 }
+
+static int convert_to_min(int secs , int* rest);
+
 static void print_keys(UI ui , Size size)
 {
 	int i = 0;
 	for(int row = (ui.box_row_pos_size_buttom + 3) ; row < (size.ws_row - 2) ; row++){
 		move_cursor( 4 , (ui.box_row_pos_size_buttom + 3) + i++);
-		for(int col = 4 ; col < (size.ws_col / 4) ; col++){
+		for(int col = 4 ; col < (size.ws_col / 3) ; col++){
 			if(row == (ui.box_row_pos_size_buttom + 3) && col == 4)		
 				printf("%s" , five);
-			else if(row == (ui.box_row_pos_size_buttom + 3) && col == (size.ws_col / 4) -1)	
+			else if(row == (ui.box_row_pos_size_buttom + 3) && col == (size.ws_col / 3) -1)	
 				printf("%s" , four);
 			else if(row == (size.ws_row - 3) && col == 4)    	
 				printf("%s" , nine);
-			else if(row == (size.ws_row - 3) && col == (size.ws_col / 4) - 1)				
+			else if(row == (size.ws_row - 3) && col == (size.ws_col / 3) - 1)				
 				printf("%s" ,eit);
-			else if((row == (ui.box_row_pos_size_buttom + 3) && (col < (size.ws_col / 4) || col > 3)) || 
-					(row == (size.ws_row - 3) && (col < (size.ws_col / 4) || col > 4)))
+			else if((row == (ui.box_row_pos_size_buttom + 3) && (col < (size.ws_col / 3) || col > 3)) || 
+					(row == (size.ws_row - 3) && (col < (size.ws_col / 3) || col > 4)))
 				printf("%s" , one);
 			else if(
 					(row < (size.ws_row - 3) && row > ui.box_row_pos_size_buttom + 3) && 
-					(col == 4 || col == (size.ws_col / 4) - 1))	
+					(col == 4 || col == (size.ws_col / 3) - 1))	
 				printf("%s" , two);
 			else 	printf(" ");
 		}
 	}
+	move_cursor(5 , (ui.box_row_pos_size_buttom + 3) + 1);
+	if(ui.is_pause)
+		printf("Audio Status %s  : [%sPLAYING%s]" , next ,Green ,Regular);
+	else
+		printf("Audio Status %s  : [%sPaused%s]" , pause ,Red ,Regular);
+
+	move_cursor(5 , (ui.box_row_pos_size_buttom + 3) + 2);
+	if((int)ui.volume == 100)
+		printf("Volume       %s : %d %c" , volume_max , (int)ui.volume , 37);
+	else if ((int)ui.volume >= 50)
+		printf("Volume       %s : %d %c" , volume_med , (int)ui.volume , 37);
+	else if ((int)ui.volume < 50 && (int)ui.volume > 0)
+		printf("Volume       %s : %d %c" , volume_low , (int)ui.volume , 37);
+	else
+		printf("Volume       %s : %d %c" , volume_mute , (int)ui.volume , 37);
+
+	move_cursor(5 , (ui.box_row_pos_size_buttom + 3) + 3);
+	printf("Total Time      : %d %c" , (int)ui.total_length , 's');
+
+	move_cursor(5 , (ui.box_row_pos_size_buttom + 3) + 4);
+	printf("Cursor Position : %d %c" , (int)ui.cursor , 's');
+
 }
 
+//#define pause_start	"⏯"
+//#define next	"⏵"
+//#define prev	"⏴"
+//#define ext	"⏻"
+//#define repeate "⭯"
+//#define pause   "⏸"
+//#define volume_max	"🔊"
+//#define volume_mute	"🔇"
+//#define volume_low	"🔈"
+//#define volume_med	"🔉"
+
+
+	// audio icons
+	//float volume;
+	//bool is_pause;
+	//unsigned long long cursor;
+	//unsigned long long total_length;
+	//bool repeate;
 #endif
 

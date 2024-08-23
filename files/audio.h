@@ -19,9 +19,9 @@ typedef struct {
 	float volume;		// volume from 0.0 to 1.0 | 0.5 default
 	float seek_time;		// time to move 
 				// seek_time edited by user to change position
-	MP_UINT64 cursor;	// getting cursor position 
+	float cursor;	// getting cursor position 
 				// will updated every minute 
-	MP_UINT64 song_length;	// this contain total music length
+	float song_length;	// this contain total music length
 	bool is_audio_playing ; // true if audio playing else false
 }MP_Audio;
 
@@ -53,13 +53,20 @@ MP_Audio MP_Init_Audio()
 
 void MP_Update_Audio(MP_Audio* audio,char* filename)
 {
-	ma_sound_uninit(&sound);
-	if(ma_sound_init_from_file(&engine , filename , 0 , NULL , NULL , &sound) != MA_SUCCESS)
-	{
-		is_error = init_audio_sound_from_file;
-		Error_Box(GetError(is_error));
-		ma_engine_uninit(&engine);
+	if(filename != NULL){
+		ma_sound_uninit(&sound);
+		if(ma_sound_init_from_file(&engine , filename , 0 , NULL , NULL , &sound) != MA_SUCCESS)
+		{
+			is_error = init_audio_sound_from_file;
+			Error_Box(GetError(is_error));
+			ma_engine_uninit(&engine);
+		}
+		if(audio->is_audio_playing)
+			StopMusic(audio);
 	}
+	SetVolume(audio);
+	ma_sound_get_length_in_seconds(&sound, &(audio->song_length));
+	ma_sound_get_cursor_in_seconds(&sound , &(audio->cursor));
 }
 void MP_Final_Audio(MP_Audio* audio)
 {
