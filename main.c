@@ -29,37 +29,58 @@
 // TODO: pause , run , next , volume
 // TODO: search over internet
 
-void* audio_always_update(void*);
+typedef struct {
+	MP_Audio audio;
+	UI	 ui;
+	int _index ;
+	char current_directory[256];
+}Main;
+
+void* main_always_update(void*);
+void cursor_move_position_down(Main*);
+void cursor_move_position_up(Main*);
+
 
 int main(void)
 {
 	bool quit = false;
 	Term term;
-	MP_Audio audio = MP_Init_Audio();
-	int index = 0;
-	UI ui = UI_Window_Init(&term);
+	Main _main;
+	_main.audio = MP_Init_Audio();
+	//int index = 0;
+	_main.ui = UI_Window_Init(&term);
+	_main._index = 0;
 	char ch;
 	bool ones = true;
-	char current_directory[256];
+	//char current_directory[256];
 
 	while(!quit)
 	{
-		ui.volume = audio.volume * 100;
-		ui.is_pause = audio.is_audio_playing;
-		ui.cursor = audio.cursor;
-		ui.total_length = audio.song_length;
-		ui.repeate = true; // by default
-		UI_Window_Update(&ui);
-
-		if(getcwd(current_directory , 256) == NULL){
+		_main.ui.Flush();
+		_main.ui.volume = _main.audio.volume * 100;
+		_main.ui.is_pause = _main.audio.is_audio_playing;
+		//_main.ui.cursor = _main.audio.cursor;
+		_main.ui.total_length = _main.audio.song_length;
+		_main.ui.repeate = true; // by default
+		UI_Window_Update(&_main.ui);
+		if(ones){
+			pthread_t thread;
+			if( pthread_create(&thread , NULL , main_always_update , (void*)&_main) != 0)
+			{
+				Error_Box("failed to create thread !");
+			}
+			(void)thread;
+			ones = !ones;
+		}
+		if(getcwd(_main.current_directory , 256) == NULL){
 			Error_Box(GetError(errno));
 		}
-		if(ui.explorer){
-			DrawBox(ui , NULL);
-			Explorer(&ui , current_directory , index);
+		if(_main.ui.explorer){
+			DrawBox(_main.ui , NULL);
+			Explorer(&_main.ui , _main.current_directory , _main._index);
 		}
 		else
-			DrawBox(ui ,NULL);
+			DrawBox(_main.ui ,NULL);
 		ch = getchar();
 		/*
 		 *	keys : 
@@ -72,8 +93,8 @@ int main(void)
 		 *		j     : move cursor down
 		 *		k     : move cursor up
 		 *		-     : reduce volume
-		 *		n     : next
-		 *		N     : prev
+		 *		>     : next
+		 *		<     : prev
 		 *		i     : change style window or switch to style window (file explorer enabled)
 		 *		a     : open favorit songs
 		 *		s     : search songs on locale device
@@ -82,27 +103,18 @@ int main(void)
 		 * */ 
 		switch(ch){
 			case 10 : {
-				if(ui.explorer){
-					if(__dirs[index + ui.cursor_position_row - ui.box_row_pos_size_top - 1].is_dir)
+				if(_main.ui.explorer){
+					if(__dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].is_dir)
 					{
-						if(chdir(__dirs[index + ui.cursor_position_row - ui.box_row_pos_size_top - 1].filename) < 0){
+						if(chdir(__dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].filename) < 0){
 							Error_Box(GetError(errno));
 						}
-						index = 0;
-						ui.cursor_position_row = ui.box_row_pos_size_top + 1;
+						_main._index = 0;
+						_main.ui.cursor_position_row = _main.ui.box_row_pos_size_top + 1;
 					}else
 					{
-						MP_Update_Audio(&audio , __dirs[index + ui.cursor_position_row - ui.box_row_pos_size_top - 1].filename);
-						PlayMusic(&audio);
-						if(ones){
-							pthread_t thread;
-							if( pthread_create(&thread , NULL , audio_always_update , (void*)&audio ) != 0)
-							{
-								Error_Box("failed to create thread !");
-							}
-							(void)thread;
-							ones = !ones;
-						}
+						MP_Update_Audio(&_main.audio , __dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].filename);
+						PlayMusic(&_main.audio);
 					}
 				}
 			}break;
@@ -111,155 +123,198 @@ int main(void)
 				switch(getchar()){
 					// up
 					case 'A' : {
-						//printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n test up");
+						cursor_move_position_up(&_main);
 					}break;
 					// down
 					case 'B' : {
-						//printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n test down");
+						cursor_move_position_down(&_main);
 					}break;
 					// right
 					case 'C' : {
-						if(audio.cursor < audio.song_length)
-							audio.cursor += audio.seek_time;
-						SeekPosition(&audio);
-						MP_Update_Audio(&audio , NULL);
+						if(_main.audio.cursor < _main.audio.song_length){
+							//_main.audio.cursor += _main.audio.seek_time;
+							SeekPosition(&_main.audio);
+						}
+						MP_Update_Audio(&_main.audio , NULL);
+						UI_Window_Update(&_main.ui);
 					}break;
 					// left
 					case 'D' : {
-						if(audio.cursor > 0)
-							audio.cursor -= audio.seek_time;
-						SeekPosition(&audio);
-						MP_Update_Audio(&audio , NULL);
+						if(_main.audio.cursor > 0)
+							_main.audio.cursor -= _main.audio.seek_time;
+						SeekPosition(&_main.audio);
+						MP_Update_Audio(&_main.audio , NULL);
 					}break;
 				}
 			}break;
 			case 'f':{
 				Error_Box(" f key is not implemented ");
-				ui.Flush();
+				_main.ui.Flush();
 				sleep(3);
 				quit = true;
 			}break;
 			case 'j':{
-				if(idx < (ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 1)){
-					if(ui.explorer && (ui.cursor_position_row < (idx + ui.box_row_pos_size_top)))
-						ui.cursor_position_row += 1;
-				}else if(idx > (ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 1)){
-					if(ui.cursor_position_row == (ui.box_row_pos_size_buttom - 1) && 
-							((ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 1) < idx)){
-						ui.cursor_position_row = ui.box_row_pos_size_top + 1;
-						if((index + (ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 1)) <= idx){
-							index += (ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 2);
-							idx -= (ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 2);
-						}
-						else{
-							index += (idx - index);
-						}
-						continue;
-					}
-					if(ui.explorer && (ui.cursor_position_row < (idx - index + ui.box_row_pos_size_top)/*(ui.box_row_pos_size_buttom - 1)*/)){
-							ui.cursor_position_row += 1;
-					}
-				}
+				cursor_move_position_down(&_main);
 			}break;
 			case 'k' : {
-				if((idx < (ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 1)) || (idx > (ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 1))){
-					if((ui.cursor_position_row == (ui.box_row_pos_size_top + 1)) && (index > 0)){
-						ui.cursor_position_row = ui.box_row_pos_size_buttom - 1;
-						index -= (ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 2);
-					}
-					if(ui.explorer && (ui.cursor_position_row > (ui.box_row_pos_size_top + 1))){
-						ui.cursor_position_row -= 1;
-					}
-				}
+				cursor_move_position_up(&_main);
 			}break;
 			case 32 :{
-				if(audio.is_audio_playing)
-					StopMusic(&audio);
+				if(_main.audio.is_audio_playing)
+					StopMusic(&_main.audio);
 				else
-				        PlayMusic(&audio);
+				        PlayMusic(&_main.audio);
+			}break;
+			case '>':{
+				if(_main.ui.cursor_position_row < _main.ui.box_row_pos_size_buttom){
+					cursor_move_position_down(&_main);
+					MP_Update_Audio(&_main.audio , __dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].filename);
+					PlayMusic(&_main.audio);
+				}
+
+			}break;
+			case '<':{
+				if(_main.ui.cursor_position_row > (_main.ui.box_row_pos_size_top)){
+					cursor_move_position_up(&_main);
+					MP_Update_Audio(&_main.audio , __dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].filename);
+					PlayMusic(&_main.audio);
+				}
 			}break;
 			case '+':{
-				if(audio.volume <= 1)
-					audio.volume += 0.01;
-				SetVolume(&audio);
+				if(_main.audio.volume <= 1)
+					_main.audio.volume += 0.01;
+				SetVolume(&_main.audio);
 			}break;
 			case '-':{
-				if(audio.volume >= 0)
-					audio.volume -= 0.01;
-				SetVolume(&audio);
+				if(_main.audio.volume >= 0)
+					_main.audio.volume -= 0.01;
+				SetVolume(&_main.audio);
 			}break;
 			case 'n':{
 				Error_Box(" n key is not implemented ");
-				ui.Flush();
+				_main.ui.Flush();
 				sleep(3);
 				quit = true;
 			}break;
 			case 'N':{
 				Error_Box(" N key is not implemented ");
-				ui.Flush();
+				_main.ui.Flush();
 				sleep(3);
 				quit = true;
 			}break;
 			case 'i':{
 				Error_Box(" i key is not implemented ");
-				ui.Flush();
+				_main.ui.Flush();
 				sleep(3);
 				quit = true;
 			}break;
 			case 'a':{
 				Error_Box(" a key is not implemented ");
-				ui.Flush();
+				_main.ui.Flush();
 				sleep(3);
 				quit = true;
 			}break;
 			case 's':{
 				Error_Box(" s key is not implemented ");
-				ui.Flush();
+				_main.ui.Flush();
 				sleep(3);
 				quit = true;
 			}break;
 			case 'S':{
 				Error_Box(" S key is not implemented ");
-				ui.Flush();
+				_main.ui.Flush();
 				sleep(3);
 				quit = true;
 			}break;
 			case '?':{
 				Error_Box(" ? key is not implemented \n exiting");
-				ui.Flush();
+				_main.ui.Flush();
 				sleep(3);
 				quit = true;
 			}break;
 			case 'u' : {
-				UI_Window_Update(&ui);
+				UI_Window_Update(&_main.ui);
 			}break;
 			case 'e' : {
-				if(ui.explorer)
-					ui.explorer = false;
+				if(_main.ui.explorer)
+					_main.ui.explorer = false;
 				else
-					ui.explorer = true;
+					_main.ui.explorer = true;
 			}break;
 			case 'q' : {
 				quit = true;
 			}
 		}
-		ui.Flush();
+		_main.ui.Flush();
 	}
 	UI_Window_Final(&term);
-	MP_Final_Audio(&audio);
+	MP_Final_Audio(&_main.audio);
 	return 0;
 }
 
-void* audio_always_update(void* param)
+void* main_always_update(void* param)
 {
-	MP_Audio* audio = (MP_Audio*)param;
+	Main* _main = (Main*)param;
 	while(true)
 	{
-		if(audio->cursor == audio->song_length){
-			PlayMusic(audio);
-			audio->cursor = 0;
+		if(_main->audio.cursor == _main->audio.song_length){
+			//PlayMusic(&_main->audio);
+			//MP_Update_Audio(&_main->audio , __dirs[index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].filename);
+			_main->audio.cursor = 0;
+			MP_Update_Audio(&_main->audio , NULL);
+			PlayMusic(&_main->audio);
 		}
-		audio->cursor++;
+		UpdateCursor(&(_main->audio));
+		_main->ui.cursor = _main->audio.cursor;
+		//print_keys(_main->ui , get_term_size());
+		UI_Window_Update(&_main->ui);
+		if(_main->ui.explorer){
+			DrawBox(_main->ui , NULL);
+			Explorer(&_main->ui , _main->current_directory , _main->_index);
+		}
+		else
+			DrawBox(_main->ui ,NULL);
+		//move_cursor(5 , (_main->ui.box_row_pos_size_buttom + 3) + 4);
+		//printf("Cursor Position : %d %c" , (int)_main->audio.cursor , 's');
+		_main->ui.Flush();
 		sleep(1);
+	}
+}
+
+void cursor_move_position_down(Main* _main)
+{
+	if(idx < (_main->ui.box_row_pos_size_buttom - _main->ui.box_row_pos_size_top - 1)){
+		if(_main->ui.explorer && (_main->ui.cursor_position_row < (idx + _main->ui.box_row_pos_size_top)))
+			_main->ui.cursor_position_row += 1;
+	}else if(idx > (_main->ui.box_row_pos_size_buttom - _main->ui.box_row_pos_size_top - 1)){
+		if(_main->ui.cursor_position_row == (_main->ui.box_row_pos_size_buttom - 1) && 
+				((_main->ui.box_row_pos_size_buttom - _main->ui.box_row_pos_size_top - 1) < idx)){
+			_main->ui.cursor_position_row = _main->ui.box_row_pos_size_top + 1;
+			if((_main->_index + (_main->ui.box_row_pos_size_buttom - _main->ui.box_row_pos_size_top - 1)) <= idx){
+				_main->_index += (_main->ui.box_row_pos_size_buttom - _main->ui.box_row_pos_size_top - 2);
+				idx -= (_main->ui.box_row_pos_size_buttom - _main->ui.box_row_pos_size_top - 2);
+			}
+			else{
+				_main->_index += (idx - _main->_index);
+			}
+			//continue;
+			return ;
+		}
+		if(_main->ui.explorer && (_main->ui.cursor_position_row < (idx - _main->_index + _main->ui.box_row_pos_size_top))){
+				_main->ui.cursor_position_row += 1;
+		}
+	}
+}
+
+void cursor_move_position_up(Main* _main)
+{
+	if((idx < (_main->ui.box_row_pos_size_buttom - _main->ui.box_row_pos_size_top - 1)) || (idx > (_main->ui.box_row_pos_size_buttom - _main->ui.box_row_pos_size_top - 1))){
+		if((_main->ui.cursor_position_row == (_main->ui.box_row_pos_size_top + 1)) && (_main->_index > 0)){
+			_main->ui.cursor_position_row = _main->ui.box_row_pos_size_buttom - 1;
+			_main->_index -= (_main->ui.box_row_pos_size_buttom - _main->ui.box_row_pos_size_top - 2);
+		}
+		if(_main->ui.explorer && (_main->ui.cursor_position_row > (_main->ui.box_row_pos_size_top + 1))){
+			_main->ui.cursor_position_row -= 1;
+		}
 	}
 }

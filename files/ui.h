@@ -145,6 +145,8 @@ void DrawBox(UI ui , Function_Style call_back_function_style);
 void Explorer(UI* ui ,char* path , int index);
 void Default_Style(UI ui);
 void Error_Box(char*);
+void print_keys(UI ui , Size size);
+Size get_term_size(void);
 
 #endif //UI_H_
 
@@ -167,14 +169,12 @@ extern Directoy __dirs[200];
 static void 		input_mode_enable(Term* tattr);
 static void 		input_mode_reset(Term* tattr);
 static void 		input_mode_disable(Term* saved_tattr);
-static Size 		get_term_size(void);
 static unsigned short 	calc_box_col_pos_right_size(Size term_size);
 static unsigned short 	calc_box_col_pos_left_size(Size term_size);
 static unsigned short 	calc_box_row_pos_size_top(Size term_size);
 static unsigned short 	calc_box_row_pos_size_buttom(Size term_size);
 static int 		flush_file(void);	
 static void		main_box(Size term_size);
-static void 		print_keys(UI ui , Size size);
 
 UI UI_Window_Init(Term* term){
 	UI ui;
@@ -190,8 +190,10 @@ UI UI_Window_Init(Term* term){
 	ui.cursor_position_row 		= ui.box_row_pos_size_top + 1;
 	ui.explorer			= false;
 	ui.show_albom 			= false;
+	ui.cursor			= 0;
 	ui.Flush			= flush_file;
-	print_keys(ui , get_term_size());
+	ui.Flush();
+	//print_keys(ui , get_term_size());
 	return ui;
 }
 
@@ -342,7 +344,7 @@ static void input_mode_reset(Term* tattr) {
     tcsetattr(STDIN_FILENO, TCSANOW, tattr);
 }
 
-static Size get_term_size(){
+Size get_term_size(){
 	Size w;
 	ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
 	return w;
@@ -392,12 +394,11 @@ static void main_box(Size term_size)
 			else 	printf(" ");
 		}
 	}
-
 }
 
 static int convert_to_min(int secs , int* rest);
 
-static void print_keys(UI ui , Size size)
+void print_keys(UI ui , Size size)
 {
 	int i = 0;
 	for(int row = (ui.box_row_pos_size_buttom + 3) ; row < (size.ws_row - 2) ; row++){

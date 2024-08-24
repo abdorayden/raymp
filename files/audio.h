@@ -33,6 +33,7 @@ void PlayMusic		(MP_Audio* audio);
 void StopMusic		(MP_Audio* audio);
 void SetVolume		(MP_Audio* audio);
 void SeekPosition	(MP_Audio* audio);
+void UpdateCursor	(MP_Audio* audio);
 
 #endif // AUDIO_H_
 
@@ -46,8 +47,9 @@ MP_Audio MP_Init_Audio()
 		Error_Box(GetError(is_error));
 	}
 	audio.volume = 0.5;
-	audio.seek_time = 5; // five minute seek
+	audio.seek_time = 10.0; // five minute seek
 	audio.is_audio_playing = false;
+	audio.cursor = 0;
 	return audio;
 }
 
@@ -66,8 +68,10 @@ void MP_Update_Audio(MP_Audio* audio,char* filename)
 	}
 	SetVolume(audio);
 	ma_sound_get_length_in_seconds(&sound, &(audio->song_length));
-	ma_sound_get_cursor_in_seconds(&sound , &(audio->cursor));
+	audio->cursor += audio->seek_time;
+	//UpdateCursor(audio);
 }
+
 void MP_Final_Audio(MP_Audio* audio)
 {
 	ma_sound_uninit(&sound);
@@ -81,6 +85,7 @@ void PlayMusic(MP_Audio* audio)
 		ma_sound_start(&sound);
 	}
 }
+
 void StopMusic(MP_Audio* audio)
 {
 	if(audio->is_audio_playing){
@@ -88,12 +93,19 @@ void StopMusic(MP_Audio* audio)
 		ma_sound_stop(&sound);
 	}
 }
+
 void SetVolume(MP_Audio* audio)
 {
 	ma_sound_set_volume(&sound, audio->volume);
 }
+
 void SeekPosition(MP_Audio* audio)
 {
 	ma_sound_seek_to_pcm_frame(&sound, (MP_UINT64)(audio->seek_time * engine.sampleRate));
+}
+
+void UpdateCursor(MP_Audio* audio)
+{
+	ma_sound_get_cursor_in_seconds(&sound , &(audio->cursor));
 }
 #endif // AUDIO_C_
