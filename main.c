@@ -51,7 +51,7 @@ int main(void)
 	_main.ui = UI_Window_Init(&term);
 	_main._index = 0;
 	char ch;
-	bool ones = true;
+	bool _ones = true;
 	//char current_directory[256];
 
 	while(!quit)
@@ -61,16 +61,17 @@ int main(void)
 		_main.ui.is_pause = _main.audio.is_audio_playing;
 		//_main.ui.cursor = _main.audio.cursor;
 		_main.ui.total_length = _main.audio.song_length;
-		_main.ui.repeate = true; // by default
+		_main.ui.status = _main.audio.status;
+		//_main.ui.repeate = true; // by default
 		UI_Window_Update(&_main.ui);
-		if(ones){
+		if(_ones){
 			pthread_t thread;
 			if( pthread_create(&thread , NULL , main_always_update , (void*)&_main) != 0)
 			{
 				Error_Box("failed to create thread !");
 			}
 			(void)thread;
-			ones = !ones;
+			_ones = !_ones;
 		}
 		if(getcwd(_main.current_directory , 256) == NULL){
 			Error_Box(GetError(errno));
@@ -100,6 +101,7 @@ int main(void)
 		 *		s     : search songs on locale device
 		 *		S     : for search on internet
 		 *		?     : show help list
+		 *		TAB 9 : change status
 		 * */ 
 		switch(ch){
 			case 10 : {
@@ -118,6 +120,13 @@ int main(void)
 					}
 				}
 			}break;
+			case 9 :{
+				if(_main.audio.status == 3){
+					_main.audio.status = 0;
+				}else{
+					_main.audio.status++;
+				}
+			}break;
 			case '\033' :{
 				getchar();
 				switch(getchar()){
@@ -132,7 +141,7 @@ int main(void)
 					// right
 					case 'C' : {
 						if(_main.audio.cursor < _main.audio.song_length){
-							//_main.audio.cursor += _main.audio.seek_time;
+							_main.audio.cursor += _main.audio.seek_time;
 							SeekPosition(&_main.audio);
 						}
 						MP_Update_Audio(&_main.audio , NULL);
@@ -252,17 +261,34 @@ int main(void)
 	return 0;
 }
 
+int random_music(void){
+	srand(time(NULL));
+	return rand()%(idx - 1);
+}
+
 void* main_always_update(void* param)
 {
 	Main* _main = (Main*)param;
 	while(true)
 	{
-		if(_main->audio.cursor == _main->audio.song_length){
-			//PlayMusic(&_main->audio);
-			//MP_Update_Audio(&_main->audio , __dirs[index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].filename);
-			_main->audio.cursor = 0;
-			MP_Update_Audio(&_main->audio , NULL);
-			PlayMusic(&_main->audio);
+		if(MusicAtEnd()){
+			if(_main->ui.status == SINGLE_LOOP){
+				//PlayMusic(&_main->audio);
+				_main->audio.cursor = 0;
+				//MP_Update_Audio(&_main->audio , NULL);
+				MP_Update_Audio(&_main->audio , __dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].filename);
+				PlayMusic(&_main->audio);
+			}else if(_main->ui.status == PLAYLIST_LOOP){
+				cursor_move_position_down(_main);
+				MP_Update_Audio(&_main->audio , __dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].filename);
+				PlayMusic(&_main->audio);
+			// TODO: fix shuffle bug
+			}else if(_main->ui.status == SHUFFLE){
+				_main->_index = random_music();
+				cursor_move_position_down(_main);
+				MP_Update_Audio(&_main->audio , __dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].filename);
+				PlayMusic(&_main->audio);
+			}
 		}
 		UpdateCursor(&(_main->audio));
 		_main->ui.cursor = _main->audio.cursor;

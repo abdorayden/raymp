@@ -15,6 +15,13 @@
 MP_Engine engine;	// engine from miniaudio
 MP_Sound sound;	// sound from miniaudio
 
+typedef enum{
+	PLAYLIST_LOOP = 0,
+	SINGLE_LOOP,
+	ONES,
+	SHUFFLE
+}Status;
+
 typedef struct {
 	float volume;		// volume from 0.0 to 1.0 | 0.5 default
 	float seek_time;		// time to move 
@@ -23,6 +30,7 @@ typedef struct {
 				// will updated every minute 
 	float song_length;	// this contain total music length
 	bool is_audio_playing ; // true if audio playing else false
+	Status status;
 }MP_Audio;
 
 extern MP_Audio MP_Init_Audio(void);
@@ -34,6 +42,8 @@ void StopMusic		(MP_Audio* audio);
 void SetVolume		(MP_Audio* audio);
 void SeekPosition	(MP_Audio* audio);
 void UpdateCursor	(MP_Audio* audio);
+bool IsMusicPlaying	(void);
+bool MusicAtEnd		(void);
 
 #endif // AUDIO_H_
 
@@ -50,6 +60,7 @@ MP_Audio MP_Init_Audio()
 	audio.seek_time = 10.0; // five minute seek
 	audio.is_audio_playing = false;
 	audio.cursor = 0;
+	audio.status = SINGLE_LOOP;
 	return audio;
 }
 
@@ -68,7 +79,7 @@ void MP_Update_Audio(MP_Audio* audio,char* filename)
 	}
 	SetVolume(audio);
 	ma_sound_get_length_in_seconds(&sound, &(audio->song_length));
-	audio->cursor += audio->seek_time;
+	//audio->cursor += audio->seek_time;
 	//UpdateCursor(audio);
 }
 
@@ -108,4 +119,15 @@ void UpdateCursor(MP_Audio* audio)
 {
 	ma_sound_get_cursor_in_seconds(&sound , &(audio->cursor));
 }
+
+bool IsMusicPlaying(void)
+{
+	return ma_sound_is_playing(&sound);
+}
+
+bool MusicAtEnd(void)
+{
+	return ma_sound_at_end(&sound);
+}
+
 #endif // AUDIO_C_

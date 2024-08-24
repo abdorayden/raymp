@@ -62,6 +62,11 @@ typedef struct winsize Size;
 #define volume_low	"🔈"
 #define volume_med	"🔉"
 
+#define single_loop	"🔂"
+#define	playlist_loop	"🔁"
+#define ones		"ONES"
+#define shufle		"🔀"
+
 #define snow	"❆"
 #define stars	"✨"
 
@@ -131,7 +136,7 @@ typedef struct {
 	bool is_pause;
 	float cursor;
 	float total_length;
-	bool repeate;
+	Status status;
 }UI;
 
 // even file explorer
@@ -444,25 +449,17 @@ void print_keys(UI ui , Size size)
 	move_cursor(5 , (ui.box_row_pos_size_buttom + 3) + 4);
 	printf("Cursor Position : %d %c" , (int)ui.cursor , 's');
 
+	move_cursor(5 , (ui.box_row_pos_size_buttom + 3) + 5);
+	if(ui.status == PLAYLIST_LOOP)
+		printf("Status %s " , playlist_loop);
+	else if(ui.status == SINGLE_LOOP)
+		printf("Status %s " , single_loop);
+	else if(ui.status == SHUFFLE)
+		printf("Status %s " , shufle);
+	else
+		printf("Status %s " , ones);
+
+
 }
-
-//#define pause_start	"⏯"
-//#define next	"⏵"
-//#define prev	"⏴"
-//#define ext	"⏻"
-//#define repeate "⭯"
-//#define pause   "⏸"
-//#define volume_max	"🔊"
-//#define volume_mute	"🔇"
-//#define volume_low	"🔈"
-//#define volume_med	"🔉"
-
-
-	// audio icons
-	//float volume;
-	//bool is_pause;
-	//unsigned long long cursor;
-	//unsigned long long total_length;
-	//bool repeate;
 #endif
 
