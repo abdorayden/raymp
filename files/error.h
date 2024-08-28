@@ -1,9 +1,6 @@
 #ifndef  ERROR_H_
 #define  ERROR_H_
 
-//#include <stdbool.h>
-//#include <string.h>
-
 typedef enum{
 	success = 0,
 	// directory list failed
@@ -29,6 +26,7 @@ typedef enum{
 
 }error_e;
 char* GetError(error_e e);
+extern void Error_Box(char*);
 error_e is_error = success;
 
 #endif //ERROR_H_

@@ -22,7 +22,7 @@ typedef enum {
 	GB,
 	TB
 }Block;
-// this linked list contains file information  
+
 typedef struct directory {
 	char 	filename[256]	; 	// file name max length 256
 	size_t 	file_size	; 	// file size
@@ -31,8 +31,10 @@ typedef struct directory {
 	bool	the_last	;
 }Directoy;
 
+#define MAX_LEN_DIRS	200
+
 int idx;
-Directoy __dirs[200];
+Directoy __dirs[MAX_LEN_DIRS];
 
 void Init_Dir(void);
 void List_Dir(const char*);
@@ -45,15 +47,6 @@ char* handle_size(size_t byte_size);
 
 #ifdef    DIR_ON
 #define   DIR_ON
-
-//#include <stdio.h>
-//#include <stdlib.h>
-//#include <dirent.h>
-//#include <sys/types.h>
-//#include <errno.h>
-//#include <string.h>
-//
-//#include "error.h"
 
 char fmt[100];
 static size_t get_file_size(char* filename){
@@ -99,11 +92,11 @@ char* handle_size(size_t byte_size){
 
 void Init_Dir(void)
 {
-	for(int i = 0 ; i < 200 ; i++)
+	for(int i = 0 ; i < MAX_LEN_DIRS ; i++)
 	{
 		__dirs[i].filename[0] = '\0';
 	}
-	memset(__dirs , 0 , 200);
+	memset(__dirs , 0 , MAX_LEN_DIRS * sizeof(Directoy));
 	idx = 0;
 	//strcpy(__dirs[0].filename , "./..");
 	//__dirs[0].file_size = 0;

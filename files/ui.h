@@ -67,8 +67,8 @@ typedef struct winsize Size;
 #define ones		"ONES"
 #define shufle		"🔀"
 
-#define snow	"❆"
-#define stars	"✨"
+#define _snow	"❆"
+#define _stars	"✨"
 
 // Lines
 #define Underline 	"\033[4;37m" 	//Underline
@@ -86,6 +86,13 @@ typedef struct winsize Size;
 #define Cyan		"\033[0;36m" 	//Cyan
 #define White		Regular 	//White
 #define Default		White		// Default (white)
+
+typedef enum{
+	rmp,
+	stars
+}Style;
+
+#define do_style(name_style , ui)	name_style##_t ((ui))
 
 typedef struct termios Term;
 
@@ -131,6 +138,9 @@ typedef struct {
 	bool show_albom;
 	int (*Flush)(void);
 
+	// styles
+	Style style;
+
 	// audio icons
 	float volume;
 	bool is_pause;
@@ -145,13 +155,15 @@ typedef void(*Function_Style)(UI ui);
 UI   UI_Window_Init(Term*);
 void UI_Window_Update(UI* ui);
 void UI_Window_Final(Term*);
-void DrawBox(UI ui , Function_Style call_back_function_style);
+void DrawBox(UI ui);
 
-void Explorer(UI* ui ,char* path , int index);
-void Default_Style(UI ui);
 void Error_Box(char*);
+void Explorer(UI* ui ,char* path , int index);
 void print_keys(UI ui , Size size);
 Size get_term_size(void);
+// styles
+void rmp_t(UI);
+void stars_t(UI);
 
 #endif //UI_H_
 
@@ -159,17 +171,6 @@ Size get_term_size(void);
 
 extern int idx;
 extern Directoy __dirs[200];
-//#include <termios.h>
-//#include <sys/ioctl.h>
-//#include <unistd.h>
-//#include <stdbool.h>
-//#include <stdlib.h>
-//#include <time.h>
-
-//#define DIR_ON
-//
-//#include "rdirectorys.h"
-//#include "error.h"
 
 static void 		input_mode_enable(Term* tattr);
 static void 		input_mode_reset(Term* tattr);
@@ -186,7 +187,6 @@ UI UI_Window_Init(Term* term){
 	clearscreen();
 	input_mode_enable(term);
 	hide_cursor();
-	main_box(get_term_size());
 	ui.box_col_pos_left_size 	= calc_box_col_pos_left_size(get_term_size());
 	ui.box_col_pos_right_size	= calc_box_col_pos_right_size(get_term_size());
 	ui.box_row_pos_size_top 	= calc_box_row_pos_size_top(get_term_size());
@@ -196,9 +196,12 @@ UI UI_Window_Init(Term* term){
 	ui.explorer			= false;
 	ui.show_albom 			= false;
 	ui.cursor			= 0;
+	ui.style 			= rmp;
 	ui.Flush			= flush_file;
+	main_box(get_term_size());
+	DrawBox(ui);
+	do_style(rmp, ui);
 	ui.Flush();
-	//print_keys(ui , get_term_size());
 	return ui;
 }
 
@@ -208,12 +211,16 @@ void UI_Window_Update(UI* ui)
 	ui->box_col_pos_right_size	= calc_box_col_pos_right_size(get_term_size());
 	ui->box_row_pos_size_top 	= calc_box_row_pos_size_top(get_term_size());
 	ui->box_row_pos_size_buttom 	= calc_box_row_pos_size_buttom(get_term_size());
-	//ui->cursor_position_col 	= ui->box_col_pos_left_size + 1;
-	//ui->cursor_position_row 	= ui->box_row_pos_size_top + 1;
-	//ui->explorer			= enable_explorer;
 	ui->show_albom 			= false;
 	clearscreen();
 	main_box(get_term_size());
+	DrawBox(*ui);
+	if(!ui->explorer){
+		if(ui->style == 0)
+			do_style(rmp, *ui);
+		else
+			do_style(stars, *ui);
+	}
 	print_keys(*ui , get_term_size());
 }
 
@@ -226,10 +233,43 @@ void UI_Window_Final(Term* saved_tattr)
 	clearscreen();
 }
 
-void DrawBox(UI ui , Function_Style call_back_function_style)
+void rmp_t(UI ui)
 {
-	// TODO: handle function style
-	(void) call_back_function_style;
+	size_t banner_size_x = 49;
+	size_t banner_size_y = 6;
+	int x = ((ui.box_col_pos_right_size - ui.box_col_pos_left_size) / 2) - (banner_size_x / 2);
+	int y = ((ui.box_row_pos_size_buttom - ui.box_row_pos_size_top) / 2) - (banner_size_y / 2);
+	move_cursor(ui.box_col_pos_left_size + x, ui.box_row_pos_size_top + y++);
+	printf("██████╗  █████╗ ██╗   ██╗     ███╗   ███╗██████╗ ");
+	move_cursor(ui.box_col_pos_left_size + x, ui.box_row_pos_size_top + y++);
+	printf("██╔══██╗██╔══██╗╚██╗ ██╔╝     ████╗ ████║██╔══██╗");
+	move_cursor(ui.box_col_pos_left_size + x, ui.box_row_pos_size_top + y++);
+	printf("██████╔╝███████║ ╚████╔╝█████╗██╔████╔██║██████╔╝");
+	move_cursor(ui.box_col_pos_left_size + x, ui.box_row_pos_size_top + y++);
+	printf("██╔══██╗██╔══██║  ╚██╔╝ ╚════╝██║╚██╔╝██║██╔═══╝ ");
+	move_cursor(ui.box_col_pos_left_size + x, ui.box_row_pos_size_top + y++);
+	printf("██║  ██║██║  ██║   ██║        ██║ ╚═╝ ██║██║     ");
+	move_cursor(ui.box_col_pos_left_size + x, ui.box_row_pos_size_top + y++);
+	printf("╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝        ╚═╝     ╚═╝╚═╝     ");
+}
+
+void stars_t(UI ui)
+{
+#define MAX_STARS	30
+	srand(time(NULL));
+	int _rands[MAX_STARS];
+	for(int i = 0 ; i < MAX_STARS ; i += 2){
+		_rands[i] = (rand()%(ui.box_col_pos_right_size - ui.box_col_pos_left_size)) + ui.box_col_pos_left_size + 1;
+		_rands[i + 1] = (rand()%(ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 1)) + ui.box_row_pos_size_top + 2;
+	}
+	for(int i = 0 ; i < MAX_STARS ; i += 2){
+		move_cursor(_rands[i] , _rands[i + 1]);
+		printf("%s",_stars);
+	}
+}
+
+void DrawBox(UI ui)
+{
 	int i = 1;
 	for(int row = ui.box_row_pos_size_top ; row <= ui.box_row_pos_size_buttom ; row++){
 		move_cursor(ui.box_col_pos_left_size , ui.box_row_pos_size_top + i++);
@@ -281,13 +321,6 @@ void DrawBox(UI ui , Function_Style call_back_function_style)
 		move_cursor(ui.box_col_pos_left_size + ((ui.box_col_pos_right_size - ui.box_col_pos_left_size) / 4) , ui.box_row_pos_size_top + 1);
 		printf("Explorer");
 	}
-}
-
-void Default_Style(UI ui)
-{
-	// this function will printing the style in the box 
-	// you can add your own function 
-	(void)ui;
 }
 
 void Error_Box(char* error)
@@ -401,8 +434,6 @@ static void main_box(Size term_size)
 	}
 }
 
-static int convert_to_min(int secs , int* rest);
-
 void print_keys(UI ui , Size size)
 {
 	int i = 0;
@@ -454,12 +485,8 @@ void print_keys(UI ui , Size size)
 		printf("Status %s " , playlist_loop);
 	else if(ui.status == SINGLE_LOOP)
 		printf("Status %s " , single_loop);
-	else if(ui.status == SHUFFLE)
-		printf("Status %s " , shufle);
 	else
 		printf("Status %s " , ones);
-
-
 }
 #endif
 

@@ -1,11 +1,6 @@
 #ifndef AUDIO_H_
 #define AUDIO_H_
 
-//#include <stdlib.h>
-//#include "./error.h"
-//#include "./ui.h"
-//#include "./third_party/miniaudio.h"
-
 #define MP_Engine	ma_engine
 #define MP_Sound	ma_sound
 #define MP_MALLOC	malloc
@@ -18,8 +13,7 @@ MP_Sound sound;	// sound from miniaudio
 typedef enum{
 	PLAYLIST_LOOP = 0,
 	SINGLE_LOOP,
-	ONES,
-	SHUFFLE
+	ONES
 }Status;
 
 typedef struct {
@@ -35,7 +29,7 @@ typedef struct {
 
 extern MP_Audio MP_Init_Audio(void);
 extern void MP_Update_Audio(MP_Audio* ,char*);
-extern void MP_Final_Audio(MP_Audio*);
+extern void MP_Final_Audio(void);
 
 void PlayMusic		(MP_Audio* audio);
 void StopMusic		(MP_Audio* audio);
@@ -79,11 +73,9 @@ void MP_Update_Audio(MP_Audio* audio,char* filename)
 	}
 	SetVolume(audio);
 	ma_sound_get_length_in_seconds(&sound, &(audio->song_length));
-	//audio->cursor += audio->seek_time;
-	//UpdateCursor(audio);
 }
 
-void MP_Final_Audio(MP_Audio* audio)
+void MP_Final_Audio(void)
 {
 	ma_sound_uninit(&sound);
 	ma_engine_uninit(&engine);

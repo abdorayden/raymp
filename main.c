@@ -16,9 +16,9 @@
 #define MINIAUDIO_IMPLEMENTATION
 #define AUDIO_C_
 
+#include "./files/third_party/miniaudio.h"
 #include "./files/error.h"
 #include "./files/rdirectorys.h"
-#include "./files/third_party/miniaudio.h"
 #include "./files/audio.h"
 #include "./files/ui.h"
 
@@ -47,22 +47,18 @@ int main(void)
 	Term term;
 	Main _main;
 	_main.audio = MP_Init_Audio();
-	//int index = 0;
 	_main.ui = UI_Window_Init(&term);
 	_main._index = 0;
 	char ch;
 	bool _ones = true;
-	//char current_directory[256];
 
 	while(!quit)
 	{
 		_main.ui.Flush();
 		_main.ui.volume = _main.audio.volume * 100;
 		_main.ui.is_pause = _main.audio.is_audio_playing;
-		//_main.ui.cursor = _main.audio.cursor;
 		_main.ui.total_length = _main.audio.song_length;
 		_main.ui.status = _main.audio.status;
-		//_main.ui.repeate = true; // by default
 		UI_Window_Update(&_main.ui);
 		if(_ones){
 			pthread_t thread;
@@ -77,11 +73,9 @@ int main(void)
 			Error_Box(GetError(errno));
 		}
 		if(_main.ui.explorer){
-			DrawBox(_main.ui , NULL);
 			Explorer(&_main.ui , _main.current_directory , _main._index);
 		}
-		else
-			DrawBox(_main.ui ,NULL);
+
 		ch = getchar();
 		/*
 		 *	keys : 
@@ -121,7 +115,7 @@ int main(void)
 				}
 			}break;
 			case 9 :{
-				if(_main.audio.status == 3){
+				if(_main.audio.status == 2){
 					_main.audio.status = 0;
 				}else{
 					_main.audio.status++;
@@ -176,7 +170,9 @@ int main(void)
 			}break;
 			case '>':{
 				if(_main.ui.cursor_position_row < _main.ui.box_row_pos_size_buttom){
-					cursor_move_position_down(&_main);
+					do{
+						cursor_move_position_down(&_main);
+					}while( __dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].is_dir);
 					MP_Update_Audio(&_main.audio , __dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].filename);
 					PlayMusic(&_main.audio);
 				}
@@ -184,7 +180,9 @@ int main(void)
 			}break;
 			case '<':{
 				if(_main.ui.cursor_position_row > (_main.ui.box_row_pos_size_top)){
-					cursor_move_position_up(&_main);
+					do{
+						cursor_move_position_up(&_main);
+					}while( __dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].is_dir);
 					MP_Update_Audio(&_main.audio , __dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].filename);
 					PlayMusic(&_main.audio);
 				}
@@ -212,10 +210,10 @@ int main(void)
 				quit = true;
 			}break;
 			case 'i':{
-				Error_Box(" i key is not implemented ");
-				_main.ui.Flush();
-				sleep(3);
-				quit = true;
+				if(_main.ui.style == 1)
+					_main.ui.style = 0;
+				else
+					_main.ui.style++;
 			}break;
 			case 'a':{
 				Error_Box(" a key is not implemented ");
@@ -257,13 +255,8 @@ int main(void)
 		_main.ui.Flush();
 	}
 	UI_Window_Final(&term);
-	MP_Final_Audio(&_main.audio);
+	MP_Final_Audio();
 	return 0;
-}
-
-int random_music(void){
-	srand(time(NULL));
-	return rand()%(idx - 1);
 }
 
 void* main_always_update(void* param)
@@ -273,35 +266,23 @@ void* main_always_update(void* param)
 	{
 		if(MusicAtEnd()){
 			if(_main->ui.status == SINGLE_LOOP){
-				//PlayMusic(&_main->audio);
 				_main->audio.cursor = 0;
-				//MP_Update_Audio(&_main->audio , NULL);
 				MP_Update_Audio(&_main->audio , __dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].filename);
 				PlayMusic(&_main->audio);
 			}else if(_main->ui.status == PLAYLIST_LOOP){
-				cursor_move_position_down(_main);
+				do{
+					cursor_move_position_down(_main);
+				}while(__dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].is_dir);
 				MP_Update_Audio(&_main->audio , __dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].filename);
 				PlayMusic(&_main->audio);
-			// TODO: fix shuffle bug
-			}else if(_main->ui.status == SHUFFLE){
-				_main->_index = random_music();
-				cursor_move_position_down(_main);
-				MP_Update_Audio(&_main->audio , __dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].filename);
-				PlayMusic(&_main->audio);
-			}
+			}		
 		}
 		UpdateCursor(&(_main->audio));
 		_main->ui.cursor = _main->audio.cursor;
-		//print_keys(_main->ui , get_term_size());
 		UI_Window_Update(&_main->ui);
 		if(_main->ui.explorer){
-			DrawBox(_main->ui , NULL);
 			Explorer(&_main->ui , _main->current_directory , _main->_index);
 		}
-		else
-			DrawBox(_main->ui ,NULL);
-		//move_cursor(5 , (_main->ui.box_row_pos_size_buttom + 3) + 4);
-		//printf("Cursor Position : %d %c" , (int)_main->audio.cursor , 's');
 		_main->ui.Flush();
 		sleep(1);
 	}
@@ -323,7 +304,6 @@ void cursor_move_position_down(Main* _main)
 			else{
 				_main->_index += (idx - _main->_index);
 			}
-			//continue;
 			return ;
 		}
 		if(_main->ui.explorer && (_main->ui.cursor_position_row < (idx - _main->_index + _main->ui.box_row_pos_size_top))){
