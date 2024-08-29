@@ -48,7 +48,7 @@ MP_Audio MP_Init_Audio()
 	MP_Audio audio;
 	if((ma_engine_init(NULL , &engine)) != MA_SUCCESS){
 		is_error = init_audio_engine;
-		Error_Box(GetError(is_error));
+		Error_Box(GetError(is_error) , NOTE , NULL);
 	}
 	audio.volume = 0.5;
 	audio.seek_time = 10.0; // five minute seek
@@ -66,7 +66,7 @@ void MP_Update_Audio(MP_Audio* audio,char* filename)
 		if(ma_sound_init_from_file(&engine , filename , 0 , NULL , NULL , &sound) != MA_SUCCESS)
 		{
 			is_error = init_audio_sound_from_file;
-			Error_Box(GetError(is_error));
+			Error_Box(GetError(is_error) , NOTE , NULL);
 			ma_engine_uninit(&engine);
 		}
 		if(audio->is_audio_playing)

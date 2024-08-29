@@ -165,7 +165,7 @@ void UI_Window_Update(UI* ui);
 void UI_Window_Final(Term*);
 void DrawBox(UI ui);
 
-void Error_Box(char*);
+void Error_Box(char* , Log , bool*);
 void Explorer(UI* ui ,char* path , int index);
 void print_keys(UI* ui , Size size);
 Size get_term_size(void);
@@ -221,13 +221,18 @@ UI UI_Window_Init(Term* term){
 
 void UI_Window_Update(UI* ui)
 {
+
+		//ui->Keys.box_keys_row_pos_top_size--;
+		//ui->box_row_pos_size_top--;
+		//ui->box_row_pos_size_buttom--;
+
+
 	ui->box_col_pos_left_size 	= calc_box_col_pos_left_size(get_term_size());
 	ui->box_col_pos_right_size	= calc_box_col_pos_right_size(get_term_size());
 	ui->box_row_pos_size_top 	= calc_box_row_pos_size_top(get_term_size());
 	ui->box_row_pos_size_buttom 	= calc_box_row_pos_size_buttom(get_term_size());
 
 	ui->Keys.box_keys_col_pos_left_size = 4;
-	//ui->Keys.box_keys_col_pos_right_size = (get_term_size().ws_col / 3);
 	ui->Keys.box_keys_row_pos_top_size = (ui->box_row_pos_size_buttom + 2);
 	ui->Keys.box_keys_row_pos_bottom_size = (get_term_size().ws_row - 2);
 
@@ -348,7 +353,7 @@ void DrawBox(UI ui)
 	}
 }
 
-void Error_Box(char* error)
+void Error_Box(char* error , Log log , bool* quit)
 {
 	Size size = get_term_size(); 
 	int i = 1;
@@ -365,9 +370,33 @@ void Error_Box(char* error)
 			else 	printf(" ");
 		}
 	}
-	move_cursor((size.ws_col/2)-(size.ws_col/4)+1 ,((size.ws_row/2) - size.ws_row/4) + 2);
-	printf("%s%sError%s%s : %s", Bold , Red ,Regular, Default , error);
-	exit(1);
+	int x = 2;
+	size_t size_ = (((size.ws_col/2)+(size.ws_col/4)) - ((size.ws_col/2)-(size.ws_col/4)));
+	size_t error_size = strlen(error);
+	move_cursor((size.ws_col/2)-(size.ws_col/4)+1 ,((size.ws_row/2) - size.ws_row/4) + x++);
+	if(log == _ERROR){
+		printf("%s%sError%s%s : ", Bold , Red ,Regular, Default);
+		if(quit != NULL)
+			*quit = true;
+	}else if( log == NOTE){
+		printf("%s%sNote%s%s : ", Bold , Blue ,Regular, Default);
+	}else{
+		printf("%s%sMessage%s%s : ", Bold , Green ,Regular, Default);
+	}
+	if(error_size > size_){
+		while(*error != '\0'){
+			for(int i = 0 ; i < size_ ; i++){
+				printf("%c" , *error);
+				error++;
+			}
+			error_size -= size_;
+			move_cursor((size.ws_col/2)-(size.ws_col/4)+1 ,((size.ws_row/2) - size.ws_row/4) + x++);
+		}
+	}else{
+		printf("%s" , error);
+	}
+	fflush(stdout);
+	sleep(4);
 }
 
 static char* fix_ui_box_border(UI ui , char* filename , size_t size_of_str_length_filename);
@@ -486,13 +515,6 @@ static void main_box(Size term_size)
 
 void print_keys(UI* ui , Size size)
 {
-
-	//ui.Keys.box_keys_col_pos_left_size = 4;
-	//ui.Keys.box_keys_col_pos_right_size = (size.ws_col / 3);
-	//ui.Keys.box_keys_row_pos_top_size = (ui.box_row_pos_size_buttom + 3);
-	//ui.Keys.box_keys_row_pos_bottom_size = (size.ws_row - 3);
-
-
 	int i = 0;
 	for(int row = ui->Keys.box_keys_row_pos_top_size ; row < ui->Keys.box_keys_row_pos_bottom_size ; row++){
 		move_cursor( ui->Keys.box_keys_col_pos_left_size , ui->Keys.box_keys_row_pos_top_size + i++);
@@ -517,7 +539,6 @@ void print_keys(UI* ui , Size size)
 			else 	printf(" ");
 		}
 	}
-	//if((size.ws_row - ui->box_row_pos_size_buttom - 6) > 5){
 	if((ui->Keys.box_keys_col_pos_right_size - ui->Keys.box_keys_col_pos_left_size - 1) <= 27){
 		ui->Keys.box_keys_col_pos_right_size += 1;
 	}
@@ -551,7 +572,6 @@ void print_keys(UI* ui , Size size)
 		printf("Status %s " , single_loop);
 	else
 		printf("Status %s " , ones);
-	//}
 	ui->Flush();
 }
 #endif

@@ -25,8 +25,15 @@ typedef enum{
 
 
 }error_e;
+
+typedef enum{
+	_ERROR,
+	NOTE ,
+	MESSAGE
+}Log;
+
 char* GetError(error_e e);
-extern void Error_Box(char*);
+extern void Error_Box(char* , Log , bool*);
 error_e is_error = success;
 
 #endif //ERROR_H_

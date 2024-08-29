@@ -63,13 +63,13 @@ int main(void)
 			pthread_t thread;
 			if( pthread_create(&thread , NULL , main_always_update , (void*)&_main) != 0)
 			{
-				Error_Box("failed to create thread !");
+				Error_Box("failed to create thread !" , NOTE , NULL);
 			}
 			(void)thread;
 			_ones = !_ones;
 		}
 		if(getcwd(_main.current_directory , 256) == NULL){
-			Error_Box(GetError(errno));
+			Error_Box(GetError(errno) , _ERROR , &quit);
 		}
 		if(_main.ui.explorer){
 			Explorer(&_main.ui , _main.current_directory , _main._index);
@@ -102,7 +102,7 @@ int main(void)
 					if(__dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].is_dir)
 					{
 						if(chdir(__dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].filename) < 0){
-							Error_Box(GetError(errno));
+							Error_Box(GetError(errno) , _ERROR , &quit);
 						}
 						_main._index = 0;
 						_main.ui.cursor_position_row = _main.ui.box_row_pos_size_top + 1;
@@ -150,10 +150,7 @@ int main(void)
 				}
 			}break;
 			case 'f':{
-				Error_Box(" f key is not implemented ");
-				_main.ui.Flush();
-				sleep(3);
-				quit = true;
+				Error_Box(" f key is not implemented " , NOTE , NULL);
 			}break;
 			case 'j':{
 				cursor_move_position_down(&_main);
@@ -197,16 +194,10 @@ int main(void)
 				SetVolume(&_main.audio);
 			}break;
 			case 'n':{
-				Error_Box(" n key is not implemented ");
-				_main.ui.Flush();
-				sleep(3);
-				quit = true;
+				Error_Box(" n key is not implemented " , NOTE , NULL);
 			}break;
 			case 'N':{
-				Error_Box(" N key is not implemented ");
-				_main.ui.Flush();
-				sleep(3);
-				quit = true;
+				Error_Box(" N key is not implemented " , NOTE , NULL);
 			}break;
 			case 'i':{
 				if(_main.ui.style == 1)
@@ -215,28 +206,16 @@ int main(void)
 					_main.ui.style++;
 			}break;
 			case 'a':{
-				Error_Box(" a key is not implemented ");
-				_main.ui.Flush();
-				sleep(3);
-				quit = true;
+				Error_Box(" a key is not implemented " , NOTE , NULL);
 			}break;
 			case 's':{
-				Error_Box(" s key is not implemented ");
-				_main.ui.Flush();
-				sleep(3);
-				quit = true;
+				Error_Box(" s key is not implemented " , NOTE , NULL);
 			}break;
 			case 'S':{
-				Error_Box(" S key is not implemented ");
-				_main.ui.Flush();
-				sleep(3);
-				quit = true;
+				Error_Box(" S key is not implemented " , NOTE , NULL);
 			}break;
 			case '?':{
-				Error_Box(" ? key is not implemented \n exiting");
-				_main.ui.Flush();
-				sleep(3);
-				quit = true;
+				Error_Box(" ? key is not implemented" , NOTE , NULL);
 			}break;
 			case 'u' : {
 				UI_Window_Update(&_main.ui);
