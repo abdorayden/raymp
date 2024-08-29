@@ -1,7 +1,7 @@
 # Ray Music Player (RayMP)
 
 <p align="center">
-  <img src="./assets/logo.png" width="150" height="150"/>
+  <img src="./assets/logo.jpg" width="150" height="150"/>
 </p>
 
 1. CLI music player written in pure C
