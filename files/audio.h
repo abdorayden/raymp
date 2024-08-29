@@ -52,6 +52,7 @@ MP_Audio MP_Init_Audio()
 	}
 	audio.volume = 0.5;
 	audio.seek_time = 10.0; // five minute seek
+	audio.song_length = 0;
 	audio.is_audio_playing = false;
 	audio.cursor = 0;
 	audio.status = SINGLE_LOOP;

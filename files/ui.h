@@ -132,6 +132,14 @@ typedef struct {
 	 * */
 	unsigned short box_row_pos_size_buttom;
 
+	// keys box map
+	struct{
+		unsigned short box_keys_col_pos_left_size;
+		unsigned short box_keys_col_pos_right_size;
+		unsigned short box_keys_row_pos_top_size;
+		unsigned short box_keys_row_pos_bottom_size;
+	}Keys;
+
 	unsigned short cursor_position_col;
 	unsigned short cursor_position_row;
 	bool explorer;
@@ -159,7 +167,7 @@ void DrawBox(UI ui);
 
 void Error_Box(char*);
 void Explorer(UI* ui ,char* path , int index);
-void print_keys(UI ui , Size size);
+void print_keys(UI* ui , Size size);
 Size get_term_size(void);
 // styles
 void rmp_t(UI);
@@ -191,6 +199,12 @@ UI UI_Window_Init(Term* term){
 	ui.box_col_pos_right_size	= calc_box_col_pos_right_size(get_term_size());
 	ui.box_row_pos_size_top 	= calc_box_row_pos_size_top(get_term_size());
 	ui.box_row_pos_size_buttom 	= calc_box_row_pos_size_buttom(get_term_size()) + 2;
+
+	ui.Keys.box_keys_col_pos_left_size = 4;
+	ui.Keys.box_keys_col_pos_right_size = (get_term_size().ws_col / 3);
+	ui.Keys.box_keys_row_pos_top_size = (ui.box_row_pos_size_buttom + 2);
+	ui.Keys.box_keys_row_pos_bottom_size = (get_term_size().ws_row - 2);
+
 	ui.cursor_position_col 		= ui.box_col_pos_left_size + 1;
 	ui.cursor_position_row 		= ui.box_row_pos_size_top + 1;
 	ui.explorer			= false;
@@ -211,6 +225,12 @@ void UI_Window_Update(UI* ui)
 	ui->box_col_pos_right_size	= calc_box_col_pos_right_size(get_term_size());
 	ui->box_row_pos_size_top 	= calc_box_row_pos_size_top(get_term_size());
 	ui->box_row_pos_size_buttom 	= calc_box_row_pos_size_buttom(get_term_size());
+
+	ui->Keys.box_keys_col_pos_left_size = 4;
+	//ui->Keys.box_keys_col_pos_right_size = (get_term_size().ws_col / 3);
+	ui->Keys.box_keys_row_pos_top_size = (ui->box_row_pos_size_buttom + 2);
+	ui->Keys.box_keys_row_pos_bottom_size = (get_term_size().ws_row - 2);
+
 	ui->show_albom 			= false;
 	clearscreen();
 	main_box(get_term_size());
@@ -221,7 +241,7 @@ void UI_Window_Update(UI* ui)
 		else
 			do_style(stars, *ui);
 	}
-	print_keys(*ui , get_term_size());
+	print_keys(ui , get_term_size());
 }
 
 void UI_Window_Final(Term* saved_tattr)
@@ -238,7 +258,7 @@ void rmp_t(UI ui)
 	size_t banner_size_x = 49;
 	size_t banner_size_y = 6;
 	int x = ((ui.box_col_pos_right_size - ui.box_col_pos_left_size) / 2) - (banner_size_x / 2);
-	int y = ((ui.box_row_pos_size_buttom - ui.box_row_pos_size_top) / 2) - (banner_size_y / 2);
+	int y = ((ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 1) / 2) - (banner_size_y / 4);
 	move_cursor(ui.box_col_pos_left_size + x, ui.box_row_pos_size_top + y++);
 	printf("██████╗  █████╗ ██╗   ██╗     ███╗   ███╗██████╗ ");
 	move_cursor(ui.box_col_pos_left_size + x, ui.box_row_pos_size_top + y++);
@@ -255,16 +275,18 @@ void rmp_t(UI ui)
 
 void stars_t(UI ui)
 {
-#define MAX_STARS	30
+#define MAX_STARS	50
 	srand(time(NULL));
 	int _rands[MAX_STARS];
 	for(int i = 0 ; i < MAX_STARS ; i += 2){
-		_rands[i] = (rand()%(ui.box_col_pos_right_size - ui.box_col_pos_left_size)) + ui.box_col_pos_left_size + 1;
+		_rands[i] = (rand()%(ui.box_col_pos_right_size - ui.box_col_pos_left_size - 1)) + ui.box_col_pos_left_size + 1;
 		_rands[i + 1] = (rand()%(ui.box_row_pos_size_buttom - ui.box_row_pos_size_top - 1)) + ui.box_row_pos_size_top + 2;
 	}
-	for(int i = 0 ; i < MAX_STARS ; i += 2){
+	for(int i = 0 ; i < MAX_STARS ; i += 4){
 		move_cursor(_rands[i] , _rands[i + 1]);
 		printf("%s",_stars);
+		move_cursor(_rands[i + 2] , _rands[i + 3]);
+		printf("%s",_snow);
 	}
 }
 
@@ -319,7 +341,10 @@ void DrawBox(UI ui)
 	}
 	if(ui.explorer){
 		move_cursor(ui.box_col_pos_left_size + ((ui.box_col_pos_right_size - ui.box_col_pos_left_size) / 4) , ui.box_row_pos_size_top + 1);
-		printf("Explorer");
+		printf("[%sExplorer%s]" , Green , Regular);
+	}else{
+		move_cursor(ui.box_col_pos_left_size + ((ui.box_col_pos_right_size - ui.box_col_pos_left_size) / 4) , ui.box_row_pos_size_top + 1);
+		printf("[%sStyles%s]" , Green , Regular);
 	}
 }
 
@@ -345,6 +370,8 @@ void Error_Box(char* error)
 	exit(1);
 }
 
+static char* fix_ui_box_border(UI ui , char* filename , size_t size_of_str_length_filename);
+
 void Explorer(UI* ui ,char* path , int index)
 {
 	Init_Dir();
@@ -356,12 +383,35 @@ void Explorer(UI* ui ,char* path , int index)
 	{
 		move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + row + 2);
 		if(ui->box_row_pos_size_top + (row + 1) == ui->cursor_position_row)
-			printf("%s %.2d -%c- %s%s%s%s\t:%s\n",file_pos ,__dirs[index].file_idx , __dirs[index].is_dir ? 'd' : 'f',__dirs[index].is_dir ? Blue : Default ,strrchr(__dirs[index].filename , '/') , Default , Regular, handle_size(__dirs[index].file_size));
+			printf("%s %.2d -%c-%s- %s%s%s%s\n",file_pos ,__dirs[index].file_idx , __dirs[index].is_dir ? 'd' : 'f', handle_size(__dirs[index].file_size),__dirs[index].is_dir ? Blue : Default ,fix_ui_box_border(*ui , strrchr(__dirs[index].filename , '/') , strlen(handle_size(__dirs[index].file_size))) , Default , Regular);
 		else
-			printf("   %.2d -%c- %s%s%s%s\t:%s\n",__dirs[index].file_idx , __dirs[index].is_dir ? 'd' : 'f',__dirs[index].is_dir ? Blue : Default ,strrchr(__dirs[index].filename, '/') , Default , Regular, handle_size(__dirs[index].file_size));
+			printf("  %.2d -%c-%s- %s%s%s%s\n",__dirs[index].file_idx , __dirs[index].is_dir ? 'd' : 'f', handle_size(__dirs[index].file_size),__dirs[index].is_dir ? Blue : Default ,fix_ui_box_border(*ui , strrchr(__dirs[index].filename, '/') ,strlen(handle_size(__dirs[index].file_size))), Default , Regular);
 		index++;
 	}
 	move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + 1);
+}
+
+static char* fix_ui_box_border(UI ui , char* filename_to_copy , size_t size_of_str_length_filename)
+{
+	size_t file_to_copy_size = strlen(filename_to_copy) + 1;
+#ifndef ONES_FILE
+#define ONES_FILE
+	char* filename = malloc(file_to_copy_size);
+#endif
+
+#ifdef ONES_FILE
+	filename = realloc(filename, file_to_copy_size);
+#endif
+        strcpy(filename, filename_to_copy);
+	int compare = (ui.box_col_pos_right_size - ui.box_col_pos_left_size - 11 - size_of_str_length_filename);
+	if(file_to_copy_size > compare)
+	{
+		for(int i = 1 ; i < 4 ; i++){
+			filename[compare - i] = '.';
+		}
+		filename[compare] = '\0';
+	}
+	return filename;
 }
 
 static void input_mode_disable(Term* saved_tattr){
@@ -434,59 +484,75 @@ static void main_box(Size term_size)
 	}
 }
 
-void print_keys(UI ui , Size size)
+void print_keys(UI* ui , Size size)
 {
+
+	//ui.Keys.box_keys_col_pos_left_size = 4;
+	//ui.Keys.box_keys_col_pos_right_size = (size.ws_col / 3);
+	//ui.Keys.box_keys_row_pos_top_size = (ui.box_row_pos_size_buttom + 3);
+	//ui.Keys.box_keys_row_pos_bottom_size = (size.ws_row - 3);
+
+
 	int i = 0;
-	for(int row = (ui.box_row_pos_size_buttom + 3) ; row < (size.ws_row - 2) ; row++){
-		move_cursor( 4 , (ui.box_row_pos_size_buttom + 3) + i++);
-		for(int col = 4 ; col < (size.ws_col / 3) ; col++){
-			if(row == (ui.box_row_pos_size_buttom + 3) && col == 4)		
+	for(int row = ui->Keys.box_keys_row_pos_top_size ; row < ui->Keys.box_keys_row_pos_bottom_size ; row++){
+		move_cursor( ui->Keys.box_keys_col_pos_left_size , ui->Keys.box_keys_row_pos_top_size + i++);
+		for(int col = ui->Keys.box_keys_col_pos_left_size ; col < ui->Keys.box_keys_col_pos_right_size ; col++){
+			if(row == (ui->Keys.box_keys_row_pos_top_size) && col == ui->Keys.box_keys_col_pos_left_size)		
 				printf("%s" , five);
-			else if(row == (ui.box_row_pos_size_buttom + 3) && col == (size.ws_col / 3) -1)	
+			else if(row == (ui->Keys.box_keys_row_pos_top_size) && col == (ui->Keys.box_keys_col_pos_right_size) - 1)	
 				printf("%s" , four);
-			else if(row == (size.ws_row - 3) && col == 4)    	
+			else if(row == (ui->Keys.box_keys_row_pos_bottom_size - 1) && col == ui->Keys.box_keys_col_pos_left_size)    	
 				printf("%s" , nine);
-			else if(row == (size.ws_row - 3) && col == (size.ws_col / 3) - 1)				
+			else if(row == (ui->Keys.box_keys_row_pos_bottom_size - 1) && col == (ui->Keys.box_keys_col_pos_right_size) - 1)				
 				printf("%s" ,eit);
-			else if((row == (ui.box_row_pos_size_buttom + 3) && (col < (size.ws_col / 3) || col > 3)) || 
-					(row == (size.ws_row - 3) && (col < (size.ws_col / 3) || col > 4)))
+			else if(
+					(row == (ui->Keys.box_keys_row_pos_top_size) && (col < (ui->Keys.box_keys_col_pos_left_size) || col > ui->Keys.box_keys_col_pos_left_size - 1)) 
+					|| 
+					(row == (ui->Keys.box_keys_row_pos_bottom_size - 1) && (col < (ui->Keys.box_keys_col_pos_right_size) || col > ui->Keys.box_keys_col_pos_left_size - 1)))
 				printf("%s" , one);
 			else if(
-					(row < (size.ws_row - 3) && row > ui.box_row_pos_size_buttom + 3) && 
-					(col == 4 || col == (size.ws_col / 3) - 1))	
+					(row < (ui->Keys.box_keys_row_pos_bottom_size) && row > ui->Keys.box_keys_row_pos_top_size) && 
+					(col == ui->Keys.box_keys_col_pos_left_size || col == (ui->Keys.box_keys_col_pos_right_size) - 1))	
 				printf("%s" , two);
 			else 	printf(" ");
 		}
 	}
-	move_cursor(5 , (ui.box_row_pos_size_buttom + 3) + 1);
-	if(ui.is_pause)
+	//if((size.ws_row - ui->box_row_pos_size_buttom - 6) > 5){
+	if((ui->Keys.box_keys_col_pos_right_size - ui->Keys.box_keys_col_pos_left_size - 1) <= 27){
+		ui->Keys.box_keys_col_pos_right_size += 1;
+	}
+	int move = 1;
+	move_cursor(ui->Keys.box_keys_col_pos_left_size + 1, ui->Keys.box_keys_row_pos_top_size + move++);
+	if(ui->is_pause)
 		printf("Audio Status %s  : [%sPLAYING%s]" , next ,Green ,Regular);
 	else
 		printf("Audio Status %s  : [%sPaused%s]" , pause ,Red ,Regular);
 
-	move_cursor(5 , (ui.box_row_pos_size_buttom + 3) + 2);
-	if((int)ui.volume == 100)
-		printf("Volume       %s : %d %c" , volume_max , (int)ui.volume , 37);
-	else if ((int)ui.volume >= 50)
-		printf("Volume       %s : %d %c" , volume_med , (int)ui.volume , 37);
-	else if ((int)ui.volume < 50 && (int)ui.volume > 0)
-		printf("Volume       %s : %d %c" , volume_low , (int)ui.volume , 37);
+	move_cursor(ui->Keys.box_keys_col_pos_left_size  + 1,ui->Keys.box_keys_row_pos_top_size + move++);
+	if((int)ui->volume == 100)
+		printf("Volume       %s : %d %c" , volume_max , (int)ui->volume , 37);
+	else if ((int)ui->volume >= 50)
+		printf("Volume       %s : %d %c" , volume_med , (int)ui->volume , 37);
+	else if ((int)ui->volume < 50 && (int)ui->volume > 0)
+		printf("Volume       %s : %d %c" , volume_low , (int)ui->volume , 37);
 	else
-		printf("Volume       %s : %d %c" , volume_mute , (int)ui.volume , 37);
+		printf("Volume       %s : %d %c" , volume_mute , (int)ui->volume , 37);
 
-	move_cursor(5 , (ui.box_row_pos_size_buttom + 3) + 3);
-	printf("Total Time      : %d %c" , (int)ui.total_length , 's');
+	move_cursor(ui->Keys.box_keys_col_pos_left_size + 1 , ui->Keys.box_keys_row_pos_top_size + move++);
+	printf("Total Time      : %d %c" , (int)ui->total_length , 's');
 
-	move_cursor(5 , (ui.box_row_pos_size_buttom + 3) + 4);
-	printf("Cursor Position : %d %c" , (int)ui.cursor , 's');
+	move_cursor(ui->Keys.box_keys_col_pos_left_size + 1 , ui->Keys.box_keys_row_pos_top_size + move++);
+	printf("Cursor Position : %d %c" , (int)ui->cursor , 's');
 
-	move_cursor(5 , (ui.box_row_pos_size_buttom + 3) + 5);
-	if(ui.status == PLAYLIST_LOOP)
+	move_cursor(ui->Keys.box_keys_col_pos_left_size + 1 , ui->Keys.box_keys_row_pos_top_size + move++);
+	if(ui->status == PLAYLIST_LOOP)
 		printf("Status %s " , playlist_loop);
-	else if(ui.status == SINGLE_LOOP)
+	else if(ui->status == SINGLE_LOOP)
 		printf("Status %s " , single_loop);
 	else
 		printf("Status %s " , ones);
+	//}
+	ui->Flush();
 }
 #endif
 

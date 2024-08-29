@@ -40,7 +40,6 @@ void* main_always_update(void*);
 void cursor_move_position_down(Main*);
 void cursor_move_position_up(Main*);
 
-
 int main(void)
 {
 	bool quit = false;
