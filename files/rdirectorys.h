@@ -98,11 +98,6 @@ void Init_Dir(void)
 	}
 	memset(__dirs , 0 , MAX_LEN_DIRS * sizeof(Directoy));
 	idx = 0;
-	//strcpy(__dirs[0].filename , "./..");
-	//__dirs[0].file_size = 0;
-	//__dirs[0].file_idx = 0;
-	//__dirs[0].is_dir = true;
-	//__dirs[0].the_last = false;
 }
 
 static bool is_file_extension(const char *fileName, const char *ext)

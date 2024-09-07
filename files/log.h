@@ -9,8 +9,6 @@ typedef enum{
 	p_not_implemented,
 	plus_not_implemented,
 	minus_not_implemented,
-	n_not_implemented,
-	N_not_implemented,
 	i_not_implemented,
 	a_not_implemented,
 	s_not_implemented,
@@ -20,9 +18,12 @@ typedef enum{
 	init_audio_engine,
 	init_audio_sound_from_file,
 	get_cursor_pcm_frames,
-	get_length_audio
-
-
+	get_length_audio,
+	// thread
+	thread_failed,
+	// favorite albome
+	failed_init_fav_albome,
+	failed_to_load_fav_albome
 
 }error_e;
 
@@ -42,12 +43,13 @@ char* GetError(error_e e){
 	switch(e){
 		case success : return NULL;
 		case list_dirs_f : return "Could not list directory";
+		case thread_failed : return "failed to create thread !";
+		case failed_to_load_fav_albome : return "failed to load favorite albome";
+		case failed_init_fav_albome : return "failed to init favorite albome";
 		case f_not_implemented : return "f key is not implemented";
 		case p_not_implemented : return "p key is not implemented";
 		case plus_not_implemented : return "+ key is not implemented";
 		case minus_not_implemented : return "- key is not implemented";
-		case n_not_implemented : return "n key is not implemented";
-		case N_not_implemented : return "N key is not implemented";
 		case i_not_implemented : return "i key is not implemented";
 		case a_not_implemented : return "a key is not implemented";
 		case s_not_implemented : return "s key is not implemented";

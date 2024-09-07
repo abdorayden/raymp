@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <dirent.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
@@ -22,11 +23,8 @@
 #include "./files/audio.h"
 #include "./files/ui.h"
 
-// TODO: create file explorer
-// TODO: handle songs
-// TODO: handle keys
-// TODO: UI  
-// TODO: pause , run , next , volume
+// TODO: add favorite albom and let user create new alboms
+// TODO: search song on local device
 // TODO: search over internet
 
 typedef struct {
@@ -34,6 +32,7 @@ typedef struct {
 	UI	 ui;
 	int _index ;
 	char current_directory[256];
+	Term term;
 }Main;
 
 void* main_always_update(void*);
@@ -46,7 +45,7 @@ int main(void)
 	Term term;
 	Main _main;
 	_main.audio = MP_Init_Audio();
-	_main.ui = UI_Window_Init(&term);
+	_main.ui = UI_Window_Init(&_main.term);
 	_main._index = 0;
 	char ch;
 	bool _ones = true;
@@ -63,14 +62,15 @@ int main(void)
 			pthread_t thread;
 			if( pthread_create(&thread , NULL , main_always_update , (void*)&_main) != 0)
 			{
-				Error_Box("failed to create thread !" , NOTE , NULL);
+				is_error = thread_failed;
 			}
 			(void)thread;
 			_ones = !_ones;
 		}
 		if(getcwd(_main.current_directory , 256) == NULL){
-			Error_Box(GetError(errno) , _ERROR , &quit);
+			is_error = errno ;
 		}
+
 		if(_main.ui.explorer){
 			Explorer(&_main.ui , _main.current_directory , _main._index);
 		}
@@ -81,7 +81,12 @@ int main(void)
 		 *		q     : for quit
 		 *		u     : update ui (im gonna handle it later)
 		 *		e     : open file explorer
+		 *
+		 *		d     : for moving to directory directly (NOT IMPLEMENTED) 
 		 *		f     : add song to favorit
+		 *		a     : open favorit albome
+		 *		?     : show help list
+		 *
 		 *		SPACE : pause and play
 		 *		+     : increase the volume
 		 *		j     : move cursor down
@@ -90,10 +95,8 @@ int main(void)
 		 *		>     : next
 		 *		<     : prev
 		 *		i     : change style window or switch to style window (file explorer enabled)
-		 *		a     : open favorit songs
 		 *		s     : search songs on locale device
 		 *		S     : for search on internet
-		 *		?     : show help list
 		 *		TAB 9 : change status
 		 * */ 
 		switch(ch){
@@ -102,7 +105,7 @@ int main(void)
 					if(__dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].is_dir)
 					{
 						if(chdir(__dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].filename) < 0){
-							Error_Box(GetError(errno) , _ERROR , &quit);
+							is_error = errno;
 						}
 						_main._index = 0;
 						_main.ui.cursor_position_row = _main.ui.box_row_pos_size_top + 1;
@@ -150,7 +153,10 @@ int main(void)
 				}
 			}break;
 			case 'f':{
-				Error_Box(" f key is not implemented " , NOTE , NULL);
+				init_fav_albome();
+				if(!__dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].is_dir){
+					add_song_to_fav_albome(__dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].filename , &quit);
+				}
 			}break;
 			case 'j':{
 				cursor_move_position_down(&_main);
@@ -166,9 +172,15 @@ int main(void)
 			}break;
 			case '>':{
 				if(_main.ui.cursor_position_row < _main.ui.box_row_pos_size_buttom){
-					do{
-						cursor_move_position_down(&_main);
-					}while( __dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].is_dir);
+					if(_main.ui.explorer){
+						do{
+							cursor_move_position_down(&_main);
+						}while(__dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].is_dir);
+					}else{
+						do{
+							_main._index++;
+						}while(__dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].is_dir);
+					}
 					MP_Update_Audio(&_main.audio , __dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].filename);
 					PlayMusic(&_main.audio);
 				}
@@ -176,9 +188,15 @@ int main(void)
 			}break;
 			case '<':{
 				if(_main.ui.cursor_position_row > (_main.ui.box_row_pos_size_top)){
-					do{
-						cursor_move_position_up(&_main);
-					}while( __dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].is_dir);
+					if(_main.ui.explorer){
+						do{
+							cursor_move_position_up(&_main);
+						}while(__dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].is_dir);
+					}else{
+						do{
+							_main._index--;
+						}while(__dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].is_dir);
+					}
 					MP_Update_Audio(&_main.audio , __dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].filename);
 					PlayMusic(&_main.audio);
 				}
@@ -193,12 +211,6 @@ int main(void)
 					_main.audio.volume -= 0.01;
 				SetVolume(&_main.audio);
 			}break;
-			case 'n':{
-				Error_Box(" n key is not implemented " , NOTE , NULL);
-			}break;
-			case 'N':{
-				Error_Box(" N key is not implemented " , NOTE , NULL);
-			}break;
 			case 'i':{
 				if(_main.ui.style == 1)
 					_main.ui.style = 0;
@@ -206,16 +218,16 @@ int main(void)
 					_main.ui.style++;
 			}break;
 			case 'a':{
-				Error_Box(" a key is not implemented " , NOTE , NULL);
+				is_error = a_not_implemented;
 			}break;
 			case 's':{
-				Error_Box(" s key is not implemented " , NOTE , NULL);
+				is_error = s_not_implemented;
 			}break;
 			case 'S':{
-				Error_Box(" S key is not implemented " , NOTE , NULL);
+				is_error = S_not_implemented;
 			}break;
 			case '?':{
-				Error_Box(" ? key is not implemented" , NOTE , NULL);
+				is_error = quastion_not_implemented;
 			}break;
 			case 'u' : {
 				UI_Window_Update(&_main.ui);
@@ -232,7 +244,7 @@ int main(void)
 		}
 		_main.ui.Flush();
 	}
-	UI_Window_Final(&term);
+	UI_Window_Final(&_main.term);
 	MP_Final_Audio();
 	return 0;
 }
@@ -248,9 +260,15 @@ void* main_always_update(void* param)
 				MP_Update_Audio(&_main->audio , __dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].filename);
 				PlayMusic(&_main->audio);
 			}else if(_main->ui.status == PLAYLIST_LOOP){
-				do{
-					cursor_move_position_down(_main);
-				}while(__dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].is_dir);
+				if(_main->ui.explorer){
+					do{
+						cursor_move_position_down(_main);
+					}while(__dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].is_dir);
+				}else{
+					do{
+						_main->_index++;
+					}while(__dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].is_dir);
+				}
 				MP_Update_Audio(&_main->audio , __dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].filename);
 				PlayMusic(&_main->audio);
 			}		
@@ -260,6 +278,10 @@ void* main_always_update(void* param)
 		UI_Window_Update(&_main->ui);
 		if(_main->ui.explorer){
 			Explorer(&_main->ui , _main->current_directory , _main->_index);
+		}
+		if(is_error){
+			Error_Box(GetError(is_error) , MESSAGE , NULL);
+			is_error = 0;
 		}
 		_main->ui.Flush();
 		sleep(1);

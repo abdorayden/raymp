@@ -20,13 +20,20 @@ typedef struct winsize Size;
 #define move_down	\
 	printf("\033[1B");
 
+#define move_right	\
+	printf("\033[1C");
+
+#define move_left	\
+	printf("\033[1D");
+
 #define hide_cursor() 	printf("\033[?25l");
 #define show_cursor()	printf("\033[?25h");
 
-#define song_char_1	"♩"
-#define song_char_2	"♪"
-#define song_char_3	"♫"
-#define song_char_4	"♬"
+#define song_char_1	"💕"
+#define song_char_2	"💞"
+#define song_char_3	"🎵"
+#define song_char_4	"🎶"
+#define song_char_5	"💖"
 
 #define bar_1		"❚"
 #define bar_2		"❙"
@@ -69,6 +76,8 @@ typedef struct winsize Size;
 
 #define _snow	"❆"
 #define _stars	"✨"
+
+#define search_emo	"🔎"
 
 // Lines
 #define Underline 	"\033[4;37m" 	//Underline
@@ -143,7 +152,9 @@ typedef struct {
 	unsigned short cursor_position_col;
 	unsigned short cursor_position_row;
 	bool explorer;
-	bool show_albom;
+	bool directory_directly;
+	//bool show_albom;
+	bool fav_albome;
 	int (*Flush)(void);
 
 	// styles
@@ -164,6 +175,12 @@ UI   UI_Window_Init(Term*);
 void UI_Window_Update(UI* ui);
 void UI_Window_Final(Term*);
 void DrawBox(UI ui);
+
+// favorite albome
+void init_fav_albome(void);
+void add_song_to_fav_albome(char* song_path , bool* quit);
+void load_fav_albome(UI* ui , int index);
+
 
 void Error_Box(char* , Log , bool*);
 void Explorer(UI* ui ,char* path , int index);
@@ -190,6 +207,14 @@ static unsigned short 	calc_box_row_pos_size_buttom(Size term_size);
 static int 		flush_file(void);	
 static void		main_box(Size term_size);
 
+// TODO: handle this 
+
+//static char* get_albome_dir();
+static bool in(char* , FILE*);
+static void del(char*);
+static int countlines(char *filename);
+static char* fix_ui_box_border(UI ui , char* filename , size_t size_of_str_length_filename);
+
 UI UI_Window_Init(Term* term){
 	UI ui;
 	clearscreen();
@@ -208,7 +233,8 @@ UI UI_Window_Init(Term* term){
 	ui.cursor_position_col 		= ui.box_col_pos_left_size + 1;
 	ui.cursor_position_row 		= ui.box_row_pos_size_top + 1;
 	ui.explorer			= false;
-	ui.show_albom 			= false;
+	ui.directory_directly		= false;
+	ui.fav_albome 			= false;
 	ui.cursor			= 0;
 	ui.style 			= rmp;
 	ui.Flush			= flush_file;
@@ -221,12 +247,6 @@ UI UI_Window_Init(Term* term){
 
 void UI_Window_Update(UI* ui)
 {
-
-		//ui->Keys.box_keys_row_pos_top_size--;
-		//ui->box_row_pos_size_top--;
-		//ui->box_row_pos_size_buttom--;
-
-
 	ui->box_col_pos_left_size 	= calc_box_col_pos_left_size(get_term_size());
 	ui->box_col_pos_right_size	= calc_box_col_pos_right_size(get_term_size());
 	ui->box_row_pos_size_top 	= calc_box_row_pos_size_top(get_term_size());
@@ -236,11 +256,10 @@ void UI_Window_Update(UI* ui)
 	ui->Keys.box_keys_row_pos_top_size = (ui->box_row_pos_size_buttom + 2);
 	ui->Keys.box_keys_row_pos_bottom_size = (get_term_size().ws_row - 2);
 
-	ui->show_albom 			= false;
 	clearscreen();
 	main_box(get_term_size());
 	DrawBox(*ui);
-	if(!ui->explorer){
+	if(!ui->explorer && !ui->directory_directly){
 		if(ui->style == 0)
 			do_style(rmp, *ui);
 		else
@@ -291,7 +310,7 @@ void stars_t(UI ui)
 		move_cursor(_rands[i] , _rands[i + 1]);
 		printf("%s",_stars);
 		move_cursor(_rands[i + 2] , _rands[i + 3]);
-		printf("%s",_snow);
+		printf("%s",song_char_5);
 	}
 }
 
@@ -353,6 +372,109 @@ void DrawBox(UI ui)
 	}
 }
 
+
+
+#define DEFAULT_DIR	".rmp"
+char ALBOME_DIR[40];
+char PATH[50];
+
+void init_fav_albome(void)
+{
+	sprintf(ALBOME_DIR , "/home/%s/%s" , getlogin() , DEFAULT_DIR);
+	if((is_error = mkdir(ALBOME_DIR , 0755)) < 0){
+		is_error = errno ; 
+		return;
+	}
+
+	sprintf(PATH , "%s/favorite" , ALBOME_DIR);
+	FILE* file = fopen(PATH , "a");
+	if(file == NULL){	
+		is_error = failed_init_fav_albome;
+		return;
+	}
+	fclose(file);
+}
+
+void add_song_to_fav_albome(char* song_path , bool* quit)
+{
+	FILE* file = fopen(PATH , "a+");
+	if(file == NULL){
+		is_error = errno;
+		return ;
+	}
+	sprintf(song_path , "%s\n" , song_path);
+	if(!in(song_path , file)){
+		if(fputs(song_path, file) == EOF)
+		       return ;
+	}
+	fclose(file);
+	Error_Box("ADDED" , MESSAGE , NULL);
+}
+
+#define FAV_SONGS	100 // max songs
+char fav_albome[FAV_SONGS][257];
+
+void load_fav_albome(UI* ui , int index)
+{
+	int lines = countlines(PATH);
+	if(lines > 99)	return;
+	FILE* file = fopen(PATH , "r");
+	if(file == NULL){
+		is_error = failed_to_load_fav_albome;
+		return ;
+	}
+
+	for(int i = 0 ; i < lines ; i++){
+		fgets(fav_albome[i] , 256 , file);
+	}
+
+	move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + 1);
+	int max_row = ((lines < (ui->box_row_pos_size_buttom - ui->box_row_pos_size_top)) ? lines : (ui->box_row_pos_size_buttom - ui->box_row_pos_size_top - 1));
+	for(int row = 0 ; *fav_albome[index] != '\0' &&  row < max_row ; row++)
+	{
+		move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + row + 2);
+		if(ui->box_row_pos_size_top + (row + 1) == ui->cursor_position_row)
+			printf("%s - %s\n",file_pos ,fix_ui_box_border(*ui , strrchr(fav_albome[index] , '/') , 0));
+		else
+			printf("   - %s\n",fix_ui_box_border(*ui , strrchr(fav_albome[index], '/') ,0));
+		index++;
+	}
+	move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + 1);
+}
+
+static bool in(char* path, FILE* fav_albome)
+{
+	char temp[256];
+	while(fav_albome != NULL && !feof(fav_albome)){
+       		fgets(temp, 256, fav_albome);
+		if(strcmp(path , temp) == 0)	return true;
+	}
+	return false;
+}
+
+static void del(char*)
+{
+
+}
+
+static int countlines(char *filename)
+{
+	FILE *fp = fopen(filename,"r");
+	int ch=0;
+	int lines=0;
+	
+	if (fp == NULL)
+		return 0;
+	
+	lines++;
+	while ((ch = fgetc(fp)) != EOF){
+	        if (ch == '\n')
+		lines++;
+	}
+	fclose(fp);
+	return lines;
+}
+
 void Error_Box(char* error , Log log , bool* quit)
 {
 	Size size = get_term_size(); 
@@ -396,16 +518,13 @@ void Error_Box(char* error , Log log , bool* quit)
 		printf("%s" , error);
 	}
 	fflush(stdout);
-	sleep(4);
+	sleep(2);
 }
-
-static char* fix_ui_box_border(UI ui , char* filename , size_t size_of_str_length_filename);
 
 void Explorer(UI* ui ,char* path , int index)
 {
 	Init_Dir();
 	List_Dir(path);
-	int local_idx = idx;
 	move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + 1);
 	int max_row = ((idx < (ui->box_row_pos_size_buttom - ui->box_row_pos_size_top)) ? idx : (ui->box_row_pos_size_buttom - ui->box_row_pos_size_top - 1));
 	for(int row = 0 ; *__dirs[index].filename != '\0' &&  row < max_row ; row++)
