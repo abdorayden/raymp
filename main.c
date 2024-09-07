@@ -18,7 +18,7 @@
 #define AUDIO_C_
 
 #include "./files/third_party/miniaudio.h"
-#include "./files/error.h"
+#include "./files/log.h"
 #include "./files/rdirectorys.h"
 #include "./files/audio.h"
 #include "./files/ui.h"
@@ -33,6 +33,7 @@ typedef struct {
 	int _index ;
 	char current_directory[256];
 	Term term;
+	bool favorite;
 }Main;
 
 void* main_always_update(void*);
@@ -47,6 +48,7 @@ int main(void)
 	_main.audio = MP_Init_Audio();
 	_main.ui = UI_Window_Init(&_main.term);
 	_main._index = 0;
+	_main.favorite = false;
 	char ch;
 	bool _ones = true;
 
@@ -227,16 +229,20 @@ int main(void)
 				is_error = S_not_implemented;
 			}break;
 			case '?':{
-				is_error = quastion_not_implemented;
+				if(_main.ui.help)
+					_main.ui.help = false;
+				else
+					_main.ui.help = true;
 			}break;
 			case 'u' : {
 				UI_Window_Update(&_main.ui);
 			}break;
 			case 'e' : {
-				if(_main.ui.explorer)
+				if(_main.ui.explorer){
 					_main.ui.explorer = false;
-				else
+				}else{
 					_main.ui.explorer = true;
+				}
 			}break;
 			case 'q' : {
 				quit = true;

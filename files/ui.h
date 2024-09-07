@@ -151,6 +151,7 @@ typedef struct {
 
 	unsigned short cursor_position_col;
 	unsigned short cursor_position_row;
+	bool help;
 	bool explorer;
 	bool directory_directly;
 	//bool show_albom;
@@ -214,6 +215,7 @@ static bool in(char* , FILE*);
 static void del(char*);
 static int countlines(char *filename);
 static char* fix_ui_box_border(UI ui , char* filename , size_t size_of_str_length_filename);
+static void helpkeys(UI ui);
 
 UI UI_Window_Init(Term* term){
 	UI ui;
@@ -232,6 +234,7 @@ UI UI_Window_Init(Term* term){
 
 	ui.cursor_position_col 		= ui.box_col_pos_left_size + 1;
 	ui.cursor_position_row 		= ui.box_row_pos_size_top + 1;
+	ui.help				= false;
 	ui.explorer			= false;
 	ui.directory_directly		= false;
 	ui.fav_albome 			= false;
@@ -259,13 +262,17 @@ void UI_Window_Update(UI* ui)
 	clearscreen();
 	main_box(get_term_size());
 	DrawBox(*ui);
-	if(!ui->explorer && !ui->directory_directly){
+	if(!ui->explorer){
 		if(ui->style == 0)
 			do_style(rmp, *ui);
 		else
 			do_style(stars, *ui);
 	}
-	print_keys(ui , get_term_size());
+	if(!ui->explorer && ui->help){
+		helpkeys(*ui);
+	}
+	if(!ui->help)
+		print_keys(ui , get_term_size());
 }
 
 void UI_Window_Final(Term* saved_tattr)
@@ -442,6 +449,39 @@ void load_fav_albome(UI* ui , int index)
 	move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + 1);
 }
 
+static void helpkeys(UI ui)
+{
+	clearscreen();
+	int i = 2;
+	move_cursor(2,i++);
+	printf("%s?%s : to show this help page" , Green , Regular);
+	move_cursor(2,i++);
+	printf("%sq%s : to quit" , Green , Regular);
+	move_cursor(2,i++);
+	printf("%su%s : to update UI" , Green , Regular);
+	move_cursor(2,i++);
+	printf("%se%s : to open file Explorer" , Green , Regular);
+	move_cursor(2,i++);
+	printf("%sSPACE%s : pause and play song" , Green , Regular);
+	move_cursor(2,i++);
+	printf("%s+%s : to increase the volume" , Green , Regular);
+	move_cursor(2,i++);
+	printf("%s-%s : to reduce volume" , Green , Regular);
+	move_cursor(2,i++);
+	printf("%sj/[ARROW KEY DOWN]%s : to move cursor down" , Green , Regular);
+	move_cursor(2,i++);
+	printf("%sk/[ARROW KEY UP]%s : to move cursor up" , Green , Regular);
+	move_cursor(2,i++);
+	printf("%s>%s : change to next song" , Green , Regular);
+	move_cursor(2,i++);
+	printf("%s<%s : change to prev song" , Green , Regular);
+	move_cursor(2,i++);
+	printf("%si%s : change window style" , Green , Regular);
+	move_cursor(2,i++);
+	printf("%sTAB%s : change status [single-loop , playlist-loop , ones]" , Green , Regular);
+
+}
+
 static bool in(char* path, FILE* fav_albome)
 {
 	char temp[256];
@@ -531,7 +571,7 @@ void Explorer(UI* ui ,char* path , int index)
 	{
 		move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + row + 2);
 		if(ui->box_row_pos_size_top + (row + 1) == ui->cursor_position_row)
-			printf("%s %.2d -%c-%s- %s%s%s%s\n",file_pos ,__dirs[index].file_idx , __dirs[index].is_dir ? 'd' : 'f', handle_size(__dirs[index].file_size),__dirs[index].is_dir ? Blue : Default ,fix_ui_box_border(*ui , strrchr(__dirs[index].filename , '/') , strlen(handle_size(__dirs[index].file_size))) , Default , Regular);
+			printf("%s %.2d -%c-%s- %s%s%s%s\n",file_pos ,__dirs[index].file_idx,  __dirs[index].is_dir ? 'd' : 'f', handle_size(__dirs[index].file_size),__dirs[index].is_dir ? Blue : Default ,fix_ui_box_border(*ui , strrchr(__dirs[index].filename , '/') , strlen(handle_size(__dirs[index].file_size))) , Default , Regular);
 		else
 			printf("  %.2d -%c-%s- %s%s%s%s\n",__dirs[index].file_idx , __dirs[index].is_dir ? 'd' : 'f', handle_size(__dirs[index].file_size),__dirs[index].is_dir ? Blue : Default ,fix_ui_box_border(*ui , strrchr(__dirs[index].filename, '/') ,strlen(handle_size(__dirs[index].file_size))), Default , Regular);
 		index++;
