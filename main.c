@@ -27,19 +27,44 @@
 // TODO: search song on local device
 // TODO: search over internet
 
+/**
+ * Main structure to hold audio, UI, and other relevant data.
+ */
 typedef struct {
 	MP_Audio audio;
 	UI	 ui;
 	int _index ;
 	char current_directory[256];
 	Term term;
-	bool favorite;
 }Main;
 
+/**
+ * Updates the UI and audio state in a separate thread.
+ * 
+ * @param param A pointer to the Main structure.
+ * @return NULL
+ */
 void* main_always_update(void*);
+
+/**
+ * Moves the cursor position down in the UI.
+ * 
+ * @param _main A pointer to the Main structure.
+ */
 void cursor_move_position_down(Main*);
+
+/**
+ * Moves the cursor position up in the UI.
+ * 
+ * @param _main A pointer to the Main structure.
+ */
 void cursor_move_position_up(Main*);
 
+/**
+ * Main function to initialize and run the music player.
+ * 
+ * @return 0 on success, non-zero on error.
+ */
 int main(void)
 {
 	bool quit = false;
@@ -48,7 +73,6 @@ int main(void)
 	_main.audio = MP_Init_Audio();
 	_main.ui = UI_Window_Init(&_main.term);
 	_main._index = 0;
-	_main.favorite = false;
 	char ch;
 	bool _ones = true;
 
@@ -73,7 +97,7 @@ int main(void)
 			is_error = errno ;
 		}
 
-		if(_main.ui.explorer){
+		if(_main.ui.explorer && !_main.ui.help){
 			Explorer(&_main.ui , _main.current_directory , _main._index);
 		}
 
@@ -124,6 +148,14 @@ int main(void)
 				}else{
 					_main.audio.status++;
 				}
+			}break;
+			case '.' : {
+			       _main.current_directory[strlen(_main.current_directory) - strlen(strrchr(_main.current_directory, '/')) + 1] = '\0';
+				if(chdir(_main.current_directory) < 0){
+					is_error = errno;
+				}
+				_main._index = 0;
+				_main.ui.cursor_position_row = _main.ui.box_row_pos_size_top + 1;
 			}break;
 			case '\033' :{
 				getchar();
@@ -282,7 +314,7 @@ void* main_always_update(void* param)
 		UpdateCursor(&(_main->audio));
 		_main->ui.cursor = _main->audio.cursor;
 		UI_Window_Update(&_main->ui);
-		if(_main->ui.explorer){
+		if(_main->ui.explorer && !_main->ui.help){
 			Explorer(&_main->ui , _main->current_directory , _main->_index);
 		}
 		if(is_error){

@@ -1,18 +1,66 @@
+/*
+ *				Copyright (c) 2024 Ray Den
+ *		
+ *		Permission is hereby granted, free of charge, to any person obtaining a copy
+ *		of this software and associated documentation files (the "Software"), to deal
+ *		in the Software without restriction, including without limitation the rights
+ *		to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *		copies of the Software, and to permit persons to whom the Software is
+ *		furnished to do so, subject to the following conditions:
+ *		
+ *		The above copyright notice and this permission notice shall be included in
+ *		all copies or substantial portions of the Software.
+ *		
+ *		THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *		IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *		FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *		AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *		LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *		OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ *		THE SOFTWARE.
+ */
+////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+ * @file ui.h
+ * @brief Header file for the UI module
+ * @author Ray Den
+ * @copyright 2024 Ray Den
+ * @license check LICENCE file
+ */
+
 #ifndef UI_H_
 #define UI_H_
 
 // Screen 
 typedef struct winsize Size;
 
+// CODES :
+// 	clear screen : "\033[2J"
+//	move cursor x,y : "\033[<number>;<number>H"
+//	move cursor up by number : "\033[<number>A"
+//	move cursor down by number : "\033[<number>B"
+//	move cursor right by number : "\033[<number>C"
+//	move cursor left by number : "\033[<number>D"
+//	hide cursor : "\033[?25l"
+//	show cursor : "\033[?25h"
+//
+
+// clear screen pragma will print "\033[2J" code to standard output
+// this code will clean buffer of stdout stream
+
 #ifndef clearscreen
 #	define clearscreen()	fputs("\033[2J",stdout)
 #endif
 
-// cursor 
+// move cursor pragma will print "\033[<number>;<number>H" code to standard output
+// this code will move cursor to x , y  number in terminal size 
 #ifndef move_cursor
 #define move_cursor(x , y)	\
 	printf("\033[%d;%dH" , y, x);
 #endif
+
+/////// read codes at line 42
 
 #define move_up	\
 	printf("\033[1A");
@@ -29,6 +77,9 @@ typedef struct winsize Size;
 #define hide_cursor() 	printf("\033[?25l");
 #define show_cursor()	printf("\033[?25h");
 
+////////
+
+// emojis code used for styles 
 #define song_char_1	"💕"
 #define song_char_2	"💞"
 #define song_char_3	"🎵"
@@ -96,6 +147,7 @@ typedef struct winsize Size;
 #define White		Regular 	//White
 #define Default		White		// Default (white)
 
+// stles
 typedef enum{
 	rmp,
 	stars
@@ -103,6 +155,7 @@ typedef enum{
 
 #define do_style(name_style , ui)	name_style##_t ((ui))
 
+// terminal to get window size 
 typedef struct termios Term;
 
 typedef struct {
@@ -169,24 +222,82 @@ typedef struct {
 	Status status;
 }UI;
 
-// even file explorer
-typedef void(*Function_Style)(UI ui);
-
+/**
+ * @brief Initializes the UI window
+ * @param term A pointer to a Term struct
+ * @return A UI struct representing the initialized window
+ */
 UI   UI_Window_Init(Term*);
+
+/**
+ * @brief Updates the UI window
+ * @param ui A pointer to a UI struct
+ */
 void UI_Window_Update(UI* ui);
+
+/**
+ * @brief Finalizes the UI window
+ * @param saved_tattr A pointer to a Term struct
+ */
 void UI_Window_Final(Term*);
+
+/**
+ * @brief Draws a box on the UI window
+ * @param ui A pointer to a UI struct
+ */
 void DrawBox(UI ui);
 
 // favorite albome
+
+/**
+ * @brief Initializes the favorite album
+ */
 void init_fav_albome(void);
+
+/**
+ * @brief Adds a song to the favorite album
+ * @param song_path The path to the song file
+ * @param quit A pointer to a boolean indicating whether to quit
+ */
 void add_song_to_fav_albome(char* song_path , bool* quit);
+
+/**
+ * @brief Loads the favorite album
+ * @param ui A pointer to a UI struct
+ * @param index The index of the file
+ */
 void load_fav_albome(UI* ui , int index);
 
-
+/*
+* @brief log any error or not or message
+* @param char* log message 
+* @param Log {_ERROR , NOTE , MESSAGE} type of log
+* @param bool* pointing to quit memory variable to quit if the error 
+*
+*/ 
 void Error_Box(char* , Log , bool*);
+
+/*
+ * @brief list file and directory's
+ * @param ui A pointer to a UI struct
+ * @param path the path we are listing
+ * @param index the index of the cursor position
+ * */
 void Explorer(UI* ui ,char* path , int index);
+
+/*
+ * @brief print informations like is audio playing total time status and volume
+ * @param ui A pointer to a UI struct
+ * @param size terminal size 
+ * */
 void print_keys(UI* ui , Size size);
+
+/*
+ * @brief function to get terminal size
+ * @return return a struct Size contains window information
+ * */
 Size get_term_size(void);
+
 // styles
 void rmp_t(UI);
 void stars_t(UI);
@@ -268,7 +379,7 @@ void UI_Window_Update(UI* ui)
 		else
 			do_style(stars, *ui);
 	}
-	if(!ui->explorer && ui->help){
+	if(ui->help){
 		helpkeys(*ui);
 	}
 	if(!ui->help)
@@ -479,6 +590,8 @@ static void helpkeys(UI ui)
 	printf("%si%s : change window style" , Green , Regular);
 	move_cursor(2,i++);
 	printf("%sTAB%s : change status [single-loop , playlist-loop , ones]" , Green , Regular);
+	move_cursor(2,i++);
+	printf("%s.%s : change directory to '..' " , Green , Regular);
 
 }
 
