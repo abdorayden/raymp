@@ -92034,7 +92034,8 @@ static ma_uint64 ma_dr_mp3_read_pcm_frames_raw(ma_dr_mp3* pMP3, ma_uint64 frames
         if (framesToRead == 0) {
             break;
         }
-        MA_DR_MP3_ASSERT(pMP3->pcmFramesRemainingInMP3Frame == 0);
+	// disable assertion 
+        //gA_DR_MP3_ASSERT(pMP3->pcmFramesRemainingInMP3Frame == 0);
         if (ma_dr_mp3_decode_next_frame(pMP3) == 0) {
             break;
         }

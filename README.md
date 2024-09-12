@@ -23,6 +23,12 @@
   </li> 
 </ul> 
 
+# Quick Start
+```console
+$ gcc -o main main.c -lm -lpthread # simple
+$ ./main
+```
+
 <h1>Music Player with File Explorer and UI Components</h1>
 <p>This is a C program that implements a music player with a file explorer and user interface (UI) components. The program allows users to navigate through directories, play music files, and control the playback using various keyboard shortcuts.
 </p> 
