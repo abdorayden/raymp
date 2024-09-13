@@ -293,8 +293,6 @@ void* main_always_update(void* param)
 		if(MusicAtEnd()){
 			if(_main->ui.status == SINGLE_LOOP){
 				_main->audio.cursor = 0;
-				MP_Update_Audio(&_main->audio , __dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].filename);
-				PlayMusic(&_main->audio);
 			}else if(_main->ui.status == PLAYLIST_LOOP){
 				if(_main->ui.explorer){
 					do{
@@ -305,9 +303,9 @@ void* main_always_update(void* param)
 						_main->_index++;
 					}while(__dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].is_dir);
 				}
-				MP_Update_Audio(&_main->audio , __dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].filename);
-				PlayMusic(&_main->audio);
 			}		
+			MP_Update_Audio(&_main->audio , __dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].filename);
+			PlayMusic(&_main->audio);
 		}
 		UpdateCursor(&(_main->audio));
 		_main->ui.cursor = _main->audio.cursor;
