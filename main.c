@@ -308,7 +308,8 @@ void* main_always_update(void* param)
 			MP_Update_Audio(&_main->audio , __dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].filename);
 			PlayMusic(&_main->audio);
 		}
-		_main->ui.cursor++;
+		if(_main->audio.is_audio_playing)
+			_main->ui.cursor++;
 		UI_Window_Update(&_main->ui);
 		if(_main->ui.explorer && !_main->ui.help){
 			Explorer(&_main->ui , _main->current_directory , _main->_index);
