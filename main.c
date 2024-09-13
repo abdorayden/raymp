@@ -79,6 +79,7 @@ int main(void)
 		_main.ui.Flush();
 		_main.ui.volume = _main.audio.volume * 100;
 		_main.ui.is_pause = _main.audio.is_audio_playing;
+		_main.ui.cursor = _main.audio.cursor;
 		_main.ui.total_length = _main.audio.song_length;
 		_main.ui.status = _main.audio.status;
 		UI_Window_Update(&_main.ui);
@@ -307,8 +308,7 @@ void* main_always_update(void* param)
 			MP_Update_Audio(&_main->audio , __dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].filename);
 			PlayMusic(&_main->audio);
 		}
-		UpdateCursor(&(_main->audio));
-		_main->ui.cursor = _main->audio.cursor;
+		_main->ui.cursor++;
 		UI_Window_Update(&_main->ui);
 		if(_main->ui.explorer && !_main->ui.help){
 			Explorer(&_main->ui , _main->current_directory , _main->_index);
