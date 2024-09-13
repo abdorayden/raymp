@@ -62,8 +62,6 @@ void cursor_move_position_up(Main*);
 
 /**
  * Main function to initialize and run the music player.
- * 
- * @return 0 on success, non-zero on error.
  */
 int main(void)
 {
