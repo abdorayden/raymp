@@ -78,7 +78,8 @@ int main(void)
 	{
 		_main.ui.Flush();
 		_main.ui.volume = _main.audio.volume * 100;
-		_main.ui.is_pause = _main.audio.is_audio_playing;
+		_main.ui.is_pause = !_main.audio.is_audio_playing;
+		UpdateCursor(&_main.audio);
 		_main.ui.cursor = _main.audio.cursor;
 		_main.ui.total_length = _main.audio.song_length;
 		_main.ui.status = _main.audio.status;
@@ -169,12 +170,10 @@ int main(void)
 					}break;
 					// right
 					case 'C' : {
-						if(_main.audio.cursor < _main.audio.song_length){
+						if(_main.audio.cursor < _main.audio.song_length)
 							_main.audio.cursor += _main.audio.seek_time;
-							SeekPosition(&_main.audio);
-						}
+						SeekPosition(&_main.audio);
 						MP_Update_Audio(&_main.audio , NULL);
-						UI_Window_Update(&_main.ui);
 					}break;
 					// left
 					case 'D' : {
@@ -294,6 +293,8 @@ void* main_always_update(void* param)
 		if(MusicAtEnd()){
 			if(_main->ui.status == SINGLE_LOOP){
 				_main->audio.cursor = 0;
+				MP_Update_Audio(&_main->audio , __dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].filename);
+				PlayMusic(&_main->audio);
 			}else if(_main->ui.status == PLAYLIST_LOOP){
 				if(_main->ui.explorer){
 					do{
@@ -304,12 +305,14 @@ void* main_always_update(void* param)
 						_main->_index++;
 					}while(__dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].is_dir);
 				}
+				MP_Update_Audio(&_main->audio , __dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].filename);
+				PlayMusic(&_main->audio);
 			}		
-			MP_Update_Audio(&_main->audio , __dirs[_main->_index + _main->ui.cursor_position_row - _main->ui.box_row_pos_size_top - 1].filename);
-			PlayMusic(&_main->audio);
 		}
-		if(_main->audio.is_audio_playing)
-			_main->ui.cursor++;
+		if(!_main->ui.is_pause){
+			UpdateCursor(&_main->audio);
+			_main->ui.cursor = _main->audio.cursor;
+		}
 		UI_Window_Update(&_main->ui);
 		if(_main->ui.explorer && !_main->ui.help){
 			Explorer(&_main->ui , _main->current_directory , _main->_index);
