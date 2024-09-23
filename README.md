@@ -52,5 +52,5 @@ $ ./main
 </ul> 
 
 # Note 
-<p>this software only tested on linux (Debian) if you see this software is useful , you can help to create a windows version or other OS versions , welcome to contributions 
+<p>this software only tested on linux (Debian) if you see this software is useful , you can help to create a windows version or other OS versions , check [contribute](https://github.com/abdorayden/raymp/CONTRIBUTIONS.md) file
 </p>

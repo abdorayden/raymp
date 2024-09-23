@@ -78,7 +78,7 @@ int main(void)
 	{
 		_main.ui.Flush();
 		_main.ui.volume = _main.audio.volume * 100;
-		_main.ui.is_pause = !_main.audio.is_audio_playing;
+		_main.ui.is_pause = _main.audio.is_audio_playing;
 		UpdateCursor(&_main.audio);
 		_main.ui.cursor = _main.audio.cursor;
 		_main.ui.total_length = _main.audio.song_length;
