@@ -17,11 +17,11 @@
 #define MINIAUDIO_IMPLEMENTATION
 #define AUDIO_C_
 
-#include "./files/third_party/miniaudio.h"
-#include "./files/log.h"
-#include "./files/rdirectorys.h"
-#include "./files/audio.h"
-#include "./files/ui.h"
+#include "./src/third_party/miniaudio.h"
+#include "./src/log.h"
+#include "./src/rdirectorys.h"
+#include "./src/audio.h"
+#include "./src/ui.h"
 
 // TODO: add favorite albom and let user create new alboms
 // TODO: search song on local device
@@ -309,7 +309,7 @@ void* main_always_update(void* param)
 				PlayMusic(&_main->audio);
 			}		
 		}
-		if(!_main->ui.is_pause){
+		if(_main->ui.is_pause){
 			UpdateCursor(&_main->audio);
 			_main->ui.cursor = _main->audio.cursor;
 		}
