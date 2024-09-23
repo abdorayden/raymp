@@ -16,7 +16,7 @@
 
 
 # Examples of rmp syntax 
-'''
+```rust
 # this is a comment
 
 # rust import libs style
@@ -42,7 +42,7 @@ let t = 5 # define variable
 fun! foo(bar)
     <code>
 endfun
-'''
+```
 
 this engine will run rmp script's for having wonderfull music player experience<br>
 if you see this project is usefull you can [cuntribute](https://github.com/abdorayden/raymp/blob/master/CONTRIBUTIONS.md) it
