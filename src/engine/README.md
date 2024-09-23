@@ -45,4 +45,4 @@ endfun
 '''
 
 this engine will run rmp script's for having wonderfull music player experience<br>
-if you see this project is usefull you can [cuntribute](https://github.com/abdorayden/raymp/CONTRIBUTIONS.md) it
+if you see this project is usefull you can [cuntribute](https://github.com/abdorayden/raymp/blob/master/CONTRIBUTIONS.md) it
