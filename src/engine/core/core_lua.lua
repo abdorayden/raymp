@@ -7,6 +7,38 @@
 -- module lua
 lua_core = {}
 
+
+-- creating objects
+-- this object contains all new objects that created using create_object function
+all_new_objects = {}
+
+-- you can create global 
+
+for_yield = coroutine.create(
+	function()
+		i = 0
+		while true do
+			i = i + 1
+			coroutine.yield(i)
+		end
+
+	end
+)
+
+function lua_core.create_object(object_name)
+	_ , index = coroutine.resume(for_yield)
+	_G[object_name] = {}
+	all_new_objects[index] = _G[object_name]
+end
+
+function get_last_index()
+	_ , last = coroutine.resume(for_yield)
+	return last - 1
+end
+
+--
+
+
 global_count_enum = -1
 
 local function enum(reset)
@@ -111,19 +143,6 @@ SHIFT_Z = enum()
 
 -- default rmp keys
 KEYS = {}
- -- KEYS = {
- -- 	[KEY_SPACE] 	= PAUSE_RESUME,
- -- 	[KEY_GT]	= SONG_NEXT,
- -- 	[KEY_LT]	= SONG_PREV,
- -- 	[KEY_TAB]	= STATUS,
- -- 	[KEY_RIGHT]	= SEEK_RIGHT,
- -- 	[KEY_LEFT]	= SEEK_LEFT,
- -- 	[KEY_E]		= EXPLORER,
- -- 	[KEY_J]		= CURSOR_MOVE_DOWN,
- -- 	[KEY_K]		= CURSOR_MOVE_UP,
- -- 	[KEY_DOWN]	= CURSOR_MOVE_DOWN,
- -- 	[KEY_UP]	= CURSOR_MOVE_UP,
- -- }
  --
  -- 	setkey(KEY_SPACE,PAUSE_RESUME)
  -- 	setkey(KEY_GT,SONG_NEXT)
