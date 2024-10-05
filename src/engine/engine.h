@@ -95,10 +95,10 @@
 #endif
 // end RMP API
 
-#define DEFAULT_RMP_SCRIPT	".rmp/main.lua"
+#define DEFAULT_RMP_SCRIPT	"lua-plug/main.lua"
 
-#define CORE_IMPLEMENTATION
-#include "./core.h"
+//#define CORE_IMPLEMENTATION
+//#include "./core.h"
 
 typedef struct {
 	lua_State * luafile;
@@ -125,7 +125,7 @@ RMPEngine RMPEngineInit(const char* filename)
 	lua_State *luafile = luaL_newstate();
 	luaL_openlibs(luafile);
 	// Load filename
-	if(luaL_loadfile(luafile , filename) != LUA_OK){
+	if(luaL_loadfile(luafile , filename) != LUA_OK || filename == NULL){
 		is_error = engine_load_file_e;
 		// if is_error the engine will run the default lua script
 		if(luaL_loadfile(luafile , DEFAULT_RMP_SCRIPT) != LUA_OK){
@@ -147,14 +147,14 @@ RMPEngine RMPEngineInit(const char* filename)
 	return rmp_engine;
 }
 
-void RMPEngineLoadUI(void* ui)
-{
-	// after getting number of boxes from lua script
-#define BOX_COUNT	// number of boxes 
-	(UI*) ui;
-	ui->boxes = malloc(sizeof(Box)*);
-	// controle boxes using box_index from UI structure
-}
+//void RMPEngineLoadUI(void* ui)
+//{
+//	// after getting number of boxes from lua script
+//#define BOX_COUNT	// number of boxes 
+//	(UI*) ui;
+//	ui->boxes = malloc(sizeof(Box)*);
+//	// controle boxes using box_index from UI structure
+//}
 
 void RMPEngineClose(RMPEngine* rmp_engine)
 {
