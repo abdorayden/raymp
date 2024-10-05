@@ -23,7 +23,11 @@ typedef enum{
 	thread_failed,
 	// favorite albome
 	failed_init_fav_albome,
-	failed_to_load_fav_albome
+	failed_to_load_fav_albome,
+	// engines
+	engine_load_file_e,
+	engine_failed,
+	engine_load_code
 
 }error_e;
 
@@ -59,6 +63,9 @@ char* GetError(error_e e){
 		case init_audio_sound_from_file : return "Failed to init sound from file (is not song)";
 		case get_cursor_pcm_frames : return "Failed to get cursor position";
 		case get_length_audio : return "Failed to get song length";
+		case engine_load_file_e : return "Failed Engine to load file extension <run default script>";
+		case engine_failed : return "Failed Engine <critical>";
+		case engine_load_code : return "Failed to load lua code <access value nil>";
 		default : return strerror(is_error);
 	}
 }

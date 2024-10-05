@@ -684,7 +684,7 @@ void Explorer(UI* ui ,char* path , int index)
 	{
 		move_cursor(ui->box_col_pos_left_size + 1 , ui->box_row_pos_size_top + row + 2);
 		if(ui->box_row_pos_size_top + (row + 1) == ui->cursor_position_row)
-			printf("%s %.2d -%c-%s- %s%s%s%s\n",file_pos ,__dirs[index].file_idx,  __dirs[index].is_dir ? 'd' : 'f', handle_size(__dirs[index].file_size),__dirs[index].is_dir ? Blue : Default ,fix_ui_box_border(*ui , strrchr(__dirs[index].filename , '/') , strlen(handle_size(__dirs[index].file_size))) , Default , Regular);
+			printf("%s %.2d -%c-%s- %s%s%s%s%s\n",file_pos ,__dirs[index].file_idx,  __dirs[index].is_dir ? 'd' : 'f', handle_size(__dirs[index].file_size),Green,__dirs[index].is_dir ? Blue : "" ,fix_ui_box_border(*ui , strrchr(__dirs[index].filename , '/') , strlen(handle_size(__dirs[index].file_size))) , Default , Regular);
 		else
 			printf("  %.2d -%c-%s- %s%s%s%s\n",__dirs[index].file_idx , __dirs[index].is_dir ? 'd' : 'f', handle_size(__dirs[index].file_size),__dirs[index].is_dir ? Blue : Default ,fix_ui_box_border(*ui , strrchr(__dirs[index].filename, '/') ,strlen(handle_size(__dirs[index].file_size))), Default , Regular);
 		index++;

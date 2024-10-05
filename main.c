@@ -211,6 +211,7 @@ int main(void)
 					}else{
 						do{
 							_main._index++;
+							cursor_move_position_down(&_main);
 						}while(__dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].is_dir);
 					}
 					MP_Update_Audio(&_main.audio , __dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].filename);
@@ -227,6 +228,7 @@ int main(void)
 					}else{
 						do{
 							_main._index--;
+							cursor_move_position_up(&_main);
 						}while(__dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].is_dir);
 					}
 					MP_Update_Audio(&_main.audio , __dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].filename);

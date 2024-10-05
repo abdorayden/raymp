@@ -4,9 +4,9 @@
  *
  *						 ________________
  *		 _____________			|		 |
- *		|             |			| downloader.rmp |
- *		|   ENGINE    | <-------------  | example.rmp	 |
- *		|_____________|			| test.rmp	 |
+ *		|             |			| downloader.lua |
+ *		|   ENGINE    | <-------------  | example.lua	 |
+ *		|_____________|			| test.lua	 |
  *		      |				|________________|
  *		      |
  *		      |
@@ -66,7 +66,6 @@
 #endif
 
 // RMP API
-
 #ifdef _WIN32
 	#define RMP_DLL_IMPORT  __declspec(dllimport)
 	#define RMP_DLL_EXPORT  __declspec(dllexport)
@@ -94,15 +93,71 @@
         #define RMP_API extern
     #endif
 #endif
-
 // end RMP API
 
-RMP_API void Load_Scripts(void);
+#define DEFAULT_RMP_SCRIPT	".rmp/main.lua"
 
+#define CORE_IMPLEMENTATION
+#include "./core.h"
+
+typedef struct {
+	lua_State * luafile;
+	const char* filename;
+}RMPEngine;
+
+// @param filename script to load
+RMP_API RMPEngine RMPEngineInit(const char*);
+
+//@param void* point to the UI structure
+RMP_API void RMPEngineLoadUI(void*);
+
+RMP_API void RMPEngineClose(RMPEngine*);
 
 #endif // RMP_ENGINE
 
 
 #ifdef  RMP_ENGINE_IMPLEMENTATION
-// implementation
+
+RMPEngine RMPEngineInit(const char* filename)
+{
+	RMPEngine rmp_engine = {0};
+	// init luafile object
+	lua_State *luafile = luaL_newstate();
+	luaL_openlibs(luafile);
+	// Load filename
+	if(luaL_loadfile(luafile , filename) != LUA_OK){
+		is_error = engine_load_file_e;
+		// if is_error the engine will run the default lua script
+		if(luaL_loadfile(luafile , DEFAULT_RMP_SCRIPT) != LUA_OK){
+			is_error = engine_failed;
+			return ;
+			//if is_error the engine will quit 
+			// because the default script not found
+		}
+
+	}
+	// calling the global main script
+	// to enable calling the functions 
+	if (lua_pcall(luafile, 0, 0, 0) != LUA_OK){
+		is_error = engine_load_code;
+		return ;
+	}
+	rmp_engine.luafile = luafile;
+	rmp_engine.filename = filename;
+	return rmp_engine;
+}
+
+void RMPEngineLoadUI(void* ui)
+{
+	// after getting number of boxes from lua script
+#define BOX_COUNT	// number of boxes 
+	(UI*) ui;
+	ui->boxes = malloc(sizeof(Box)*);
+	// controle boxes using box_index from UI structure
+}
+
+void RMPEngineClose(RMPEngine* rmp_engine)
+{
+	lua_close(rmp_engine->luafile);
+}
 #endif//RMP_ENGINE_IMPLEMENTATION
