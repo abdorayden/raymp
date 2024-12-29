@@ -1,19 +1,11 @@
 #ifndef RDIR_H_
 #define RDIR_H_
 
-typedef int 		Err	;
-typedef struct dirent 	Dirent	;
+#include "config/list.h"
+
+typedef struct dirent 	RMPDirent;
 
 #define MAX_FILE 10
-
-#ifndef BOOL_ON
-#include <stdbool.h>
-#else
-typedef enum{
-	false = 0,
-	true = !false,
-}bool;
-#endif
 
 typedef enum {
 	B ,
@@ -26,27 +18,15 @@ typedef enum {
 typedef struct directory {
 	char 	filename[256]	; 	// file name max length 256
 	size_t 	file_size	; 	// file size
-	int 	file_idx	; 	// file index 
 	bool 	is_dir		;	// true if it's directory
-	bool	the_last	;
 }Directoy;
 
-#define MAX_LEN_DIRS	200
-
-int idx;
-Directoy __dirs[MAX_LEN_DIRS];
-
-void Init_Dir(void);
-void List_Dir(const char*);
-// used for debuging
-void Dump_files(void);
-char* handle_size(size_t byte_size);
-
+void InitDir(RLList);
+void ListDir(const char*,RLList);
 
 #endif //RDIR_H_
 
 #ifdef    DIR_ON
-#define   DIR_ON
 
 char fmt[100];
 static size_t get_file_size(char* filename){
@@ -61,7 +41,7 @@ static size_t get_file_size(char* filename){
 	fclose(filep);
 	return size;
 }
-char* handle_size(size_t byte_size){
+static char* handle_size(size_t byte_size){
 	if(byte_size == 0)	return "0 B";
 	Block block = B;
 	while((byte_size / 1024) != 0){		
@@ -88,18 +68,6 @@ char* handle_size(size_t byte_size){
 	return fmt;
 }
 
-	
-
-void Init_Dir(void)
-{
-	for(int i = 0 ; i < MAX_LEN_DIRS ; i++)
-	{
-		__dirs[i].filename[0] = '\0';
-	}
-	memset(__dirs , 0 , MAX_LEN_DIRS * sizeof(Directoy));
-	idx = 0;
-}
-
 static bool is_file_extension(const char *fileName, const char *ext)
 {
     bool result = false;
@@ -113,7 +81,14 @@ static bool is_file_extension(const char *fileName, const char *ext)
     return result;
 }
 
-void List_Dir(const char* dirname){
+void InitDir(RLList list)
+{
+	RLSetObject(DIRECTORY);
+	list.List_Clear();
+}
+
+void ListDir(const char* dirname , RLList list){
+	RLSetObject(DIRECTORY);
 	if(dirname == NULL)	return;
         DIR *dir = opendir(dirname);
 	if(dir == NULL){
@@ -121,34 +96,39 @@ void List_Dir(const char* dirname){
 		return ;
 	}
 	errno = 0;
-	Dirent* rdir= readdir(dir);
+	RMPDirent* rdir= readdir(dir);
+	Directoy dirs = {0};
+	RLCopyObject(sizeof(Directoy));
 	while(rdir != NULL){
+#ifdef _WIN32
+
+                sprintf(dirs.filename, "%s/%s", dirname, rdir->d_name);
+		dirs.file_size = get_file_size(rdir->d_name);
+		DWORD result = GetFileAttributes(rdir->d_name);
+		if(result == INVALID_FILE_ATTRIBUTES || !(result & FILE_ATTRIBUTE_DIRECTORY))
+		{
+			dirs.is_dir = false;
+		}else{
+			dirs.is_dir = true;
+		}
+#else
 		switch(rdir->d_type){
 			case DT_REG : {
-                		sprintf(__dirs[idx].filename, "%s/%s", dirname, rdir->d_name);
-				__dirs[idx].file_size = get_file_size(rdir->d_name);
-				__dirs[idx].is_dir = false;
-				__dirs[idx].file_idx = idx;
+                		sprintf(dirs.filename, "%s/%s", dirname, rdir->d_name);
+				dirs.file_size = get_file_size(rdir->d_name);
+				dirs.is_dir = false;
 			}break;
 			case DT_DIR : {
-				if(
-					strcmp(rdir->d_name, ".") == 0  		//|| 
-					//strcmp(rdir->d_name, "..") == 0 		
-
-				)
-				{
-					rdir = readdir(dir);
-					continue;
-				}
-                		sprintf(__dirs[idx].filename,"%s/%s", dirname, rdir->d_name);
-				__dirs[idx].file_size = 0;
-				__dirs[idx].is_dir = true;
-				__dirs[idx].file_idx = idx;
+                		sprintf(dirs.filename,"%s/%s", dirname, rdir->d_name);
+				dirs.file_size = 0;
+				dirs.is_dir = true;
 			}
 		}
-		++idx;
+#endif
+		list.List_Append(RL_VOIDPTR , (void*)&dirs);
 		rdir = readdir(dir);
 	}
+	RLDisableCopyObject();
 
 	if(errno != 0){
 		if(dir)	
@@ -157,16 +137,7 @@ void List_Dir(const char* dirname){
 		return;
 	}
 	closedir(dir);
-	__dirs[idx].the_last = true;
 	return;
-}
-
-void Dump_files(void)
-{
-	for(int i = 0 ; i < idx ; i++)
-	{
-		printf("\n%s" , __dirs[i].filename);
-	}
 }
 
 #endif // DIR_ON

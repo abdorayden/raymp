@@ -12,6 +12,11 @@
 #include <time.h>
 #include <pthread.h>
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
 #define DIR_ON
 #define UI_C_
 #define MINIAUDIO_IMPLEMENTATION
@@ -211,7 +216,6 @@ int main(void)
 					}else{
 						do{
 							_main._index++;
-							cursor_move_position_down(&_main);
 						}while(__dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].is_dir);
 					}
 					MP_Update_Audio(&_main.audio , __dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].filename);
@@ -228,7 +232,6 @@ int main(void)
 					}else{
 						do{
 							_main._index--;
-							cursor_move_position_up(&_main);
 						}while(__dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].is_dir);
 					}
 					MP_Update_Audio(&_main.audio , __dirs[_main._index + _main.ui.cursor_position_row - _main.ui.box_row_pos_size_top - 1].filename);
@@ -364,3 +367,4 @@ void cursor_move_position_up(Main* _main)
 		}
 	}
 }
+

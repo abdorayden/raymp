@@ -4,9 +4,12 @@
 --
 --
 
--- module lua
+io = require("io")
+
+-- module core_lua
 lua_core = {}
 
+lua_core.EnableFromScratch = false
 
 -- creating objects
 -- this object contains all new objects that created using create_object function
@@ -53,25 +56,25 @@ end
 
 NONE = -1000
 
-EXPLORER = enum(true)
-STYLES = enum()
-SEEK_RIGHT = enum()
-SEEK_LEFT = enum()
-VOLUME_UP = enum()
-VOLUME_DOWN = enum()
-STATUS = enum()
-PAUSE = enum()
-RESUME = enum()
-SONG_NEXT = enum()
-SONG_PREV = enum()
-PAUSE_RESUME = PAUSE | RESUME
+EXPLORER 		= enum(true)
+STYLES 			= enum()
+SEEK_RIGHT 		= enum()
+SEEK_LEFT 		= enum()
+VOLUME_UP 		= enum()
+VOLUME_DOWN 		= enum()
+STATUS 			= enum()
+PAUSE 			= enum()
+RESUME 			= enum()
+SONG_NEXT 		= enum()
+SONG_PREV 		= enum()
+PAUSE_RESUME 		= PAUSE | RESUME
 
-CURSOR_MOVE_UP	= enum()
-CURSOR_MOVE_DOWN = enum()
+CURSOR_MOVE_UP		= enum()
+CURSOR_MOVE_DOWN 	= enum()
 
-FUZZING_SEARCH = enum()
-DOWNLOAD_OVER_INTERNET = enum()
-SETTINGS = enum()
+FUZZING_SEARCH 		= enum()
+DOWNLOAD_OVER_INTERNET 	= enum()
+SETTINGS 		= enum()
 -- manage alboms
 
 KEY_A = enum(true)  
@@ -218,4 +221,55 @@ function lua_core.get_os()
 	end
 end
 
+function lua_core.moveto(x , y)
+	if(lua_core.get_os() == "Linux") then
+		io.write("\033["..y..";"..x.."H");
+	end
+end
+
+function  lua_core.cls()
+	if(lua_core.get_os() == "Linux") then
+		io.write("\033[2J")
+	end
+end
+#define move_up	\
+	printf("\033[1A");
+
+#define move_down	\
+	printf("\033[1B");
+
+#define move_right	\
+	printf("\033[1C");
+
+#define move_left	\
+	printf("\033[1D");
+
+#define hide_cursor() 	printf("\033[?25l");
+#define show_cursor()	printf("\033[?25h");
+-- UI
+if lua_core.EnableFromScratch == true then
+	local UI = {
+		-- first layer contains tabs 
+		-- by default there's one tab (main window)
+		[1] = {
+			-- contains boxes how many frame in the window
+			[1] = {
+
+			}
+		}
+	}
+
+	function lua_core.Box(
+		position_start 	-- position of the box 
+		, width 	-- box width
+		, height 	-- box height
+		, title 	-- box title
+		, obj		-- object to connect with 
+		, border	-- border style
+		)
+
+	end
+
+	function lua_core.Log_Box()
+end
 return lua_core
