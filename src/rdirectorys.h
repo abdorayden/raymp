@@ -1,3 +1,8 @@
+/*
+ *	RMP (Ray Music Player) , rdirectorys.h part of raymp repo
+ *	this file handle listing directory's , type of attr and size
+ * */
+
 #ifndef RDIR_H_
 #define RDIR_H_
 
