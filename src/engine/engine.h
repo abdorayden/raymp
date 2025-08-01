@@ -80,3 +80,50 @@ void RMPEngineClose(RMPEngine*);
 
 #endif // RMP_ENGINE
 
+// #ifndef RMP_ENGINE
+// #define RMP_ENGINE
+// 
+// #ifndef LIST_INCLUDED
+// #include "../third_party/raylist.h"
+// #endif
+// 
+// #ifndef _WIN32
+// #include <lua.h>
+// #include <lua5.4/lauxlib.h>
+// #include <lua5.4/lualib.h>
+// #else
+// #include "./lua/include/lua.h"
+// // #include "./lua/include/lauxlib.h"
+// #include "./lua/include/lualib.h"
+// #endif
+// 
+// #define RMP_MALLOC  RLALLOC
+// #define RMP_REALLOC RLREALLOC
+// #define RMP_FREE    RLFREE
+// 
+// typedef enum {
+//     RMP_ERROR_ENGINE_FILENAME_NULL,
+//     RMP_ERROR_LOAD_LUA_FILE,
+//     RMP_ERROR_CALLING_MAIN_FUNCTION,
+//     RMP_ERROR_ENTRY_NULL,
+//     RMP_ERROR_COROUTINE,
+//     RMP_FINE
+// } RMPEngineError;
+// 
+// typedef enum {
+//     RMP_ERR,
+//     RMP_OK
+// } RMPEngineStatus;
+// 
+// typedef struct {
+//     lua_State* L;
+//     const char* filename;
+//     RMPEngineStatus status;
+//     int is_running;
+// } RMPEngine;
+// 
+// RMPEngine RMPEngineInit(const char* filename);
+// RMPEngineError RMPEngineRun(RMPEngine engine);
+// void RMPEngineClose(RMPEngine* engine);
+// 
+// #endif // RMP_ENGINE

@@ -1,493 +1,357 @@
 /*
- *	keyboard.c file is part of RMP engine 
- *	and the licence is under licence repo
- *
- * */
+ * 	this file is part of core engine 
+ * 	keyboard_lua.c - Cross-platform keyboard input library for Lua
+ * 	Supports Windows, Linux, and macOS with non-blocking input
+ */
 
-// standerd libc 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-// lua lib
 #include <lua5.4/lua.h>
 #include <lua5.4/lauxlib.h>
 #include <lua5.4/lualib.h>
+#include <stdbool.h>
 
-
-// Linux/macOS:
-//	gcc -shared -o mylib.so -fPIC mylib.c
-// Windows (MinGW):
-//	gcc -shared -o mylib.dll -fPIC mylib.c
-
-
-// Keys enumeration to map which key is pressed
+// Key enumeration (complete version)
 typedef enum {
-	KEY_CTRL_A,
-	KEY_CTRL_B,
-	KEY_CTRL_C,      
-	KEY_CTRL_D,      
-	KEY_CTRL_E,      
-	KEY_CTRL_F,      
-	KEY_CTRL_N,      
-	KEY_CTRL_O,      
-	KEY_CTRL_P,      
-	KEY_CTRL_Q,      
-	KEY_CTRL_R,      
-	KEY_CTRL_Y,      
-	KEY_CTRL_G, 
-	KEY_CTRL_H, 
-	KEY_CTRL_I, 
-	KEY_CTRL_K, 
-	KEY_CTRL_L, 
-	KEY_CTRL_S, 
-	KEY_CTRL_T, 
-	KEY_CTRL_U, 
-	KEY_CTRL_V, 
-	KEY_CTRL_W, 
-	KEY_CTRL_X, 
-	KEY_CTRL_Z, 
+	// Control keys
+	KEY_CTRL_A, KEY_CTRL_B, KEY_CTRL_C, KEY_CTRL_D, KEY_CTRL_E,
+	KEY_CTRL_F, KEY_CTRL_G, KEY_CTRL_H ,
+	KEY_CTRL_K, KEY_CTRL_L, KEY_CTRL_M, KEY_CTRL_N, KEY_CTRL_O,
+	KEY_CTRL_P, KEY_CTRL_Q, KEY_CTRL_R, KEY_CTRL_S, KEY_CTRL_T,
+	KEY_CTRL_U, KEY_CTRL_V, KEY_CTRL_W, KEY_CTRL_X, KEY_CTRL_Y,
+	KEY_CTRL_Z,
 
-	KEY_A,
-	KEY_B,
-	KEY_C,      
-	KEY_D,      
-	KEY_E,      
-	KEY_F,      
-	KEY_M,      
-	KEY_N,      
-	KEY_O,      
-	KEY_P,      
-	KEY_Q,      
-	KEY_R,      
-	KEY_Y,      
-	KEY_G, 
-	KEY_H, 
-	KEY_I, 
-	KEY_J, 
-	KEY_K, 
-	KEY_L, 
-	KEY_S, 
-	KEY_T, 
-	KEY_U, 
-	KEY_V, 
-	KEY_W, 
-	KEY_X, 
-	KEY_Z, 
+	// Special keys
+	KEY_ENTER, KEY_SPACE, KEY_ESCAPE, KEY_UP, KEY_DOWN,
+	KEY_LEFT, KEY_RIGHT, KEY_TAB,
 
-	KEY_ENTER,
-	KEY_SPACE,
-	KEY_ESCAPE,
-	KEY_UP,
-	KEY_DOWN, 
-	KEY_LEFT,
-	KEY_RIGHT,
+	// Alphabet keys (lowercase)
+	KEY_A, KEY_B, KEY_C, KEY_D, KEY_E, KEY_F, KEY_G, KEY_H,
+	KEY_I, KEY_J, KEY_K, KEY_L, KEY_M, KEY_N, KEY_O, KEY_P,
+	KEY_Q, KEY_R, KEY_S, KEY_T, KEY_U, KEY_V, KEY_W, KEY_X,
+	KEY_Y, KEY_Z,
 
-	KEY_PLUS, 
-	KEY_MINUS,
-	KEY_GT,
-	KEY_LT, 
-	KEY_TAB,	 
-
-	KEY_SHIFT_A,   
-	KEY_SHIFT_B,   
-	KEY_SHIFT_C,   
-	KEY_SHIFT_D,   
-	KEY_SHIFT_E,   
-	KEY_SHIFT_F,   
-	KEY_SHIFT_M,   
-	KEY_SHIFT_N,   
-	KEY_SHIFT_O,   
-	KEY_SHIFT_P,   
-	KEY_SHIFT_Q,   
-	KEY_SHIFT_R,   
-	KEY_SHIFT_Y,   
-	KEY_SHIFT_G,
-	KEY_SHIFT_H,
-	KEY_SHIFT_I,
-	KEY_SHIFT_J,
-	KEY_SHIFT_K,
-	KEY_SHIFT_L,
-	KEY_SHIFT_S,
-	KEY_SHIFT_T,
-	KEY_SHIFT_U,
-	KEY_SHIFT_V,
-	KEY_SHIFT_W,
-	KEY_SHIFT_X,
+	// Alphabet keys (uppercase/shifted)
+	KEY_SHIFT_A, KEY_SHIFT_B, KEY_SHIFT_C, KEY_SHIFT_D, KEY_SHIFT_E,
+	KEY_SHIFT_F, KEY_SHIFT_G, KEY_SHIFT_H, KEY_SHIFT_I, KEY_SHIFT_J,
+	KEY_SHIFT_K, KEY_SHIFT_L, KEY_SHIFT_M, KEY_SHIFT_N, KEY_SHIFT_O,
+	KEY_SHIFT_P, KEY_SHIFT_Q, KEY_SHIFT_R, KEY_SHIFT_S, KEY_SHIFT_T,
+	KEY_SHIFT_U, KEY_SHIFT_V, KEY_SHIFT_W, KEY_SHIFT_X, KEY_SHIFT_Y,
 	KEY_SHIFT_Z,
-	KEY_0, 
-	KEY_1,
-	KEY_2,
-	KEY_3,
-	KEY_4,
-	KEY_5,
-	KEY_6,
-	KEY_7,
-	KEY_8,
-	KEY_9,
-	KEY_HASHTAG,
-	KEY_DOLAR,
-	KEY_PERSANT,
-	KEY_STAR,
-	KEY_DOT,
-	KEY_UNDERS,
-	KEY_SEMICOL,
-	KEY_QUISTION_MARK,
-	KEY_AT,
-	KEY_OPCURB,
-	KEY_BACK_SLASH,
-	KEY_CLCURB,
-	KEY_BACKTICK,
-	KEY_OPEN_BRAKET,
-	KEY_BAR,
-	KEY_CLOSED_BRAKET,
-	KEY_DBL_QUOTE,
-	KEY_SINGLE_QOUTE,
+
+	// Number keys
+	KEY_0, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5,
+	KEY_6, KEY_7, KEY_8, KEY_9,
+
+	// Symbol keys
+	KEY_PLUS, KEY_MINUS, KEY_GT, KEY_LT, KEY_HASHTAG,
+	KEY_DOLAR, KEY_PERSANT, KEY_STAR, KEY_DOT, KEY_UNDERS,
+	KEY_SEMICOL, KEY_QUISTION_MARK, KEY_AT, KEY_OPCURB,
+	KEY_CLCURB, KEY_BACK_SLASH, KEY_BACKTICK, KEY_OPEN_BRAKET,
+	KEY_CLOSED_BRAKET, KEY_BAR, KEY_DBL_QUOTE, KEY_SINGLE_QOUTE,
+
 	NONE
-}Keys;
+} Keys;
 
-#if !defined(_WIN32)
-
-// posix stuff
-
-#include <sys/ioctl.h>
-#include <termios.h>
-#include <ctype.h>
-#include <unistd.h>
-#include <signal.h>
-#include <fcntl.h>
-
-typedef struct termios Term;
-
-static inline void input_mode_disable(Term* saved_tattr){
-  	tcsetattr(STDIN_FILENO, TCSANOW, saved_tattr);
-}
-
-static inline void input_mode_enable(Term* tattr) {
-    tcgetattr(STDIN_FILENO, tattr);
-    tattr->c_lflag &= ~(ICANON | ECHO); 
-    tattr->c_cc[VMIN] = 1;
-    tattr->c_cc[VTIME] = 0;             
-    tcsetattr(STDIN_FILENO, TCSANOW, tattr);
-}
-
-static inline void input_mode_reset(Term* tattr) {
-    tcgetattr(STDIN_FILENO, tattr);
-    tattr->c_lflag |= (ICANON | ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, tattr);
-}
-
-
-#define CTRL_KEY(key)	((key) & 0x1f)
-
-int handle_keys(lua_State* state) {
-    	char c = (char)luaL_checkinteger(state, 1);
-	Keys for_ret;
-	switch (c){
-		case CTRL_KEY('a') : for_ret = KEY_CTRL_A;break;
-		case CTRL_KEY('b') : for_ret = KEY_CTRL_B;break;
-		case CTRL_KEY('c') : for_ret = KEY_CTRL_C;break;
-		case CTRL_KEY('d') : for_ret = KEY_CTRL_D;break;
-		case CTRL_KEY('e') : for_ret = KEY_CTRL_E;break;
-		case CTRL_KEY('f') : for_ret = KEY_CTRL_F;break;
-		case CTRL_KEY('g') : for_ret = KEY_CTRL_G;break;
-		case CTRL_KEY('h') : for_ret = KEY_CTRL_H;break;
-		case CTRL_KEY('k') : for_ret = KEY_CTRL_K;break;
-		case CTRL_KEY('l') : for_ret = KEY_CTRL_L;break;
-		case CTRL_KEY('n') : for_ret = KEY_CTRL_N;break;
-		case CTRL_KEY('o') : for_ret = KEY_CTRL_O;break;
-		case CTRL_KEY('p') : for_ret = KEY_CTRL_P;break;
-		case CTRL_KEY('q') : for_ret = KEY_CTRL_Q;break;
-		case CTRL_KEY('r') : for_ret = KEY_CTRL_R;break;
-		case CTRL_KEY('s') : for_ret = KEY_CTRL_S;break;
-		case CTRL_KEY('t') : for_ret = KEY_CTRL_T;break;
-		case CTRL_KEY('u') : for_ret = KEY_CTRL_U;break;
-		case CTRL_KEY('v') : for_ret = KEY_CTRL_V;break;
-		case CTRL_KEY('w') : for_ret = KEY_CTRL_W;break;
-		case CTRL_KEY('x') : for_ret = KEY_CTRL_X;break;
-		case CTRL_KEY('y') : for_ret = KEY_CTRL_Y;break;
-		case CTRL_KEY('z') : for_ret = KEY_CTRL_Z;break;
-
-		case  9  : for_ret = KEY_TAB;break;
-		case  10 : for_ret = KEY_ENTER;break; 
-		case '0' : for_ret = KEY_0;break; 
-		case '1' : for_ret = KEY_1;break;
-		case '2' : for_ret = KEY_2;break;
-		case '3' : for_ret = KEY_3;break;
-		case '4' : for_ret = KEY_4;break;
-		case '5' : for_ret = KEY_5;break;
-		case '6' : for_ret = KEY_6;break;
-		case '7' : for_ret = KEY_7;break;
-		case '8' : for_ret = KEY_8;break;
-		case '9' : for_ret = KEY_9;break;
-		case 'a' : for_ret = KEY_A;break;
-		case 'b' : for_ret = KEY_B;break;
-		case 'c' : for_ret = KEY_C;break;
-		case 'd' : for_ret = KEY_D;break;
-		case 'e' : for_ret = KEY_E;break;
-		case 'f' : for_ret = KEY_F;break;
-		case 'g' : for_ret = KEY_G;break;
-		case 'h' : for_ret = KEY_H;break;
-		case 'i' : for_ret = KEY_I;break;
-		case 'j' : for_ret = KEY_J;break;
-		case 'k' : for_ret = KEY_K;break;
-		case 'l' : for_ret = KEY_L;break;
-		case 'm' : for_ret = KEY_M;break;
-		case 'n' : for_ret = KEY_N;break;
-		case 'o' : for_ret = KEY_O;break;
-		case 'p' : for_ret = KEY_P;break;
-		case 'q' : for_ret = KEY_Q;break;
-		case 'r' : for_ret = KEY_R;break;
-		case 's' : for_ret = KEY_S;break;
-		case 't' : for_ret = KEY_T;break;
-		case 'u' : for_ret = KEY_U;break;
-		case 'v' : for_ret = KEY_V;break;
-		case 'w' : for_ret = KEY_W;break;
-		case 'x' : for_ret = KEY_X;break;
-		case 'y' : for_ret = KEY_Y;break;
-		case 'z' : for_ret = KEY_Z;break;
-		case 'A' : for_ret = KEY_SHIFT_A;break; 
-		case 'B' : for_ret = KEY_SHIFT_B;break;
-		case 'C' : for_ret = KEY_SHIFT_C;break;
-		case 'D' : for_ret = KEY_SHIFT_D;break;
-		case 'E' : for_ret = KEY_SHIFT_E;break;
-		case 'F' : for_ret = KEY_SHIFT_F;break;
-		case 'G' : for_ret = KEY_SHIFT_G;break;
-		case 'H' : for_ret = KEY_SHIFT_H;break;
-		case 'I' : for_ret = KEY_SHIFT_I;break;
-		case 'J' : for_ret = KEY_SHIFT_J;break;
-		case 'K' : for_ret = KEY_SHIFT_K;break;
-		case 'L' : for_ret = KEY_SHIFT_L;break;
-		case 'M' : for_ret = KEY_SHIFT_M;break;
-		case 'N' : for_ret = KEY_SHIFT_N;break;
-		case 'O' : for_ret = KEY_SHIFT_O;break;
-		case 'P' : for_ret = KEY_SHIFT_P;break;
-		case 'Q' : for_ret = KEY_SHIFT_Q;break;
-		case 'R' : for_ret = KEY_SHIFT_R;break;
-		case 'S' : for_ret = KEY_SHIFT_S;break;
-		case 'T' : for_ret = KEY_SHIFT_T;break;
-		case 'U' : for_ret = KEY_SHIFT_U;break;
-		case 'V' : for_ret = KEY_SHIFT_V;break;
-		case 'W' : for_ret = KEY_SHIFT_W;break;
-		case 'X' : for_ret = KEY_SHIFT_X;break;
-		case 'Y' : for_ret = KEY_SHIFT_Y;break;
-		case 'Z' : for_ret = KEY_SHIFT_Z;break;
-		case '#' : for_ret = KEY_HASHTAG;break;
-		case '$' : for_ret = KEY_DOLAR;break;
-		case '%' : for_ret = KEY_PERSANT;break;
-		case '*' : for_ret = KEY_STAR;break;
-		case '+' : for_ret = KEY_PLUS;break;
-		case '-' : for_ret = KEY_MINUS;break;
-		case '.' : for_ret = KEY_DOT;break;
-		case ';' : for_ret = KEY_SEMICOL;break;
-		case '<' : for_ret = KEY_LT;break; 
-		case '>' : for_ret = KEY_GT;break;
-		case '?' : for_ret = KEY_QUISTION_MARK;break;
-		case '@' : for_ret = KEY_AT;break;
-		case '[' : for_ret = KEY_OPCURB;break;
-		case '\\': for_ret = KEY_BACK_SLASH;break;
-		case ']' : for_ret = KEY_CLCURB;break; 
-		case '_' : for_ret = KEY_UNDERS;break;
-		case '`' : for_ret = KEY_BACKTICK;break;
-		case '{' : for_ret = KEY_OPEN_BRAKET;break;
-		case '|' : for_ret = KEY_BAR;break;
-		case '}' : for_ret = KEY_CLOSED_BRAKET;break;
-		case '"' : for_ret = KEY_DBL_QUOTE;break;
-		case '\'': for_ret = KEY_SINGLE_QOUTE;break;
-		case ' ' : for_ret = KEY_SPACE;break;
-
-		case '\033' :{
-			char seq[3];break;
-			read(STDIN_FILENO , &seq[0] , 1);break; 
-			if(seq[0] != '['){
-				for_ret = KEY_ESCAPE;break;
-			}else{
-				read(STDIN_FILENO , &seq[1] , 1);break;
-				switch(seq[1]){
-			        	case 'A' : for_ret = KEY_UP;break;
-			        	case 'B' : for_ret = KEY_DOWN;break;
-			        	case 'C' : for_ret = KEY_RIGHT;break;
-					case 'D' : for_ret = KEY_LEFT ;break;
-				}
-			}
-		}break;break;
-		default : for_ret = NONE;
-	}
-	lua_pushinteger(state , for_ret);
-	return 1;
-}
-
-
-#else
-#ifdef KEYBOARDLL_EXPORTS /*  define ADD_EXPORTS *only* when building the DLL. */
-  #define KEYBOARDLL_API __declspec(dllexport)
-#else
-  #define KEYBOARDLL_API __declspec(dllimport)
-#endif
-
-/* Define calling convention in one place, for convenience. */
-#define CALL __cdecl
-
-KEYBOARDLL_API int CALL handle_keys(lua_State* state) {
-
+#if defined(_WIN32)
+// Windows implementation
 #include <windows.h>
 
-int CALL handle_keys(lua_State* state) {
-	Keys for_ret;
-	HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
-	DWORD fdwMode = ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT;
-	SetConsoleMode(hStdin, fdwMode);
+static bool initialized = false;
+static HANDLE hStdin;
+static DWORD oldMode;
 
-	INPUT_RECORD irInBuf[128];
+static void init_console() {
+	if (!initialized) {
+		hStdin = GetStdHandle(STD_INPUT_HANDLE);
+		GetConsoleMode(hStdin, &oldMode);
+		SetConsoleMode(hStdin, ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT);
+		initialized = true;
+	}
+}
+
+static void restore_console() {
+	if (initialized) {
+		SetConsoleMode(hStdin, oldMode);
+		initialized = false;
+	}
+}
+
+static Keys handle_keys() {
+	init_console();
+
+	INPUT_RECORD irInBuf;
 	DWORD cNumRead;
-	ReadConsoleInput(hStdin, irInBuf, 128, &cNumRead);
-	for (DWORD i = 0; i < cNumRead; i++) {
-		if (irInBuf[i].EventType == KEY_EVENT) {
-			KEY_EVENT_RECORD keyEvent = irInBuf[i].Event.KeyEvent;
-			if (keyEvent.bKeyDown) {
-				char ch = keyEvent.uChar.AsciiChar;
-                    		DWORD ctrlState = keyEvent.dwControlKeyState;
-				if(ctrlState & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED)){
-                        		if (ch >= 1 && ch <= 26) {
-                        		    switch('A' + ch - 1) {
-						case 'A' : for_ret = KEY_CTRL_A;break;
-						case 'B' : for_ret = KEY_CTRL_B;break;
-						case 'C' : for_ret = KEY_CTRL_C;break;
-						case 'D' : for_ret = KEY_CTRL_D;break;
-						case 'E' : for_ret = KEY_CTRL_E;break;
-						case 'F' : for_ret = KEY_CTRL_F;break;
-						case 'G' : for_ret = KEY_CTRL_G;break;
-						case 'H' : for_ret = KEY_CTRL_H;break;
-						case 'I' : for_ret = KEY_CTRL_I;break;
-						case 'K' : for_ret = KEY_CTRL_K;break;
-						case 'L' : for_ret = KEY_CTRL_L;break;
-						case 'N' : for_ret = KEY_CTRL_N;break;
-						case 'O' : for_ret = KEY_CTRL_O;break;
-						case 'P' : for_ret = KEY_CTRL_P;break;
-						case 'Q' : for_ret = KEY_CTRL_Q;break;
-						case 'R' : for_ret = KEY_CTRL_R;break;
-						case 'S' : for_ret = KEY_CTRL_S;break;
-						case 'T' : for_ret = KEY_CTRL_T;break;
-						case 'U' : for_ret = KEY_CTRL_U;break;
-						case 'V' : for_ret = KEY_CTRL_V;break;
-						case 'W' : for_ret = KEY_CTRL_W;break;
-						case 'X' : for_ret = KEY_CTRL_X;break;
-						case 'Y' : for_ret = KEY_CTRL_Y;break;
-						case 'Z' : for_ret = KEY_CTRL_Z;break;
 
-					    }
-                        		} 
-				}else{
-					if (ch >= 32 && ch <= 126) {
-						if(ch == 0x61)		for_ret = KEY_A; 
-						else if(ch == 0x62)	for_ret = KEY_B;
-						else if(ch == 0x63)	for_ret = KEY_C;
-						else if(ch == 0x64)	for_ret = KEY_D;
-						else if(ch == 0x65)	for_ret = KEY_E;
-						else if(ch == 0x66)	for_ret = KEY_F;
-						else if(ch == 0x67)	for_ret = KEY_G;
-						else if(ch == 0x68)	for_ret = KEY_H;
-						else if(ch == 0x69)	for_ret = KEY_I;
-						else if(ch == 0x6A)	for_ret = KEY_J;
-						else if(ch == 0x6B)	for_ret = KEY_K;
-						else if(ch == 0x6C)	for_ret = KEY_L;
-						else if(ch == 0x6D)	for_ret = KEY_M;
-						else if(ch == 0x6E)	for_ret = KEY_N;
-						else if(ch == 0x6F)	for_ret = KEY_O;
-						else if(ch == 0x70)	for_ret = KEY_P;
-						else if(ch == 0x71)	for_ret = KEY_Q;
-						else if(ch == 0x72)	for_ret = KEY_R;
-						else if(ch == 0x73)	for_ret = KEY_S;
-						else if(ch == 0x74)	for_ret = KEY_T;
-						else if(ch == 0x75)	for_ret = KEY_U;
-						else if(ch == 0x76)	for_ret = KEY_V;
-						else if(ch == 0x77)	for_ret = KEY_W;
-						else if(ch == 0x78)	for_ret = KEY_X;
-						else if(ch == 0x79)	for_ret = KEY_Y;
-						else if(ch == 0x7A)	for_ret = KEY_Z;
-						else if(ch == '#' ) for_ret = KEY_HASHTAG;
-						else if(ch == '$' ) for_ret = KEY_DOLAR;
-						else if(ch == '%' ) for_ret = KEY_PERSANT;
-						else if(ch == '*' ) for_ret = KEY_STAR;
-						else if(ch == '+' ) for_ret = KEY_PLUS;
-						else if(ch == '-' ) for_ret = KEY_MINUS;
-						else if(ch == '.' ) for_ret = KEY_DOT;
-						else if(ch == ';' ) for_ret = KEY_SEMICOL;
-						else if(ch == '<' ) for_ret = KEY_LT; 
-						else if(ch == '>' ) for_ret = KEY_GT;
-						else if(ch == '?' ) for_ret = KEY_QUISTION_MARK;
-						else if(ch == '@' ) for_ret = KEY_AT;
-						else if(ch == '[' ) for_ret = KEY_OPCURB;
-						else if(ch == '\\') for_ret = KEY_BACK_SLASH;
-						else if(ch == ']' ) for_ret = KEY_CLCURB; 
-						else if(ch == '_' ) for_ret = KEY_UNDERS;
-						else if(ch == '`' ) for_ret = KEY_BACKTICK;
-						else if(ch == '{' ) for_ret = KEY_OPEN_BRAKET;
-						else if(ch == '|' ) for_ret = KEY_BAR;
-						else if(ch == '}' ) for_ret = KEY_CLOSED_BRAKET;
-						else if(ch == '"' ) for_ret = KEY_DBL_QUOTE;
-						else if(ch == '\'') for_ret = KEY_SINGLE_QOUTE;
-						else if(ch == ' ' ) for_ret = KEY_SPACE;
-					}
-					if (keyEvent.wVirtualKeyCode == VK_ESCAPE) 	for_ret = KEY_ESCAPE;
-					else if(keyEvent.wVirtualKeyCode == VK_TAB) 	for_ret = KEY_TAB;
-					else if(keyEvent.wVirtualKeyCode == VK_RETURN) 	for_ret = KEY_ENTER;
-					else if(keyEvent.wVirtualKeyCode == VK_LEFT) 	for_ret = KEY_LEFT;
-					else if(keyEvent.wVirtualKeyCode == VK_UP)	for_ret = KEY_UP;
-					else if(keyEvent.wVirtualKeyCode == VK_RIGHT)	for_ret = KEY_RIGHT;
-					else if(keyEvent.wVirtualKeyCode == VK_DOWN)	for_ret = KEY_DOWN;
-					else if(keyEvent.wVirtualKeyCode == 0x30) 	for_ret = KEY_0;
-					else if(keyEvent.wVirtualKeyCode == 0x31) 	for_ret = KEY_1;
-					else if(keyEvent.wVirtualKeyCode == 0x32)	for_ret = KEY_2;
-					else if(keyEvent.wVirtualKeyCode == 0x33)	for_ret = KEY_3;
-					else if(keyEvent.wVirtualKeyCode == 0x34)	for_ret = KEY_4;
-					else if(keyEvent.wVirtualKeyCode == 0x35)	for_ret = KEY_5;
-					else if(keyEvent.wVirtualKeyCode == 0x36)	for_ret = KEY_6;
-					else if(keyEvent.wVirtualKeyCode == 0x37)	for_ret = KEY_7;
-					else if(keyEvent.wVirtualKeyCode == 0x38)	for_ret = KEY_8;
-					else if(keyEvent.wVirtualKeyCode == 0x39)	for_ret = KEY_9;
-					else if(keyEvent.wVirtualKeyCode == 0x41) 	for_ret = KEY_SHIFT_A;
-					else if(keyEvent.wVirtualKeyCode == 0x42) 	for_ret = KEY_SHIFT_B;
-					else if(keyEvent.wVirtualKeyCode == 0x43) 	for_ret = KEY_SHIFT_C;
-					else if(keyEvent.wVirtualKeyCode == 0x44) 	for_ret = KEY_SHIFT_D;
-					else if(keyEvent.wVirtualKeyCode == 0x45) 	for_ret = KEY_SHIFT_E;
-					else if(keyEvent.wVirtualKeyCode == 0x46) 	for_ret = KEY_SHIFT_F;
-					else if(keyEvent.wVirtualKeyCode == 0x47) 	for_ret = KEY_SHIFT_G;
-					else if(keyEvent.wVirtualKeyCode == 0x48) 	for_ret = KEY_SHIFT_H;
-					else if(keyEvent.wVirtualKeyCode == 0x49) 	for_ret = KEY_SHIFT_I;
-					else if(keyEvent.wVirtualKeyCode == 0x4A) 	for_ret = KEY_SHIFT_J;
-					else if(keyEvent.wVirtualKeyCode == 0x4B) 	for_ret = KEY_SHIFT_K;
-					else if(keyEvent.wVirtualKeyCode == 0x4C) 	for_ret = KEY_SHIFT_L;
-					else if(keyEvent.wVirtualKeyCode == 0x4D) 	for_ret = KEY_SHIFT_M;
-					else if(keyEvent.wVirtualKeyCode == 0x4E) 	for_ret = KEY_SHIFT_N;
-					else if(keyEvent.wVirtualKeyCode == 0x4F) 	for_ret = KEY_SHIFT_O;
-					else if(keyEvent.wVirtualKeyCode == 0x50) 	for_ret = KEY_SHIFT_P;
-					else if(keyEvent.wVirtualKeyCode == 0x51) 	for_ret = KEY_SHIFT_Q;
-					else if(keyEvent.wVirtualKeyCode == 0x52) 	for_ret = KEY_SHIFT_R;
-					else if(keyEvent.wVirtualKeyCode == 0x53) 	for_ret = KEY_SHIFT_S;
-					else if(keyEvent.wVirtualKeyCode == 0x54) 	for_ret = KEY_SHIFT_T;
-					else if(keyEvent.wVirtualKeyCode == 0x55) 	for_ret = KEY_SHIFT_U;
-					else if(keyEvent.wVirtualKeyCode == 0x56) 	for_ret = KEY_SHIFT_V;
-					else if(keyEvent.wVirtualKeyCode == 0x57) 	for_ret = KEY_SHIFT_W;
-					else if(keyEvent.wVirtualKeyCode == 0x58) 	for_ret = KEY_SHIFT_X;
-					else if(keyEvent.wVirtualKeyCode == 0x59) 	for_ret = KEY_SHIFT_Y;
-					else if(keyEvent.wVirtualKeyCode == 0x5A) 	for_ret = KEY_SHIFT_Z;
-				}
+	// Non-blocking check
+	if (!PeekConsoleInput(hStdin, &irInBuf, 1, &cNumRead) || cNumRead == 0) {
+		return NONE;
+	}
 
+	ReadConsoleInput(hStdin, &irInBuf, 1, &cNumRead);
+
+	if (irInBuf.EventType == KEY_EVENT && irInBuf.Event.KeyEvent.bKeyDown) {
+		KEY_EVENT_RECORD keyEvent = irInBuf.Event.KeyEvent;
+		char ch = keyEvent.uChar.AsciiChar;
+		DWORD ctrlState = keyEvent.dwControlKeyState;
+		WORD vk = keyEvent.wVirtualKeyCode;
+
+		// Handle Ctrl+key combinations
+		if (ctrlState & (LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED)) {
+			if (ch >= 1 && ch <= 26) return KEY_CTRL_A + (ch - 1);
+		}
+
+		// Handle regular keys
+		if (ch >= 32 && ch <= 126) {
+			if (ch >= 'a' && ch <= 'z') return KEY_A + (ch - 'a');
+			if (ch >= 'A' && ch <= 'Z') return KEY_SHIFT_A + (ch - 'A');
+			if (ch >= '0' && ch <= '9') return KEY_0 + (ch - '0');
+
+			switch (ch) {
+				case '#': return KEY_HASHTAG;
+				case '$': return KEY_DOLAR;
+				case '%': return KEY_PERSANT;
+				case '*': return KEY_STAR;
+				case '+': return KEY_PLUS;
+				case '-': return KEY_MINUS;
+				case '.': return KEY_DOT;
+				case ';': return KEY_SEMICOL;
+				case '<': return KEY_LT;
+				case '>': return KEY_GT;
+				case '?': return KEY_QUISTION_MARK;
+				case '@': return KEY_AT;
+				case '[': return KEY_OPCURB;
+				case '\\': return KEY_BACK_SLASH;
+				case ']': return KEY_CLCURB;
+				case '_': return KEY_UNDERS;
+				case '`': return KEY_BACKTICK;
+				case '{': return KEY_OPEN_BRAKET;
+				case '|': return KEY_BAR;
+				case '}': return KEY_CLOSED_BRAKET;
+				case '"': return KEY_DBL_QUOTE;
+				case '\'': return KEY_SINGLE_QOUTE;
+				case ' ': return KEY_SPACE;
 			}
 		}
+
+		// Handle special keys
+		switch (vk) {
+			case VK_ESCAPE: return KEY_ESCAPE;
+			case VK_TAB: return KEY_TAB;
+			case VK_RETURN: return KEY_ENTER;
+			case VK_LEFT: return KEY_LEFT;
+			case VK_UP: return KEY_UP;
+			case VK_RIGHT: return KEY_RIGHT;
+			case VK_DOWN: return KEY_DOWN;
+		}
 	}
-	lua_pushinteger(state , for_ret);
-	return 1;
+
+	return NONE;
 }
 
+#else
+// POSIX implementation (Linux/macOS)
+#include <termios.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+static struct termios orig_termios;
+static bool initialized = false;
+
+static void init_terminal() {
+	if (!initialized) {
+		tcgetattr(STDIN_FILENO, &orig_termios);
+		struct termios new_termios = orig_termios;
+		new_termios.c_lflag &= ~(ICANON | ECHO);
+		new_termios.c_cc[VMIN] = 0;
+		new_termios.c_cc[VTIME] = 0;
+		tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
+		initialized = true;
+	}
+}
+
+static void restore_terminal() {
+	if (initialized) {
+		tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
+		initialized = false;
+	}
+}
+
+#define CTRL_KEY(k) ((k) & 0x1f)
+
+static Keys handle_keys() {
+	init_terminal();
+
+	char c;
+	int bytes = read(STDIN_FILENO, &c, 1);
+	if (bytes <= 0) return NONE;
+
+	switch (c) {
+		// Control keys
+		case CTRL_KEY('a') : return KEY_CTRL_A;
+		case CTRL_KEY('b') : return KEY_CTRL_B;
+		case CTRL_KEY('c') : return KEY_CTRL_C;
+		case CTRL_KEY('d') : return KEY_CTRL_D;
+		case CTRL_KEY('e') : return KEY_CTRL_E;
+		case CTRL_KEY('f') : return KEY_CTRL_F;
+		case CTRL_KEY('g') : return KEY_CTRL_G;
+		case CTRL_KEY('h') : return KEY_CTRL_H;
+		case CTRL_KEY('k') : return KEY_CTRL_K;
+		case CTRL_KEY('l') : return KEY_CTRL_L;
+		case CTRL_KEY('n') : return KEY_CTRL_N;
+		case CTRL_KEY('o') : return KEY_CTRL_O;
+		case CTRL_KEY('p') : return KEY_CTRL_P;
+		case CTRL_KEY('q') : return KEY_CTRL_Q;
+		case CTRL_KEY('r') : return KEY_CTRL_R;
+		case CTRL_KEY('s') : return KEY_CTRL_S;
+		case CTRL_KEY('t') : return KEY_CTRL_T;
+		case CTRL_KEY('u') : return KEY_CTRL_U;
+		case CTRL_KEY('v') : return KEY_CTRL_V;
+		case CTRL_KEY('w') : return KEY_CTRL_W;
+		case CTRL_KEY('x') : return KEY_CTRL_X;
+		case CTRL_KEY('y') : return KEY_CTRL_Y;
+		case CTRL_KEY('z') : return KEY_CTRL_Z;
+
+				     // Special keys
+		case '\t': return KEY_TAB;
+		case '\n': return KEY_ENTER;
+		case ' ': return KEY_SPACE;
+
+			  // Numbers
+		case '0': return KEY_0;
+		case '1': return KEY_1;
+		case '2': return KEY_2;
+		case '3': return KEY_3;
+		case '4': return KEY_4;
+		case '5': return KEY_5;
+		case '6': return KEY_6;
+		case '7': return KEY_7;
+		case '8': return KEY_8;
+		case '9': return KEY_9;
+
+			  // Lowercase letters
+		case 'a': return KEY_A;
+		case 'b': return KEY_B;
+		case 'c': return KEY_C;
+		case 'd': return KEY_D;
+		case 'e': return KEY_E;
+		case 'f': return KEY_F;
+		case 'g': return KEY_G;
+		case 'h': return KEY_H;
+		case 'i': return KEY_I;
+		case 'j': return KEY_J;
+		case 'k': return KEY_K;
+		case 'l': return KEY_L;
+		case 'm': return KEY_M;
+		case 'n': return KEY_N;
+		case 'o': return KEY_O;
+		case 'p': return KEY_P;
+		case 'q': return KEY_Q;
+		case 'r': return KEY_R;
+		case 's': return KEY_S;
+		case 't': return KEY_T;
+		case 'u': return KEY_U;
+		case 'v': return KEY_V;
+		case 'w': return KEY_W;
+		case 'x': return KEY_X;
+		case 'y': return KEY_Y;
+		case 'z': return KEY_Z;
+
+			  // Uppercase letters
+		case 'A': return KEY_SHIFT_A;
+		case 'B': return KEY_SHIFT_B;
+		case 'C': return KEY_SHIFT_C;
+		case 'D': return KEY_SHIFT_D;
+		case 'E': return KEY_SHIFT_E;
+		case 'F': return KEY_SHIFT_F;
+		case 'G': return KEY_SHIFT_G;
+		case 'H': return KEY_SHIFT_H;
+		case 'I': return KEY_SHIFT_I;
+		case 'J': return KEY_SHIFT_J;
+		case 'K': return KEY_SHIFT_K;
+		case 'L': return KEY_SHIFT_L;
+		case 'M': return KEY_SHIFT_M;
+		case 'N': return KEY_SHIFT_N;
+		case 'O': return KEY_SHIFT_O;
+		case 'P': return KEY_SHIFT_P;
+		case 'Q': return KEY_SHIFT_Q;
+		case 'R': return KEY_SHIFT_R;
+		case 'S': return KEY_SHIFT_S;
+		case 'T': return KEY_SHIFT_T;
+		case 'U': return KEY_SHIFT_U;
+		case 'V': return KEY_SHIFT_V;
+		case 'W': return KEY_SHIFT_W;
+		case 'X': return KEY_SHIFT_X;
+		case 'Y': return KEY_SHIFT_Y;
+		case 'Z': return KEY_SHIFT_Z;
+
+			  // Symbols
+		case '#': return KEY_HASHTAG;
+		case '$': return KEY_DOLAR;
+		case '%': return KEY_PERSANT;
+		case '*': return KEY_STAR;
+		case '+': return KEY_PLUS;
+		case '-': return KEY_MINUS;
+		case '.': return KEY_DOT;
+		case ';': return KEY_SEMICOL;
+		case '<': return KEY_LT;
+		case '>': return KEY_GT;
+		case '?': return KEY_QUISTION_MARK;
+		case '@': return KEY_AT;
+		case '[': return KEY_OPCURB;
+		case '\\': return KEY_BACK_SLASH;
+		case ']': return KEY_CLCURB;
+		case '_': return KEY_UNDERS;
+		case '`': return KEY_BACKTICK;
+		case '{': return KEY_OPEN_BRAKET;
+		case '|': return KEY_BAR;
+		case '}': return KEY_CLOSED_BRAKET;
+		case '"': return KEY_DBL_QUOTE;
+		case '\'': return KEY_SINGLE_QOUTE;
+
+			   // Arrow keys (escape sequences)
+		case '\033': {
+				     char seq[2];
+				     if (read(STDIN_FILENO, &seq[0], 1) != 1) return KEY_ESCAPE;
+				     if (seq[0] == '[') {
+					     if (read(STDIN_FILENO, &seq[1], 1) == 1) {
+						     switch (seq[1]) {
+							     case 'A': return KEY_UP;
+							     case 'B': return KEY_DOWN;
+							     case 'C': return KEY_RIGHT;
+							     case 'D': return KEY_LEFT;
+						     }
+					     }
+				     }
+				     return KEY_ESCAPE;
+			     }
+
+		default: return NONE;
+	}
+}
 #endif
 
-// Table used to load handle_keys funtion and used in lua_core api
-int RMPCoreKeyboardLib(lua_State *L) {
-	lua_newtable(L);
-	lua_pushcfunction(L, handle_keys);
-	lua_setfield(L, -2, "HandleKeys");
+// Lua interface
+static int lua_get_key(lua_State *L) {
+	Keys key = handle_keys();
+	lua_pushinteger(L, (int)key);
 	return 1;
 }
 
+static int lua_kclose(lua_State *L) {
+#if defined(_WIN32)
+	restore_console();
+#else
+	restore_terminal();
+#endif
+	return 0;
+}
+
+static const luaL_Reg keyboard_lib[] = {
+	{"get", lua_get_key},
+	{"close", lua_kclose},
+	{NULL, NULL}
+};
+
+int luaopen_keyboard(lua_State *L) {
+	luaL_newlib(L, keyboard_lib);
+	return 1;
+}

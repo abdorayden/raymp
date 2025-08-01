@@ -1,10 +1,21 @@
-mm = require("mod")
-mm.add(10,20)
-mm.sub(30,20)
-mm.mul(10,20)
-mm.div(30,20)
-mm.has_sin = true
-mm.sin(a)
+-- mm = require("mod")
+-- mm.add(10,20)
+-- mm.sub(30,20)
+-- mm.mul(10,20)
+-- mm.div(30,20)
+-- mm.has_sin = true
+-- mm.sin(a)
+
+function setup()
+	return {
+		window_title = "rayden",
+		window_id = 31,
+	}
+end
+
+
+
+
 
 -- local objects = {}
 -- 

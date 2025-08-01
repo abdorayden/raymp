@@ -1,2 +1,0 @@
--- TODO: loading animation
--- TODO: timeline bar
