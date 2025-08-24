@@ -1,5 +1,7 @@
 -- rmp framework
-local api = require("../core/rmp")
+local api = require("rmp")
+
+-- create configuration lua handler
 --
 --	Copyright 2024 by rayden
 --		 
@@ -20,41 +22,46 @@ local api = require("../core/rmp")
 -- 	dx: the end position x for the window
 -- 	dy: the end position y for the window
 
-function main(callBackPlug)
+function main(configuration_object)
+
+	-- TODO: load configuration file
+	-- TODO: handle songs in engine
+
 	local h , w = api.Terminal:GetSize() 
 
 	api.Terminal:HideCursor()
 	api.Terminal:ClearWindow()
 
-	local window = api.Window:New(api.BoxDrawing.HeavyBorder)
-
 	local key = api.Terminal.HandleKey()
 	while true do
 		h , w = api.Terminal:GetSize() 
-		window:CreateWindow(
-		nil,
-		w , h, 1 , 1 ,
-		nil , nil, 
-		function(x,y,dx,dy)
-			local tha_plug_window = api.Window:New(api.BoxDrawing.HeavyBorder)
-			tha_plug_window:CreateWindow(
-				nil,
-				w/2,h/2,w/4,h/8,nil,nil,nil
-			)
-
-			local configSong = api.Window:New(api.BoxDrawing.HeavyBorder)
-			configSong :CreateWindow(
-				nil,
-				w/8,h/4,w/8,h/2,nil,nil,nil
-			)
+		key = api.Terminal:HandleKey()
+		api.Window:CreateWindow(
+			nil
+			, w 
+			, h
+			, 1 
+			, 1 
+			, api.FGBGreen 
+			, nil
+			, api.BoxDrawing.HeavyBorder
+			, function(x,y,dx,dy)
+				-- TODO: pass plugins to the callback function
+				api.Window:CreateWindow(
+					api.Text:New("intern" , api.FGRed , api.SlowBlink):GetColoredText(),
+					w/2,h/2,w/4,h/8,nil,nil,api.BoxDrawing.HeavyBorder,nil
+				)
+				api.Window:CreateWindow(
+					api.Text:New("keys" , api.FGRed , api.SlowBlink):GetColoredText(),
+					w/4,h/4,w/10,(h-2 - h/4),nil,nil,api.BoxDrawing.HeavyBorder,nil
+				)
 		end)
 
 		if key == api.KEY_Q then
 			break
 		end
 
-		key = api.Terminal:HandleKey()
-		api.sleep(100)
+		api.sleep(500)
 	end
 
 	api.Terminal:CloseKey();

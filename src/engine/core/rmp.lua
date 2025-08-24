@@ -117,23 +117,7 @@ local io = require("io")
 local keyboard = require("keyboard")
 local rmpaudio = require("rmpaudio")
 local sleep = require("sleep")
-
--- os detection
-function RMP.GetOs()
-	-- stolen from https://stackoverflow.com/questions/295052/how-can-i-determine-the-os-of-the-system-from-within-a-lua-script
-	local BinaryFormat = package.cpath:match("%p[\\|/]?%p(%a+)")
-	if BinaryFormat == "dll" then
-		return "Windows"
-	elseif BinaryFormat == "so" then
-		return "Linux"
-	elseif BinaryFormat == "dylib" then
-		return "MacOS"
-	end
-end
-
-RMP.QuickRoutine = function(func)
-	return coroutine.create(func)
-end
+local platform = require("platform")
 
 -- handle enumuration in lua using coroutine yield
 global_count_enum = -1
@@ -147,61 +131,74 @@ local function enum(reset)
 	return global_count_enum
 end
 
+do	-- os detection
+	RMP.LINUX  = enum(true)
+	RMP.WINDOWS  = enum()
+	RMP.MAC  = enum()
+	RMP.UNKOW  = enum()
+
+	function RMP.getOs() -- it will return enum value
+		return platform.platform() 
+	end
+end
+
+RMP.quickRoutine = function(func)
+	return coroutine.create(func)
+end
 
 -- check ansi escape code : https://en.wikipedia.org/wiki/ANSI_escape_code
-
 -- line style
 RMP.Strike		= "\27[9m"
 RMP.Hide		= "\27[8m"
-RMP.SlowBlink 	= "\27[5m"
+RMP.SlowBlink 		= "\27[5m"
 RMP.OverUnderline 	= "\27[53m"
-RMP.Underline 	= "\27[4m"
-RMP.DoubleUnderline= "\27[21m"
+RMP.Underline 		= "\27[4m"
+RMP.DoubleUnderline	= "\27[21m"
 RMP.Italic	   	= "\27[3m"
 RMP.Bold	   	= "\27[1m"
-RMP.Regular   	= "\27[0m"
+RMP.Regular   		= "\27[0m"
 
 -- colors
 -- TODO: handle colors using ColorFromHex
 -- ForeGround 
-RMP.FGBlack	= "\27[30m"
+RMP.FGBlack		= "\27[30m"
 RMP.FGRed	 	= "\27[31m" 
-RMP.FGGreen	= "\27[32m"
-RMP.FGYellow	= "\27[33m"
+RMP.FGGreen		= "\27[32m"
+RMP.FGYellow		= "\27[33m"
 RMP.FGBlue	 	= "\27[34m"
-RMP.FGMagenta 	= "\27[35m"
+RMP.FGMagenta 		= "\27[35m"
 RMP.FGCyan	 	= "\27[36m"
-RMP.FGWhite	= "\27[37m"
+RMP.FGWhite		= "\27[37m"
 
 -- ForeGround bright
-RMP.FGBBlack	= "\27[90m"
+RMP.FGBBlack		= "\27[90m"
 RMP.FGBRed	 	= "\27[91m" 
-RMP.FGBGreen	= "\27[92m"
-RMP.FGBYellow	= "\27[93m"
-RMP.FGBBlue	= "\27[94m"
-RMP.FGBMagenta 	= "\27[95m"
-RMP.FGBCyan	= "\27[96m"
-RMP.FGBWhite	= "\27[97m"
+RMP.FGBGreen		= "\27[92m"
+RMP.FGBYellow		= "\27[93m"
+RMP.FGBBlue		= "\27[94m"
+RMP.FGBMagenta 		= "\27[95m"
+RMP.FGBCyan		= "\27[96m"
+RMP.FGBWhite		= "\27[97m"
 
 -- BackGround 
-RMP.BGBlack	= "\27[40m"
+RMP.BGBlack		= "\27[40m"
 RMP.BGRed	 	= "\27[41m" 
-RMP.BGGreen	= "\27[42m"
-RMP.BGYellow	= "\27[43m"
+RMP.BGGreen		= "\27[42m"
+RMP.BGYellow		= "\27[43m"
 RMP.BGBlue	 	= "\27[44m"
-RMP.BGMagenta 	= "\27[45m"
+RMP.BGMagenta 		= "\27[45m"
 RMP.BGCyan	 	= "\27[46m"
-RMP.BGWhite	= "\27[47m"
+RMP.BGWhite		= "\27[47m"
 
 -- BackGround bright
-RMP.BGBBlack	= "\27[100m"
+RMP.BGBBlack		= "\27[100m"
 RMP.BGBRed	 	= "\27[101m" 
-RMP.BGBGreen	= "\27[102m"
-RMP.BGBYellow	= "\27[103m"
-RMP.BGBBlue 	= "\27[104m"
-RMP.BGBMagenta 	= "\27[105m"
-RMP.BGBCyan	= "\27[106m"
-RMP.BGBWhite	= "\27[107m"
+RMP.BGBGreen		= "\27[102m"
+RMP.BGBYellow		= "\27[103m"
+RMP.BGBBlue 		= "\27[104m"
+RMP.BGBMagenta 		= "\27[105m"
+RMP.BGBCyan		= "\27[106m"
+RMP.BGBWhite		= "\27[107m"
 
 -- Imojis
 RMP.File_pos 	= "➯"
@@ -238,24 +235,24 @@ RMP.Bar_3		= "❘"
 
 RMP.Bar_l_to_r_12_5_per	= "▏"
 RMP.Bar_l_to_r_25_per 	= "▎"
-RMP.Bar_l_to_r_37_5_per 	= "▍"
+RMP.Bar_l_to_r_37_5_per = "▍"
 RMP.Bar_l_to_r_50_per 	= "▌"
-RMP.Bar_l_to_r_62_5_per 	= "▋"
+RMP.Bar_l_to_r_62_5_per = "▋"
 RMP.Bar_l_to_r_75_per 	= "▊"
-RMP.Bar_l_to_r_87_5_per 	= "▉"
+RMP.Bar_l_to_r_87_5_per = "▉"
 
 RMP.Bar_b_to_u_12_5_per	 	= "▇"
 RMP.Bar_b_to_u_25_per 	 	= "▆"
-RMP.Bar_b_to_u_37_5_per 	 	= "▅"
+RMP.Bar_b_to_u_37_5_per 	= "▅"
 RMP.Bar_b_to_u_50_per 	 	= "▄"
-RMP.Bar_b_to_u_62_5_per 	 	= "▃"
+RMP.Bar_b_to_u_62_5_per 	= "▃"
 RMP.Bar_b_to_u_75_per 	 	= "▂"
-RMP.Bar_b_to_u_87_5_per 	 	= "▁"
+RMP.Bar_b_to_u_87_5_per 	= "▁"
 
-RMP.Bar_Shading_20_per =  " " 
-RMP.Bar_Shading_40_per =  "░" 
-RMP.Bar_Shading_60_per =  "▒" 
-RMP.Bar_Shading_80_per =  "▓" 
+RMP.Bar_Shading_00_per =  " " 
+RMP.Bar_Shading_25_per =  "░" 
+RMP.Bar_Shading_50_per =  "▒" 
+RMP.Bar_Shading_75_per =  "▓" 
 
 RMP.Bar_100_per 	= "█"
 
@@ -346,13 +343,15 @@ RMP.BraillePattern = {
     "⣟", "⣯", "⣷", "⣾", "⣿"
 }
 
-RMP.FG = "38"
-RMP.BG = "48"
+do 	-- color from hex
+	RMP.FG = "38"
+	RMP.BG = "48"
 
-function RMP.ColorFromHex(hex , fg_or_bg)
-	fb = fg_or_bg or "38"
-	local r , g , b = tonumber(hex:sub(1,2) , 16) , tonumber(hex:sub(3,4) , 16) , tonumber(hex:sub(5,6) , 16)
-	return string.format("\27[%s;2;%d;%d;%dm" , fb , r , g , b)
+	function RMP.colorFromHex(hex , fg_or_bg)
+		fb = fg_or_bg or "38"
+		local r , g , b = tonumber(hex:sub(1,2) , 16) , tonumber(hex:sub(3,4) , 16) , tonumber(hex:sub(5,6) , 16)
+		return string.format("\27[%s;2;%d;%d;%dm" , fb , r , g , b)
+	end
 end
 
 RMP.Default = "\27[0m"
@@ -369,51 +368,53 @@ end
 
 RMP.Duration = {}
 RMP.Duration.__index = Duration
+do
+	function RMP.Duration:fromSec(sec)
+		return sec * 1000
+	end
 
-function RMP.Duration:from_sec(sec)
-	return sec * 1000
-end
+	function RMP.Duration:fromMilsec(sec)
+		return sec
+	end
 
-function RMP.Duration:from_milsec(sec)
-	return sec
 end
 
 function RMP.sleep(time)
 	sleep.sleep(time)
 end
 
-
 -- Text class used to work with texts
 RMP.Text = {}
 RMP.Text.__index = Text
+do	-- text
+	-- constructor
+	function RMP.Text:new(text , style , color)
+		self.text = text or ""
+		self.color = color or RMP.Default
+		self.style = style or RMP.Default
+		self.start_pos = 1
+		return self
+	end
 
--- constructor
-function RMP.Text:New(text , style , color)
-	self.text = text or ""
-	self.color = color or RMP.Default
-	self.style = style or RMP.Default
-	self.start_pos = 1
-	return self
-end
+	-- method Position in lua used to controle position of the text 
+	function RMP.Text:setPosition(x,y)
+		moveto(x , y)
+	end
 
--- method Position in lua used to controle position of the text 
-function RMP.Text:SetPosition(x,y)
-	moveto(x , y)
-end
+	-- ColoredText accept text and color and return colored text
+	function RMP.Text:getColoredText()
+		return self.style..self.color..self.text..RMP.Default
+	end
 
--- ColoredText accept text and color and return colored text
-function RMP.Text:GetColoredText()
-	return self.style..self.color..self.text..RMP.Default
-end
+	function RMP.Text:getText()
+		return self.text
+	end
 
-function RMP.Text:GetText()
-	return self.text
-end
-
-function RMP.Text:FixTextToBox(w)
-	local text = string.sub(self.text , self.start_pos , math.floor(w) - 7 + self.start_pos)
-	self.start_pos = self.start_pos + math.floor(w) - 6
-	return text
+	function RMP.Text:fixTextToBox(w)
+		local text = string.sub(self.text , self.start_pos , math.floor(w) - 7 + self.start_pos)
+		self.start_pos = self.start_pos + math.floor(w) - 6
+		return text
+	end
 end
 
 -- the enumeration value returns from HandleKey input
@@ -878,447 +879,413 @@ function RMP.GetKeyStr(key)
 	end
 end
 
--- TODO: handle border style
--- STYLE_ONE_BORDER = enum(true)
--- STYLE_TWO_BORDER = enum()
+do	-- local functions
+	function strip_ansi(text)
+		if text == nil then 
+			return nil
+		end
+		return text:gsub("\27%[[%d;]+m", "")
+	end
 
--- DEFAULT_BORDER = STYLE_ONE_BORDER
-
--- function RMP.SetBorder(border)
--- 	if border ~= STYLE_ONE_BORDER or border ~= STYLE_TWO_BORDER then
--- 		DEFAULT_BORDER = STYLE_ONE_BORDER
--- 	else
--- 		DEFAULT_BORDER = border
--- 	end
--- end
-
--- if DEFAULT_BORDER == STYLE_ONE_BORDER then
--- 	TL = "┌"  -- Top-left corner
--- 	TR = "┐"  -- Top-right corner
--- 	BL = "└"  -- Bottom-left corner
--- 	BR = "┘"  -- Bottom-right corner
--- 	H  = "─"  -- Horizontal line
--- 	V  = "│"  -- Vertical line
-
--- elseif DEFAULT_BORDER == STYLE_TWO_BORDER then 
--- 	TL  = "╔"  -- Top-left corner
--- 	TR  = "╗"  -- Top-right corner
--- 	BL  = "╚"  -- Bottom-left corner
--- 	BR  = "╝"  -- Bottom-right corner
--- 	H   = "═"  -- Horizontal line
--- 	V   = "║"  -- Vertical line
--- 	BTR = "╠" -- Between-Right
--- 	BTU = "╩" -- Between-Up
--- 	BTD = "╦" -- Between-Down
--- 	BTL = "╣" -- Between-Left
--- end
-
-local function strip_ansi(text)
-	if text == nil then 
+	function remove_new_lines_from_str(text)
+		if text ~= nil then 
+			return string.gsub(text, "[\r\n]", "")
+		end
 		return nil
 	end
-	return text:gsub("\27%[[%d;]+m", "")
-end
 
-local function remove_new_lines_from_str(text)
-	if text ~= nil then 
-		return string.gsub(text, "[\r\n]", "")
-	end
-	return nil
-end
-
-local function cleanTextLocal(text)
-	if text ~= nil then 
-		return text:gsub("\27%[[^m]*m", ""):gsub("^[^%w]+%s*", "")
-	end
-	return nil
-end
-
-local function draw_box(border , title , x, y, width, height, border_color , bg_color)
-	local tha_box = ""
-
-	if border ~= 0 and border ~= 1 or border == nil then
-		TL = RMP.BoxDrawing.LightBorder[3] -- "┌" Top-left corner
-		TR = RMP.BoxDrawing.LightBorder[4] -- "┐" Top-right corner
-		BL = RMP.BoxDrawing.LightBorder[5] -- "└" Bottom-left corner
-		BR = RMP.BoxDrawing.LightBorder[6] -- "┘" Bottom-right corner
-		H  = RMP.BoxDrawing.LightBorder[1] -- "─" Horizontal line
-		V  = RMP.BoxDrawing.LightBorder[2] -- "│" Vertical line
-		-- "─",  -- Light horizontal line (U+2500)
-		-- "│",  -- Light vertical line (U+2502)
-		-- "┌",  -- Light down and right corner (U+250C)
-		-- "┐",  -- Light down and left corner (U+2510)
-		-- "└",  -- Light up and right corner (U+2514)
-		-- "┘",  -- Light up and left corner (U+2518)
-		-- "├",  -- Light vertical and right tee (U+251C)
-		-- "┤",  -- Light vertical and left tee (U+2524)
-		-- "┬",  -- Light down and horizontal tee (U+252C)
-		-- "┴",  -- Light up and horizontal tee (U+2534)
-		-- "┼",  -- Light vertical and horizontal cross (U+253C)
-	end
-	TL = border[3] -- "┌" Top-left corner
-	TR = border[4] -- "┐" Top-right corner
-	BL = border[5] -- "└" Bottom-left corner
-	BR = border[6] -- "┘" Bottom-right corner
-	H  = border[1] -- "─" Horizontal line
-	V  = border[2] -- "│" Vertical line
-
-	tha_box  = tha_box .. moveto(x, y , true)
-	local title_len = #strip_ansi(title) 
-	local padding = math.floor((width - title_len - 2) / 2)
-
-	tha_box = tha_box .. RMP.Text:New(TL , nil , border_color):GetColoredText() .. string.rep(RMP.Text:New(H , nil , border_color):GetColoredText(),padding).. title .. string.rep(RMP.Text:New(H , nil , border_color):GetColoredText(), width - title_len - padding- 2) ..  RMP.Text:New(TR , nil , border_color):GetColoredText()
-
-	for i = 1, height - 2 do
-		tha_box  = tha_box .. moveto(x, y + i, true)
-		tha_box = tha_box .. RMP.Text:New(V , nil , border_color):GetColoredText() .. string.rep(RMP.Text:New(" " , nil , bg_color):GetColoredText(), width - 2) .. RMP.Text:New(V , nil , border_color):GetColoredText()
+	function cleanTextLocal(text)
+		if text ~= nil then 
+			return text:gsub("\27%[[^m]*m", ""):gsub("^[^%w]+%s*", "")
+		end
+		return nil
 	end
 
-	tha_box  = tha_box .. moveto(x, y + height - 1, true)
-	tha_box = tha_box .. RMP.Text:New(BL , nil , border_color):GetColoredText() .. string.rep(RMP.Text:New(H , nil , border_color):GetColoredText(), width - 2) .. RMP.Text:New(BR , nil , border_color):GetColoredText()
-	io.write(tha_box)
-	io.flush()
-	tha_box = ""
+	function draw_box(border , title , x, y, width, height, border_color , bg_color)
+		local tha_box = ""
+
+		if border == nil then
+			TL = RMP.BoxDrawing.LightBorder[3] -- "┌" Top-left corner
+			TR = RMP.BoxDrawing.LightBorder[4] -- "┐" Top-right corner
+			BL = RMP.BoxDrawing.LightBorder[5] -- "└" Bottom-left corner
+			BR = RMP.BoxDrawing.LightBorder[6] -- "┘" Bottom-right corner
+			H  = RMP.BoxDrawing.LightBorder[1] -- "─" Horizontal line
+			V  = RMP.BoxDrawing.LightBorder[2] -- "│" Vertical line
+		else
+			TL = border[3] -- "┌" Top-left corner
+			TR = border[4] -- "┐" Top-right corner
+			BL = border[5] -- "└" Bottom-left corner
+			BR = border[6] -- "┘" Bottom-right corner
+			H  = border[1] -- "─" Horizontal line
+			V  = border[2] -- "│" Vertical line
+		end
+
+		tha_box  = tha_box .. moveto(x, y , true)
+		local title_len = #strip_ansi(title) 
+		local padding = math.floor((width - title_len - 2) / 2)
+
+		tha_box = tha_box .. RMP.Text:new(TL , nil , border_color):getColoredText() .. string.rep(RMP.Text:new(H , nil , border_color):getColoredText(),padding).. title .. string.rep(RMP.Text:new(H , nil , border_color):getColoredText(), width - title_len - padding- 2) ..  RMP.Text:new(TR , nil , border_color):getColoredText()
+
+		for i = 1, height - 2 do
+			tha_box  = tha_box .. moveto(x, y + i, true)
+			tha_box = tha_box .. RMP.Text:new(V , nil , border_color):getColoredText() .. string.rep(RMP.Text:new(" " , nil , bg_color):getColoredText(), width - 2) .. RMP.Text:new(V , nil , border_color):getColoredText()
+		end
+
+		tha_box  = tha_box .. moveto(x, y + height - 1, true)
+		tha_box = tha_box .. RMP.Text:new(BL , nil , border_color):getColoredText() .. string.rep(RMP.Text:new(H , nil , border_color):getColoredText(), width - 2) .. RMP.Text:new(BR , nil , border_color):getColoredText()
+		io.write(tha_box)
+		io.flush()
+		tha_box = ""
+	end
 end
 
 RMP.Window = {}
 RMP.Window.__index = Window
+do 	-- creating window
+	-- callback function accept 4 agrs 
+	function RMP.Window:createWindow(title , width , height , x , y , border_color , background_color , border , callback)
+		if title == nil then
+			title = ""
+		end
 
-function RMP.Window:New(border)
-	self.border = border
-	return self
+		local title = title or ""
+
+		draw_box(border 
+			, title 
+			, math.floor(x)
+			,math.floor(y)
+			,math.floor(width)
+			,math.floor(height) 
+			, border_color 
+			, background_color
+		)
+
+		moveto(x + 1 , y + 1)
+
+		if callback ~= nil and type(callback) == "function" then
+			callback(x , y , x + width , y + height)
+		end
+	end
 end
 
--- callback function accept 4 agrs 
-function RMP.Window:CreateWindow(title , width , height , x , y , border_color , background_color , callback)
-	if title == nil then
-		title = ""
-	end
-
-	local title = title or ""
-
-	draw_box(self.border , title , math.floor(x),math.floor(y),math.floor(width),math.floor(height) , border_color , background_color)
-
-	moveto(x + 1 , y + 1)
-
-	if callback ~= nil and type(callback) == "function" then
-		callback(x , y , x + width , y + height)
-	end
-end
+-- TODO: use  virtual terminal for more performence
 
 -- TODO: Handle Terminal  class
 -- NOTE: Terminal class uses ansii escape code i need to create shared library to handle terminal for each platform
 RMP.Terminal = {}
 RMP.Terminal.__index = Terminal
-
-function RMP.Terminal:ClearWindow()
-	io.write("\27[2J")
-end
-function RMP.Terminal:MoveTo(x , y)
-	if x < 1 then
-		x = 1
-	elseif y < 1 then
-		y = 1
+do	-- Terminal
+	function RMP.Terminal:clearWindow()
+		io.write("\27[2J")
 	end
-	moveto(x,y)
-end
-function RMP.Terminal:MoveUp(x)
-	if x < 1 or x == nil then
-		x = 1
-	end
-	io.write("\27[" .. x .. "A");
-end
-function RMP.Terminal:MoveDown(x)
-	if x < 1  or x == nil then
-		x = 1
-	end
-	io.write("\27[" .. x .. "B");
-end
-function RMP.Terminal:MoveLeft(x)
-	if x < 1  or x == nil then
-		x = 1
-	end
-	io.write("\27[" .. x .. "D");
-end
-function RMP.Terminal:MoveRight(x)
-	if x < 1  or x == nil then
-		x = 1
-	end
-	io.write("\27[" .. x .. "C");
-end
-function RMP.Terminal:HideCursor()
-	io.write("\27[?25l");
-end
-function RMP.Terminal:ShowCursor()
-	io.write("\27[?25h");
-end
-function RMP.Terminal:RawMode(enable)
-	if RMP.GetOs() == "Windows" then
-		if enable then
-			os.execute("mode con: cols=9999 lines=9999")
-		else
-			os.execute("mode con: cols=80 lines=25")
+	function RMP.Terminal:moveTo(x , y)
+		if x < 1 then
+			x = 1
+		elseif y < 1 then
+			y = 1
 		end
-	else
-		if enable then
-			os.execute("stty raw -echo")
+		moveto(x,y)
+	end
+	function RMP.Terminal:moveUp(x)
+		if x < 1 or x == nil then
+			x = 1
+		end
+		io.write("\27[" .. x .. "A");
+	end
+	function RMP.Terminal:moveDown(x)
+		if x < 1  or x == nil then
+			x = 1
+		end
+		io.write("\27[" .. x .. "B");
+	end
+	function RMP.Terminal:moveLeft(x)
+		if x < 1  or x == nil then
+			x = 1
+		end
+		io.write("\27[" .. x .. "D");
+	end
+	function RMP.Terminal:moveRight(x)
+		if x < 1  or x == nil then
+			x = 1
+		end
+		io.write("\27[" .. x .. "C");
+	end
+	function RMP.Terminal:hideCursor()
+		io.write("\27[?25l");
+	end
+	function RMP.Terminal:showCursor()
+		io.write("\27[?25h");
+	end
+	function RMP.Terminal:rawMode(enable)
+		if RMP.getOs() == RMP.WINDOWS then
+			if enable then
+				os.execute("mode con: cols=9999 lines=9999")
+			else
+				os.execute("mode con: cols=80 lines=25")
+			end
 		else
-			os.execute("stty -raw echo")
+			if enable then
+				os.execute("stty raw -echo")
+			else
+				os.execute("stty -raw echo")
+			end
 		end
 	end
-end
 
-function RMP.Terminal:GetSize()
-	if RMP.GetOs() == "Linux" then
-		local handle = io.popen("stty size")
-		local result = handle:read("*a")
-		handle:close()
-		local rows, cols = result:match("(%d+)%s+(%d+)")
-		return tonumber(rows) , tonumber(cols)
-	else
-		local handle = io.popen("mode con")
-		local result = handle:read("*a")
-		handle:close()
-		local cols, rows = result:match("Columns:(%d+).*Lines:(%d+)")
-		return tonumber(rows) , tonumber(cols)
+	function RMP.Terminal:getSize()
+		if RMP.getOs() == RMP.LINUX then
+			local handle = io.popen("stty size")
+			local result = handle:read("*a")
+			handle:close()
+			local rows, cols = result:match("(%d+)%s+(%d+)")
+			return tonumber(rows) , tonumber(cols)
+		else
+			local handle = io.popen("mode con")
+			local result = handle:read("*a")
+			handle:close()
+			local cols, rows = result:match("Columns:(%d+).*Lines:(%d+)")
+			return tonumber(rows) , tonumber(cols)
+		end
+
+		return nil , nil
 	end
 
-	return nil , nil
-end
+	-- TODO: make sure that function works on windows
+	-- TODO: add this two function to Input class to add more operations to make it easy
+	function RMP.Terminal:handleKey()
+		return keyboard.get()
+	end
 
--- TODO: make sure that function works on windows
--- TODO: add this two function to Input class to add more operations to make it easy
-function RMP.Terminal:HandleKey()
-	return keyboard.get()
-end
-
-function RMP.Terminal:CloseKey()
-	return keyboard.close()
+	function RMP.Terminal:closeKey()
+		return keyboard.close()
+	end
 end
 
 -- TODO: handle Input 
+-- TODO: handle Tables 
 -- TODO: handle Panel
 -- TODO: handle Loading  
 RMP.Options = {}
 RMP.Options.__index = Options
-
--- options : array of options 
-function RMP.Options:AddOption(options)
-	self.options = options
-	self.color = RMP.Default
-	self.symbl = "" 
-	self.pos = 1
-
-	self.counter = false
-	self.mark = false
-	self.marked_table = {}
-	self.selected = ""
-	self.unselected = ""
-	return self
-end
-
-function RMP.Options:SetCounter(value)
-	self.counter  = value
-	return self
-end
-
-function RMP.Options:SetMark(selected , unselected)
-	self.selected = selected
-	self.unselected = unselected 
-	for i = 1 , #self.options do
-		self.marked_table[i] = false
-	end
-	self.mark = true
-	return self
-end
-
-function RMP.Options:SetColorFocus(color)
-	self.color = color
-	return self
-end
-
-function RMP.Options:SetSymblFocus(symbl)
-	self.symbl = symbl 
-	return self
-end
-
-function RMP.Options:SetOptions(options)
-	self.options = options
-	return self
-end
-
-function RMP.Options:GetOptions()
-	return self.options
-end
-
--- default position
-function RMP.Options:FocusPos(position)
-	self.pos = position or 1
-	text = self.options[self.pos]
-	self.options[self.pos] = RMP.Text:New(text , self.symbl , self.color):GetColoredText()
-	return self
-end
-
-function RMP.Options:Next()
-	text = self.options[self.pos]
-	self.options[self.pos] = cleanTextLocal(text)
-	if self.pos == #self.options then
+do	-- Options
+	-- options : array of options 
+	function RMP.Options:addOption(options)
+		self.options = options
+		self.color = RMP.Default
+		self.symbl = "" 
 		self.pos = 1
-	else
-		self.pos = self.pos + 1
+
+		self.counter = false
+		self.mark = false
+		self.marked_table = {}
+		self.selected = ""
+		self.unselected = ""
+		return self
 	end
-	self:FocusPos(self.pos)
-	return self
-end
 
-function RMP.Options:First()
-	self.pos = 1
-	self:FocusPos(self.pos)
-	return self
-end
-
-function RMP.Options:Last()
-	self.pos = #self.options
-	self:FocusPos(self.pos)
-	return self
-end
-
-function RMP.Options:Prev()
-	text = self.options[self.pos]
-	self.options[self.pos] = cleanTextLocal(text)
-	if self.pos == 1 then
-		self.pos = #self.options
-	else
-		self.pos = self.pos - 1
+	function RMP.Options:setCounter(value)
+		self.counter  = value
+		return self
 	end
-	self:FocusPos(self.pos)
-	return self
-end
 
-function RMP.Options:GetSelected()
-	self.marked_table[self.pos] = not self.marked_table[self.pos]
-	return cleanTextLocal(self.options[self.pos])
-end
-
-function RMP.Options:GetOptions()
-	return self.options
-end
-
--- Log method will print the options to standerd output
-function RMP.Options:Log(x , y)
-	RMP.Terminal:MoveTo(x,y)
-	for i = 1 , #self.options do
-		if self.marked_table[i] then
-			io.write(self.selected)
-		else
-			io.write(self.unselected)
+	function RMP.Options:setMark(selected , unselected)
+		self.selected = selected
+		self.unselected = unselected 
+		for i = 1 , #self.options do
+			self.marked_table[i] = false
 		end
-		io.write(self.options[i])
-		RMP.Terminal:MoveTo(x,y + i)
+		self.mark = true
+		return self
+	end
+
+	function RMP.Options:setColorFocus(color)
+		self.color = color
+		return self
+	end
+
+	function RMP.Options:setSymblFocus(symbl)
+		self.symbl = symbl 
+		return self
+	end
+
+	function RMP.Options:setOptions(options)
+		self.options = options
+		return self
+	end
+
+	function RMP.Options:getOptions()
+		return self.options
+	end
+
+	-- default position
+	function RMP.Options:focusPos(position)
+		self.pos = position or 1
+		text = self.options[self.pos]
+		self.options[self.pos] = RMP.Text:new(text , self.symbl , self.color):getColoredText()
+		return self
+	end
+
+	function RMP.Options:next()
+		text = self.options[self.pos]
+		self.options[self.pos] = cleanTextLocal(text)
+		if self.pos == #self.options then
+			self.pos = 1
+		else
+			self.pos = self.pos + 1
+		end
+		self:focusPos(self.pos)
+		return self
+	end
+
+	function RMP.Options:first()
+		self.pos = 1
+		self:focusPos(self.pos)
+		return self
+	end
+
+	function RMP.Options:last()
+		self.pos = #self.options
+		self:focusPos(self.pos)
+		return self
+	end
+
+	function RMP.Options:prev()
+		text = self.options[self.pos]
+		self.options[self.pos] = cleanTextLocal(text)
+		if self.pos == 1 then
+			self.pos = #self.options
+		else
+			self.pos = self.pos - 1
+		end
+		self:focusPos(self.pos)
+		return self
+	end
+
+	function RMP.Options:getSelected()
+		self.marked_table[self.pos] = not self.marked_table[self.pos]
+		return cleanTextLocal(self.options[self.pos])
+	end
+
+	function RMP.Options:getOptions()
+		return self.options
+	end
+
+	-- Log method will print the options to standerd output
+	function RMP.Options:log(x , y)
+		RMP.Terminal:moveTo(x,y)
+		for i = 1 , #self.options do
+			if self.marked_table[i] then
+				io.write(self.selected)
+			else
+				io.write(self.unselected)
+			end
+			io.write(self.options[i])
+			RMP.Terminal:moveTo(x,y + i)
+		end
 	end
 end
 
 -- TODO: handle Layout
 RMP.Draw = {}
 RMP.Draw.__index = Draw
+do	-- Draw
+	function RMP.Draw:rectangle(x,y,width,height,color)
+		local tha_box = ""
+		tha_box  = tha_box .. moveto(x, y , true)
 
-function RMP.Draw:Rect(x,y,width,height,color)
-	local tha_box = ""
-	tha_box  = tha_box .. moveto(x, y , true)
+		tha_box  = tha_box .. RMP.Text:new(" " , nil , color):getColoredText()  .. string.rep(RMP.Text:new(" " , nil , color):getColoredText(), width - 2) ..  RMP.Text:new(" " , nil , color):getColoredText()
 
-	tha_box  = tha_box .. RMP.Text:New(" " , nil , color):GetColoredText()  .. string.rep(RMP.Text:New(" " , nil , color):GetColoredText(), width - 2) ..  RMP.Text:New(" " , nil , color):GetColoredText()
+		for i = 1, height - 2 do
+			tha_box  = tha_box .. moveto(x, y + i , true)
+			tha_box  = tha_box .. RMP.Text:new(" " , nil , color):getColoredText() .. string.rep(RMP.Text:new(" " , nil , color):getColoredText(), width - 2) .. RMP.Text:new(" " , nil , color):getColoredText()
+		end
 
-	for i = 1, height - 2 do
-		tha_box  = tha_box .. moveto(x, y + i , true)
-		tha_box  = tha_box .. RMP.Text:New(" " , nil , color):GetColoredText() .. string.rep(RMP.Text:New(" " , nil , color):GetColoredText(), width - 2) .. RMP.Text:New(" " , nil , color):GetColoredText()
+		tha_box  = tha_box .. moveto(x, y + height - 1 , true)
+		tha_box  = tha_box .. RMP.Text:new(" " , nil , color):getColoredText() .. string.rep(RMP.Text:new(" " , nil , color):getColoredText(), width - 2) .. RMP.Text:new(" " , nil , color):getColoredText()
+		io.write(tha_box)
+		io.flush()
+		tha_box = ""
+		-- TODO: flush output
+		-- TODO: write by buffer
 	end
 
-	tha_box  = tha_box .. moveto(x, y + height - 1 , true)
-	tha_box  = tha_box .. RMP.Text:New(" " , nil , color):GetColoredText() .. string.rep(RMP.Text:New(" " , nil , color):GetColoredText(), width - 2) .. RMP.Text:New(" " , nil , color):GetColoredText()
-	io.write(tha_box)
-	io.flush()
-	tha_box = ""
-	-- TODO: flush output
-	-- TODO: write by buffer
-end
-
-function RMP.Draw:Circle(px, py, r , color)
-	for y = -r, r do
-		RMP.Terminal:MoveTo(px , py + y + r)
-		for x = -r, r do
-			if x * x + y * y <= r * r then
-				io.write(RMP.Text:New("  " , nil ,color):GetColoredText())
-			else
-				io.write("  ")
+	function RMP.Draw:circle(px, py, r , color)
+		for y = -r, r do
+			RMP.Terminal:moveTo(px , py + y + r)
+			for x = -r, r do
+				if x * x + y * y <= r * r then
+					io.write(RMP.Text:new("  " , nil ,color):getColoredText())
+				else
+					io.write("  ")
+				end
 			end
 		end
 	end
-end
 
-function RMP.Draw:Triangle(height, pos_x, pos_y, color)
-	char = RMP.Text:New(" " , nil , color):GetColoredText()
-	for y = 0, height - 1 do
-		local spaces = height - y - 1
-		local stars = 2 * y + 1
+	function RMP.Draw:triangle(height, pos_x, pos_y, color)
+		char = RMP.Text:new(" " , nil , color):getColoredText()
+		for y = 0, height - 1 do
+			local spaces = height - y - 1
+			local stars = 2 * y + 1
 
-		RMP.Terminal:MoveTo(pos_x + spaces , pos_y + y)
-		io.write(string.rep(char, stars), "\n")
+			RMP.Terminal:moveTo(pos_x + spaces , pos_y + y)
+			io.write(string.rep(char, stars), "\n")
+		end
+	end
+
+	-- TODO: add thick
+	function RMP.Draw:line(x , y, width , color)
+		RMP.Terminal:moveTo(x,y)
+		for i = 0  , width do
+			io.write(RMP.Text:new(" " , nil , color):getColoredText())
+		end
+	end
+
+	function RMP.Draw:column(x, y , height , color)
+		RMP.Terminal:moveTo(x,y)
+		for i = 0  , height do
+			io.write(RMP.Text:new(" " , nil , color):getColoredText())
+			RMP.Terminal:moveDown(1)
+			RMP.Terminal:moveLeft(1)
+		end
 	end
 end
-
-function RMP.Draw:Line(x , y, width , color)
-	RMP.Terminal:MoveTo(x,y)
-	for i = 0  , width do
-		io.write(RMP.Text:New(" " , nil , color):GetColoredText())
-	end
-end
-
-function RMP.Draw:Column(x, y , height , color)
-	RMP.Terminal:MoveTo(x,y)
-	for i = 0  , height do
-		io.write(RMP.Text:New(" " , nil , color):GetColoredText())
-		RMP.Terminal:MoveDown(1)
-		RMP.Terminal:MoveLeft(1)
-	end
-end
-
 -- TODO: handle Bar  
-
 RMP.Popup = {}
 RMP.Popup.__index = Popup
+do	-- Popups
+	RMP.MESSAGE = enum(true)
+	RMP.INFO = enum()
+	RMP.ERROR = enum()
+	RMP.WARNING = enum()
 
-RMP.MESSAGE = enum(true)
-RMP.INFO = enum()
-RMP.ERROR = enum()
-RMP.WARNING = enum()
+	-- Position Layout
+	RMP.CENTER 	= enum(true)
+	RMP.TOP_LEFT 	= enum()
+	RMP.TOP_RIGHT 	= enum()
+	RMP.BUTTOM_LEFT 	= enum()
+	RMP.BUTTOM_RIGHT 	= enum()
 
--- Position Layout
-RMP.CENTER 	= enum(true)
-RMP.TOP_LEFT 	= enum()
-RMP.TOP_RIGHT 	= enum()
-RMP.BUTTOM_LEFT 	= enum()
-RMP.BUTTOM_RIGHT 	= enum()
-
--- TODO: add emojis for each status
-function RMP.Popup:Run(message , title , status , border_color , bg_color , poslayout)
-	rows , cols = RMP.Terminal:GetSize()
-	local poslayout = poslayout or RMP.CENTER
-	local x , y = nil , nil
-	if poslayout == RMP.TOP_LEFT then
-		x , y = 2,2
-	elseif poslayout == RMP.TOP_RIGHT then
-		x , y = cols - (cols/4) -  2,2
-	elseif poslayout == RMP.BUTTOM_LEFT then
-		x , y = 2,rows - (rows/4) -  2
-	elseif poslayout == RMP.BUTTOM_RIGHT then
-		x , y = cols - (cols/4) -  2,rows - (rows/4) -  2
-	else
-		x , y = cols / 2 , rows / 2
-	end
-	RMP.Window:CreateWindow(
+	-- TODO: add emojis for each status
+	function RMP.Popup:run(message , title , status , border_color , bg_color , poslayout)
+		rows , cols = RMP.Terminal:getSize()
+		local poslayout = poslayout or RMP.CENTER
+		local x , y = nil , nil
+		if poslayout == RMP.TOP_LEFT then
+			x , y = 2,2
+		elseif poslayout == RMP.TOP_RIGHT then
+			x , y = cols - (cols/4) -  2,2
+		elseif poslayout == RMP.BUTTOM_LEFT then
+			x , y = 2,rows - (rows/4) -  2
+		elseif poslayout == RMP.BUTTOM_RIGHT then
+			x , y = cols - (cols/4) -  2,rows - (rows/4) -  2
+		else
+			x , y = cols / 2 , rows / 2
+		end
+		RMP.Window:createWindow(
 		title , 
--- 		cols / 2 , 
--- 		rows / 2 , 
+		-- 		cols / 2 , 
+		-- 		rows / 2 , 
 		x,
 		y,
 		cols/4 , 
@@ -1327,157 +1294,155 @@ function RMP.Popup:Run(message , title , status , border_color , bg_color , posl
 		bg_color , 
 		function(x, y , xx , yy)
 			-- TODO: handle emojis here
-			local t = RMP.Text:New(remove_new_lines_from_str(message) , nil , nil)
-			RMP.Terminal:MoveTo(math.floor(cols/4) ,math.floor(rows/4))
-			RMP.Terminal:MoveDown(1)
-			RMP.Terminal:MoveRight(2)
+			local t = RMP.Text:new(remove_new_lines_from_str(message) , nil , nil)
+			RMP.Terminal:moveTo(math.floor(cols/4) ,math.floor(rows/4))
+			RMP.Terminal:moveDown(1)
+			RMP.Terminal:moveRight(2)
 			for i = 1 , math.floor(yy - y) - 2 do
-				io.write(t:FixTextToBox(xx - x + 2))
+				io.write(t:fixTextToBox(xx - x + 2))
 				io.flush()
-				RMP.Terminal:MoveTo(math.floor(cols/4) + 2,math.floor(rows/4) + i)
-				RMP.Terminal:MoveDown(1)
+				RMP.Terminal:moveTo(math.floor(cols/4) + 2,math.floor(rows/4) + i)
+				RMP.Terminal:moveDown(1)
 			end
 		end
-	)
-end
+		)
+	end
 
-function RMP.Popup:Error(message , delay , poslayout)
-	local delay = delay or 3	-- 3 seconds
-	local poslayout = poslayout or RMP.CENTER
-	RMP.Popup:Run(
-		message , 
-		"[ " .. RMP.Text:New(
+	function RMP.Popup:error(message , delay , poslayout)
+		local delay = delay or 3	-- 3 seconds
+		local poslayout = poslayout or RMP.CENTER
+		RMP.Popup:run(
+			message , 
+			"[ " .. RMP.Text:new(
 			"ERROR" , 
 			RMP.Bold , 
 			RMP.BGBRed
-		):GetColoredText() .. " ]", 
-		RMP.ERROR , 
-		RMP.FGRed , 
-		nil,
-		poslayout
-	)
-	-- TODO: implement sleep function
-	RMP.sleep(RMP.Duration:from_sec(delay))
-end
+			):getColoredText() .. " ]", 
+			RMP.ERROR , 
+			RMP.FGRed , 
+			nil,
+			poslayout
+		)
+		RMP.sleep(RMP.Duration:fromSec(delay))
+	end
 
-function RMP.Popup:Info(message , delay , poslayout)
-	local delay = delay or 3	-- 3 seconds
-	local poslayout = poslayout or RMP.CENTER
-	RMP.Popup:Run(
-		message ,
-		"[ " .. RMP.Text:New(
+	function RMP.Popup:info(message , delay , poslayout)
+		local delay = delay or 3	-- 3 seconds
+		local poslayout = poslayout or RMP.CENTER
+		RMP.Popup:run(
+			message ,
+			"[ " .. RMP.Text:new(
 			"INFO" , 
 			RMP.Bold , 
 			RMP.BGBGreen
-		):GetColoredText()  .. " ]", 
-		RMP.INFO , 
-		RMP.FGGreen , 
-		nil,
-		poslayout
-	)
-	-- TODO: implement sleep function
-	RMP.sleep(RMP.Duration:from_sec(delay))
-end
+			):getColoredText()  .. " ]", 
+			RMP.INFO , 
+			RMP.FGGreen , 
+			nil,
+			poslayout
+		)
+		RMP.sleep(RMP.Duration:fromSec(delay))
+	end
 
-function RMP.Popup:Message(message , delay , poslayout)
-	local delay = delay or 3	-- 3 seconds
-	local poslayout = poslayout or RMP.CENTER
-	RMP.Popup:Run(
-		message ,  
-		"[ " .. RMP.Text:New(
+	function RMP.Popup:message(message , delay , poslayout)
+		local delay = delay or 3	-- 3 seconds
+		local poslayout = poslayout or RMP.CENTER
+		RMP.Popup:run(
+			message ,  
+			"[ " .. RMP.Text:new(
 			"Message" , 
 			RMP.Bold , 
 			RMP.BGBBlue
-		):GetColoredText()   .. " ]", 
-		RMP.MESSAGE , 
-		RMP.FGBlue , 
-		nil,
-		poslayout
-	)
-	-- TODO: implement sleep function
-	RMP.sleep(RMP.Duration:from_sec(delay))
-end
+			):getColoredText()   .. " ]", 
+			RMP.MESSAGE , 
+			RMP.FGBlue , 
+			nil,
+			poslayout
+		)
+		RMP.sleep(RMP.Duration:fromSec(delay))
+	end
 
-function RMP.Popup:Warning(message , delay , poslayout)
-	local delay = delay or 3	-- 3 seconds
-	local poslayout = poslayout or RMP.CENTER
-	RMP.Popup:Run(
-	message ,  
-	"[ " .. RMP.Text:New(
-	"Warning" , 
-	RMP.Bold , 
-	RMP.BGBYellow
-	):GetColoredText()   .. " ]", 
-	RMP.WARNING , 
-	RMP.FGYellow , 
-		nil,
-		poslayout
-	)
-	-- TODO: implement sleep function
-	RMP.sleep(RMP.Duration:from_sec(delay))
+	function RMP.Popup:warning(message , delay , poslayout)
+		local delay = delay or 3	-- 3 seconds
+		local poslayout = poslayout or RMP.CENTER
+		RMP.Popup:run(
+			message ,  
+			"[ " .. RMP.Text:new(
+			"Warning" , 
+			RMP.Bold , 
+			RMP.BGBYellow
+			):getColoredText()   .. " ]", 
+			RMP.WARNING , 
+			RMP.FGYellow , 
+			nil,
+			poslayout
+		)
+		RMP.sleep(RMP.Duration:fromSec(delay))
+	end
 end
 
 -- Scroller class
 RMP.Scroller = {}
 RMP.Scroller.__index = RMP.Scroller
-
-function RMP.Scroller:New(h, optObj)
-	local obj = setmetatable({}, self)
-	obj.h = h
-	obj.data = optObj:GetOptions()
-	obj.cur = 0
-	obj.options = optObj:SetOptions(obj:GetSlice())
-	return obj
-end
-
-function RMP.Scroller:GetSlice()
-	local local_data = {}
-	local last = math.min(self.h, #self.data)
-
-	for i = 1, last do
-		local_data[i] = self.data[i + self.cur]
+do	-- Scroller
+	function RMP.Scroller:new(h, optObj)
+		local obj = setmetatable({}, self)
+		obj.h = h
+		obj.data = optObj:getOptions()
+		obj.cur = 0
+		obj.options = optObj:setOptions(obj:getSlice())
+		return obj
 	end
-	return local_data
-end
 
-function RMP.Scroller:NextLine()
-	if self.cur + self.h < #self.data then
-		if self.options.pos < self.h then
-			self.options:Next()
-		else
-			self.cur = self.cur + 1
-			self.options:SetOptions(self:GetSlice())
-	 		self.options:FocusPos(self.h)
+	function RMP.Scroller:getSlice()
+		local local_data = {}
+		local last = math.min(self.h, #self.data)
+
+		for i = 1, last do
+			local_data[i] = self.data[i + self.cur]
 		end
-	else
-		self.options:Next()
+		return local_data
 	end
-end
 
-function RMP.Scroller:PrevLine()
-	if self.cur > 0 then
-		if self.options.pos > 1 then
-			self.options:Prev()
+	function RMP.Scroller:nextLine()
+		if self.cur + self.h < #self.data then
+			if self.options.pos < self.h then
+				self.options:next()
+			else
+				self.cur = self.cur + 1
+				self.options:setOptions(self:getSlice())
+				self.options:focusPos(self.h)
+			end
 		else
-			self.cur = self.cur - 1
-			self.options:SetOptions(self:GetSlice())
-			self.options:FocusPos(1)
+			self.options:next()
 		end
-	else
-		self.options:Prev()
 	end
-end
-function RMP.Scroller:NextContent()
-	local max_start = math.max(0, #self.data - self.h)
-	self.cur = math.min(self.cur + self.h, max_start)
-	self.options:SetOptions(self:GetSlice())
-	self.options:FocusPos(1)
-end
 
-function RMP.Scroller:PrevContent()
-	self.cur = math.max(self.cur - self.h, 0)
-	self.options:SetOptions(self:GetSlice())
-	self.options:FocusPos(1)
+	function RMP.Scroller:prevLine()
+		if self.cur > 0 then
+			if self.options.pos > 1 then
+				self.options:prev()
+			else
+				self.cur = self.cur - 1
+				self.options:setOptions(self:getSlice())
+				self.options:focusPos(1)
+			end
+		else
+			self.options:prev()
+		end
+	end
+	function RMP.Scroller:nextContent()
+		local max_start = math.max(0, #self.data - self.h)
+		self.cur = math.min(self.cur + self.h, max_start)
+		self.options:setOptions(self:getSlice())
+		self.options:focusPos(1)
+	end
+
+	function RMP.Scroller:prevContent()
+		self.cur = math.max(self.cur - self.h, 0)
+		self.options:setOptions(self:getSlice())
+		self.options:focusPos(1)
+	end
 end
 
 -- TODO: bind miniaudio
@@ -1486,179 +1451,186 @@ end
 RMP.Sound = {}
 RMP.Sound.__index = RMP.Sound
 
-RMP.PLAYLIST_LOOP 	= enum(true)
-RMP.SINGLE_LOOP 	= enum()
-RMP.ONES 		= enum()
+do 	-- Sound
 
-function RMP.Sound:New(array_sounds)
-	self.sound_name = array_sounds or nil
-	if type(array_sounds) == "table" then
-		self.sound_name = array_sounds
-	elseif type(array_sounds) == "string" then
-		self.sound_name = {array_sounds}
-	else
-		self.sound_name = nil
-	end
-	self.curr = 1
-	self.vol = 50
-	self.is_played_before = false
-	self.is_loaded = false
-	self.status = RMP.ONES
-	rmpaudio.Init()
-	if self.sound_name ~= nil then
-		local ok , err = pcall(rmpaudio.Load , self.sound_name[self.curr])
-		if not ok then
-			RMP.Popup:Error("cannot load the sound " .. err)
-			return self
-		end
-		self.is_loaded = true
-	end
-	return self
-end
+	RMP.PLAYLIST_LOOP 	= enum(true)
+	RMP.SINGLE_LOOP 	= enum()
+	RMP.ONES 		= enum()
 
-function RMP.Sound:Add(sounds)
-	if type(sounds) == "string" then
-		if self.sound_name == nil then
-			self.sound_name = {}
+	function RMP.Sound:new(array_sounds)
+		self.sound_name = array_sounds or nil
+		if type(array_sounds) == "table" then
+			self.sound_name = array_sounds
+		elseif type(array_sounds) == "string" then
+			self.sound_name = {array_sounds}
+		else
+			self.sound_name = nil
 		end
-		table.insert(self.sound_name,sounds)
-	else 
-		RMP.Popup:Error("cannot add this sound the type is not string")
+		self.curr = 1
+		self.vol = 50
+		self.is_played_before = false
+		self.is_loaded = false
+		self.status = RMP.ONES
+		rmpaudio.Init()
+		if self.sound_name ~= nil then
+			local ok , err = pcall(rmpaudio.Load , self.sound_name[self.curr])
+			if not ok then
+				RMP.Popup:error("cannot load the sound " .. err)
+				return self
+			end
+			self.is_loaded = true
+		end
 		return self
 	end
 
-	return self
-end
-
-function RMP.Sound:SetStatus(status)
-	if type(status) == "number" and status <= RMP.ONES or status >= RMP.PLAYLIST_LOOP then
-		self.status = status
-	end
-	return self
-end
-
-function RMP.Sound:GetStatus()
-	return self.status
-end
-
--- function RMP.Sound:LoadSoundDirectly(sounds_file)
--- 	rmpaudio.Load(sounds_file)
--- 	return self
--- end
-
--- function RMP.Sound:Load()
--- 	rmpaudio.Load(self.sound_name[self.curr])
--- 	return self
--- end
-
-function RMP.Sound:Play()
-	if not self.is_played_before then
-		local ok , err = pcall(rmpaudio.Play)
-		if not ok then
-			RMP.Popup:Error(err)
+	function RMP.Sound:add(sounds)
+		if type(sounds) == "string" then
+			if self.sound_name == nil then
+				self.sound_name = {}
+			end
+			table.insert(self.sound_name,sounds)
+		else 
+			RMP.Popup:error("cannot add this sound the type is not string")
 			return self
 		end
-		self.is_played_before = true
+
+		return self
 	end
-	return self
-end
 
-function RMP.Sound:Next()
-	if self.curr < #self.sound_name  then
-		self.curr = self.curr + 1
-	else
-		self.curr = 1
+	function RMP.Sound:setStatus(status)
+		if type(status) == "number" and status <= RMP.ONES or status >= RMP.PLAYLIST_LOOP then
+			self.status = status
+		end
+		return self
 	end
-	return self
-end
 
-function RMP.Sound:Prev()
-	if self.curr > 1  then
-		self.curr = self.curr - 1
-	else
-		self.curr = #self.sound_name
+	function RMP.Sound:getStatus()
+		return self.status
 	end
-	return self
-end
 
--- NOTE: this method is broken
-function RMP.Sound:PlayForEver()
-	return rmpaudio.PlayUntilFinished()
-end
+	-- function RMP.Sound:loadSoundDirectly(sounds_file)
+	-- 	rmpaudio.Load(sounds_file)
+	-- 	return self
+	-- end
 
-function RMP.Sound:IsValid()
-	return rmpaudio.IsValid()
-end
+	-- function RMP.Sound:load()
+	-- 	rmpaudio.Load(self.sound_name[self.curr])
+	-- 	return self
+	-- end
 
-function RMP.Sound:GetAudioDeviceInformation()
-	return rmpaudio.GetAudioDeviceInformation()
-end
-
-function RMP.Sound:SetSpeed(speed)
-	rmpaudio.SetSpeed(speed)
-	return self
-end
-
-function RMP.Sound:Pause()
-	rmpaudio.Pause()
-	return self
-end
-
-function RMP.Sound:Resume()
-	rmpaudio.Resume()
-	return self
-end
-
-function RMP.Sound:Stop()
-	rmpaudio.Stop()
-	return self
-end
-
--- in persent
-function RMP.Sound:SetVolume(volume)
-	if volume > 100 then
-		rmpaudio.SetVolume(1)
-	elseif volume < 0 then
-		rmpaudio.SetVolume(0.5)
-	else
-		rmpaudio.SetVolume(volume / 100)
+	function RMP.Sound:play()
+		if not self.is_played_before then
+			local ok , err = pcall(rmpaudio.Play)
+			if not ok then
+				RMP.Popup:error(err)
+				return self
+			end
+			self.is_played_before = true
+		end
+		return self
 	end
-	return self
-end
 
--- in minute
-function RMP.Sound:Seek(pos)
-	rmpaudio.Seek(pos)
-	return self
-end
+	function RMP.Sound:next()
+		if self.curr < #self.sound_name  then
+			self.curr = self.curr + 1
+		else
+			self.curr = 1
+		end
+		return self
+	end
 
-function RMP.Sound:GetPosition()
-	return rmpaudio.GetPosition()
-end
+	function RMP.Sound:prev()
+		if self.curr > 1  then
+			self.curr = self.curr - 1
+		else
+			self.curr = #self.sound_name
+		end
+		return self
+	end
 
-function RMP.Sound:IsPlaying()
-	return rmpaudio.IsPlaying()
-end
+	-- NOTE: this method is broken
+	function RMP.Sound:playForEver()
+		return rmpaudio.PlayUntilFinished()
+	end
 
-function RMP.Sound:GetDuration()
-	return rmpaudio.GetDuration()
-end
+	function RMP.Sound:isValid()
+		return rmpaudio.IsValid()
+	end
 
-function RMP.Sound:GetMetaData()
-	return rmpaudio.GetMetaData()
-end
+	function RMP.Sound:getAudioDeviceInformation()
+		return rmpaudio.GetAudioDeviceInformation()
+	end
 
--- in persent
-function RMP.Sound:GetVolume()
-	return rmpaudio.GetVolume()*100
-end
+	function RMP.Sound:setSpeed(speed)
+		rmpaudio.SetSpeed(speed)
+		return self
+	end
 
-function RMP.Sound:CleanUp()
-	rmpaudio.Clean()
+	function RMP.Sound:pause()
+		rmpaudio.Pause()
+		return self
+	end
+
+	function RMP.Sound:resume()
+		rmpaudio.Resume()
+		return self
+	end
+
+	function RMP.Sound:stop()
+		rmpaudio.Stop()
+		return self
+	end
+
+	-- in persent
+	function RMP.Sound:setVolume(volume)
+		if volume > 100 then
+			rmpaudio.SetVolume(1)
+		elseif volume < 0 then
+			rmpaudio.SetVolume(0.5)
+		else
+			rmpaudio.SetVolume(volume / 100)
+		end
+		return self
+	end
+
+	-- in minute
+	function RMP.Sound:seek(pos)
+		rmpaudio.Seek(pos)
+		return self
+	end
+
+	function RMP.Sound:getPosition()
+		return rmpaudio.GetPosition()
+	end
+
+	function RMP.Sound:isPlaying()
+		return rmpaudio.IsPlaying()
+	end
+
+	function RMP.Sound:getDuration()
+		return rmpaudio.GetDuration()
+	end
+
+	function RMP.Sound:getMetaData()
+		return rmpaudio.GetMetaData()
+	end
+
+	-- in persent
+	function RMP.Sound:getVolume()
+		return rmpaudio.GetVolume()*100
+	end
+
+	function RMP.Sound:cleanUp()
+		rmpaudio.Clean()
+	end
+
 end
 
 -- TODO: write master.lua for managing lua plugins using lua coroutines
 -- TODO: make init.lua contains confguration like add plugins and configure keys
+
+-- TODO: introduce configuration system to manage lua configuration file 
+
 
 return RMP
 

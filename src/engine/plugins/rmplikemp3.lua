@@ -1,9 +1,10 @@
 local api = require("rmp")
 
 -- return function(sound_cfg)
-function main(sound_cfg)
+-- this function accept 4 params
+function main(x , y , xx , yy)
 	-- TODO: handle the sound from rmp api using sound_cfg param
-	local h , w = api.Terminal:GetSize() 
+	local h , w = api.Terminal:getSize() 
 	local rmpmp3 = "Rmp_Mp3"
 	-- local  rh , rw = 1 , #rmpmp3
 	local  rh , rw = h/4 , w/4
@@ -50,10 +51,10 @@ function main(sound_cfg)
 	local bgcolor = bgcolors[math.random(1 , #bgcolors)]
 	local fgcolor = fgcolors[math.random(1 , #fgcolors)]
 
-	api.Terminal:HideCursor()
+	api.Terminal:hideCursor()
 	while true do
-		h , w = api.Terminal:GetSize() 
-		api.Terminal:ClearWindow()
+		h , w = api.Terminal:getSize() 
+		api.Terminal:clearWindow()
 		ux = ux + dx
 		uy = uy + dy
 		if ux + rw > w or ux < 2 then
@@ -66,24 +67,30 @@ function main(sound_cfg)
 			bgcolor = bgcolors[math.random(1 , #bgcolors)]
 			fgcolor = fgcolors[math.random(1 , #fgcolors)]
 		end
-		api.Window:CreateWindow(
-		"[ " .. api.Text:New("RMP" , api.Bold , bgcolor):GetColoredText() .. " ]",
+		api.Window:createWindow(
+		"[ " .. api.Text:new("RMP" , api.Bold , bgcolor):getColoredText() .. " ]",
 		w , h, 1 , 1 ,
-		fgcolor , nil, function (x,y,xx,yy)
-			api.Terminal:MoveRight(ux)
-			api.Terminal:MoveDown(uy)
+		fgcolor , nil , api.BoxDrawing.HeavyBorder, function (x,y,xx,yy)
+			api.Terminal:moveRight(ux)
+			api.Terminal:moveDown(uy)
 
-			api.Window:CreateWindow(nil , w / 4 , h / 4 , ux , uy , fgcolor  , bgcolor , function(rx,ry,rxx,ryy)
-				api.Terminal:MoveRight(math.floor((rxx - rx)/2) - 4)
-				api.Terminal:MoveDown(math.floor((ryy - ry)/2) - 1)
+			api.Window:createWindow(nil , w / 4 , h / 4 , ux , uy , fgcolor  , bgcolor ,api.BoxDrawing.HeavyBorder, function(rx,ry,rxx,ryy)
+				api.Terminal:moveRight(math.floor((rxx - rx)/2) - 4)
+				api.Terminal:moveDown(math.floor((ryy - ry)/2) - 1)
 				-- api.Terminal:MoveTo(math.floor(rxx/2) + rx,math.floor(ryy/2) + ry)
-				io.write(api.Text:New(rmpmp3 , nil , fgcolor):GetColoredText())
+				io.write(api.Text:new(rmpmp3 , nil , fgcolor):getColoredText())
 				io.flush()
 			end)
 		end
 		)
+
+		if api.Terminal:handleKey() == api.KEY_Q then
+			break
+		end
 		-- os.execute("sleep 0.010")
-		os.execute("sleep 0.05")
+		-- os.execute("sleep 0.05")
+		api.sleep(60)
 	end
-	api.Terminal:ShowCursor()
+	api.Terminal:showCursor()
+	api.Terminal:closeKey()
 end

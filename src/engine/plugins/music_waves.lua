@@ -1,7 +1,7 @@
-local api = require("../core/rmp")
+local api = require("rmp")
 
-main = function()
-	h , w = api.Terminal:GetSize()
+main = function(x , y , xx , yy)
+	h , w = api.Terminal:getSize()
 	local cols = 6
 	local wrec = math.floor(w/cols)
 	local values = {}
@@ -18,42 +18,48 @@ main = function()
 		api.BGWhite
 	}
 	local quite = false
-	local bgcolor = bgcolors[math.random(1 , #bgcolors)]
-	local co = api.QuickRoutine(function()
-		api.Terminal:HideCursor()
+	-- local bgcolor = bgcolors[math.random(1 , #bgcolors)]
+	local bgcolor = api.BGBRed
+	local co = api.quickRoutine(function()
+		api.Terminal:hideCursor()
 		while true and not quite do
 			for i = 1 , cols do
+				-- values[i] = math.random(5 , h - 5)
 				values[i] = math.random(5 , h - 5)
 			end
-			api.Window:CreateWindow(
-			api.Text:New("Status" , api.Bold , api.BGGreen):GetColoredText(),
+			api.Window:createWindow(
+			api.Text:new("Status" , api.Bold , api.BGGreen):getColoredText(),
 			w, h, 1, 1,
 			api.FGRed,
 			nil,
+			api.BoxDrawing.LightBorder,
 			function(x,y,xx,yy)
 				for i = 1 , cols do
-					bgcolor = bgcolors[math.random(1 , #bgcolors)]
-					api.Draw:Rect(wrec*(i - 1) + 2*(math.floor(math.sqrt(i)) - 1),h - values[i],wrec - 3,values[i],bgcolor)
+					-- bgcolor = bgcolors[math.random(1 , #bgcolors)]
+					bgcolor = api.BGBRed
+					api.Draw:rectangle(wrec*(i - 1) + 2*(math.floor(math.sqrt(i)) - 1),h - values[i],wrec - 3,values[i],bgcolor)
 				end
 			end
 			)
-			-- coroutine.yield()
-			os.execute("sleep 0.2")
+			-- must be yielding to jump to other loop between main loop and other function loop
+			coroutine.yield()
 		end
-		api.Terminal:ShowCursor()
+		api.Terminal:showCursor()
 	end)
-	api.Terminal:RawMode(true)
+	api.Terminal:rawMode(true)
 	os.execute("stty -icanon -echo < /dev/tty")  -- Unix/Linux
 	while not quite do
 		coroutine.resume(co)
 		-- TODO: add non-blocking to stdin
 		-- TODO: make a strong controle to input in linux and windows in raymp
-		local key = api.Terminal:HandleKey()
+		local key = api.Terminal:handleKey()
 		if key == api.KEY_Q or key == api.KEY_SHIFT_Q then
-			api.Terminal:ClearWindow()
+			api.Terminal:clearWindow()
 			quite = true
 			break
 		end
+		api.sleep(api.Duration:fromMilsec(200))
 	end
-	api.Terminal:RawMode(false)
+	api.Terminal:rawMode(false)
+	api.Terminal:showCursor()
 end

@@ -56,6 +56,7 @@ typedef enum{
 }RMPEngineError;
 
 static RMPEngineError __rmp__is__error = FINE;
+static char* error = NULL;
 
 typedef enum {
 	ERR,
