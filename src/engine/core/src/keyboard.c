@@ -337,6 +337,7 @@ static int lua_get_key(lua_State *L) {
 }
 
 static int lua_kclose(lua_State *L) {
+	(void)L;
 #if defined(_WIN32)
 	restore_console();
 #else

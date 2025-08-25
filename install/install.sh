@@ -1,6 +1,9 @@
 #!/bin/bash
 
-local INIT_PATH = "$HOME/.rmp/.init.lua"
+INIT_PATH="$HOME/.rmp/.init.lua"
+INCLUDE_PATH="-I../src/engine/lua/include"
+LIB_PATH="-L../src/engine/lua/lib -l:liblua.a"
+FLAGS="-shared  -fPIC  -Wall -Wextra"
 
 help(){
 	echo "HELP:"
@@ -10,6 +13,7 @@ help(){
 	echo "	clean : remove all installed shared librarys and lua files from the system files"
 	echo "	compile : compile .c files lua libs to shared libs"
 	echo "	install : install .so and .lua files to system files"
+	echo "		-v : verbose flag"
 	echo "NOTE:"
 	echo "	install and clean command require root privileges"
 	exit 1
@@ -43,7 +47,10 @@ fi
 if [[ "$1" == "clean" ]]
 then
 	echo "[+] cleaning ..."
-	set -xe
+	if [[ "$2" == "-v" ]]
+	then
+		set -xe
+	fi
 	rm /usr/local/lib/lua/5.4/rmpaudio.so
 	rm /usr/local/lib/lua/5.4/keyboard.so
 	rm /usr/local/lib/lua/5.4/sleep.so
@@ -52,48 +59,53 @@ then
 elif [[ "$1" == "compile" ]]
 then
 	echo "[+] compiling ..."
-	set -xe
+	if [[ "$2" == "-v" ]]
+	then
+		set -xe
+	fi
 
 	gcc \
-		-shared \
-		-fPIC \
+		$FLAGS\
 		-o ../src/engine/core/lib/rmpaudio.so ../src/engine/core/src/rmpaudio.c \
-		-I../src/engine/lua/include \
-		-L../src/engine/lua/lib \
-		-l:liblua.a
+		$INCLUDE_PATH	\
+		$LIB_PATH
 
 	gcc \
-		-shared \
-		-fPIC \
+		$FLAGS\
 		-o ../src/engine/core/lib/keyboard.so ../src/engine/core/src/keyboard.c \
-		-I../src/engine/lua/include \
-		-L../src/engine/lua/lib \
-		-l:liblua.a
+		$INCLUDE_PATH	\
+		$LIB_PATH
 
 	gcc \
-		-shared \
-		-fPIC \
+		$FLAGS\
 		-o ../src/engine/core/lib/sleep.so ../src/engine/core/src/sleep.c \
-		-I../src/engine/lua/include \
-		-L../src/engine/lua/lib \
-		-l:liblua.a
+		$INCLUDE_PATH	\
+		$LIB_PATH
 
 	gcc \
-		-shared \
-		-fPIC \
+		$FLAGS\
 		-o ../src/engine/core/lib/platform.so ../src/engine/core/src/platform.c \
-		-I../src/engine/lua/include \
-		-L../src/engine/lua/lib \
-		-l:liblua.a
+		$INCLUDE_PATH	\
+		$LIB_PATH
+
+	gcc \
+		$FLAGS\
+		-o ../src/engine/core/lib/directory.so ../src/engine/core/src/directory.c \
+		$INCLUDE_PATH	\
+		$LIB_PATH
 
 elif [[ "$1" == "install" ]]
 then
 	echo "[+] Installing ..."
-	set -xe
+	if [[ "$2" == "-v" ]]
+	then
+		set -xe
+	fi
 	cp ../src/engine/core/lib/rmpaudio.so /usr/local/lib/lua/5.4
 	cp ../src/engine/core/lib/keyboard.so /usr/local/lib/lua/5.4
 	cp ../src/engine/core/lib/sleep.so /usr/local/lib/lua/5.4
 	cp ../src/engine/core/lib/platform.so /usr/local/lib/lua/5.4
+	cp ../src/engine/core/lib/directory.so /usr/local/lib/lua/5.4
 	cp ../src/engine/core/rmp.lua /usr/local/share/lua/5.4
 
 	exit 0

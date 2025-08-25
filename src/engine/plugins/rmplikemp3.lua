@@ -87,8 +87,6 @@ function main(x , y , xx , yy)
 		if api.Terminal:handleKey() == api.KEY_Q then
 			break
 		end
-		-- os.execute("sleep 0.010")
-		-- os.execute("sleep 0.05")
 		api.sleep(60)
 	end
 	api.Terminal:showCursor()

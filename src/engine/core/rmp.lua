@@ -118,6 +118,7 @@ local keyboard = require("keyboard")
 local rmpaudio = require("rmpaudio")
 local sleep = require("sleep")
 local platform = require("platform")
+local directory = require("directory")
 
 -- handle enumuration in lua using coroutine yield
 global_count_enum = -1
@@ -943,6 +944,16 @@ RMP.Window = {}
 RMP.Window.__index = Window
 do 	-- creating window
 	-- callback function accept 4 agrs 
+
+	function RMP.Window:windowId(id)
+		self.id = id
+		return self
+	end
+
+	function RMP.Window:getId()
+		return self.id
+	end
+
 	function RMP.Window:createWindow(title , width , height , x , y , border_color , background_color , border , callback)
 		if title == nil then
 			title = ""
@@ -993,7 +1004,7 @@ do	-- Terminal
 		io.write("\27[" .. x .. "A");
 	end
 	function RMP.Terminal:moveDown(x)
-		if x < 1  or x == nil then
+		if x == nil or x < 1 then
 			x = 1
 		end
 		io.write("\27[" .. x .. "B");
@@ -1626,11 +1637,143 @@ do 	-- Sound
 
 end
 
+RMP.Path = {}
+RMP.Path.__index = RMP.Path
+do	-- Path
+	function RMP.Path:new(path)
+		self.path = path or self:getCurrentPath()
+	end
+
+	function RMP.Path:getCurrentPath()
+		return directory.get_current_path()
+	end
+
+	function RMP.Path:getHomePath()
+		return directory.home_path()
+	end
+
+	function RMP.Path:listDir()
+		-- this method return table of tables contains two value 
+		-- first one is boolean indecates if it is file or dir (true -> file else dir)
+		-- second one is string name of the file or dir
+		return directory.list_dir(self.path)	-- may return nil
+	end
+
+	function RMP.Path:makeDir(dir_name)
+		local full_dir = nil
+		if string.sub(self.path , -1) == "/" then
+			full_dir = self.path..dir_name
+		else
+			full_dir = self.path.."/"..dir_name
+		end
+		return directory.mkdir(full_dir , 
+			nil	-- mode default 0o755
+		)
+	end
+
+	function RMP.Path:removeDir(dir_name)
+		local full_dir = nil
+		if string.sub(self.path , -1) == "/" then
+			full_dir = self.path..dir_name
+		else
+			full_dir = self.path.."/"..dir_name
+		end
+		return directory.rmdir(full_dir)
+	end
+
+	function RMP.Path:find(pattern , is_find_file) -- boolean
+		-- if file or dir is founded it returns true so you can access it directly
+		local lst = self:listDir()
+		if not lst then
+			return false
+		end
+
+		for _ , info in ipairs(lst) do
+			if is_find_file then
+				if info.is_file and pattern == info.name then
+					return true
+				end
+			else
+				if not info.is_file and pattern == info.name then
+					return true
+				end
+			end
+		end
+		return false
+	end
+
+	function RMP.Path:findRecursive(pattern, is_file_pattern, max_depth) -- return Table {path , name , is_file}
+		max_depth = max_depth or -1
+		local results = {}
+		local match_func
+
+		if type(pattern) == "function" then
+			match_func = pattern
+		else
+			match_func = function(name) return name == pattern end
+		end
+
+		local search_recursive = function(current_path, current_depth)
+			if max_depth >= 0 and current_depth > max_depth then
+				return
+			end
+
+			local temp_path = RMP.Path:new(current_path)
+			local lst = temp_path:listDir()
+			if not lst then
+				return
+			end
+
+			for _, info in ipairs(lst) do
+				local full_path
+				if string.sub(current_path, -1) == "/" then
+					full_path = current_path .. info.name
+				else
+					full_path = current_path .. "/" .. info.name
+				end
+
+				local should_check = (is_file_pattern == nil) or
+				(is_file_pattern and info.is_file) or
+				(not is_file_pattern and not info.is_file)
+
+				if should_check and match_func(info.name, info.is_file, full_path) then
+					table.insert(results, {
+						path = full_path,
+						name = info.name,
+						is_file = info.is_file
+					})
+				end
+
+				if not info.is_file then
+					search_recursive(full_path, current_depth + 1)
+				end
+			end
+		end
+
+		search_recursive(self.path, 0)
+		return results
+	end
+
+end
+
 -- TODO: write master.lua for managing lua plugins using lua coroutines
 -- TODO: make init.lua contains confguration like add plugins and configure keys
 
 -- TODO: introduce configuration system to manage lua configuration file 
+RMP.Config = {}
+RMP.Config.__index = RMP.Config
 
+do 	-- Config
+	function RMP.Config:load()
+		local path
+		self.cfg = require(".init")
+		return self
+	end
+
+	function RMP.Config:integratePlugUsingId(id)
+		-- TODO: handle multiple plugins in same window , and check the input key to change between them
+		-- search key id in table and return the callback function 
+	end
+end
 
 return RMP
-

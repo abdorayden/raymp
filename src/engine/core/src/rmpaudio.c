@@ -16,6 +16,7 @@ ma_device device;
 ma_decoder decoder;
 
 void data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
+	(void)pInput;
 	ma_decoder* pDecoder = (ma_decoder*)pDevice->pUserData;
 	if (pDecoder == NULL) return;
 
@@ -78,6 +79,7 @@ static int lua_miniaudio_play(lua_State *L) {
 }
 
 static int lua_miniaudio_stop(lua_State *L) {
+	(void)L;
 	ma_device_stop(&device);
 	return 0;
 }
@@ -128,6 +130,7 @@ static int lua_miniaudio_get_position(lua_State *L) {
 //}
 
 static int lua_miniaudio_cleanup(lua_State *L) {
+	(void)L;
 	ma_device_uninit(&device);
 	ma_decoder_uninit(&decoder);
 	ma_context_uninit(&context);

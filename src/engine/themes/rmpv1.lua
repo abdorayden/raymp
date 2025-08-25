@@ -27,16 +27,16 @@ function main(configuration_object)
 	-- TODO: load configuration file
 	-- TODO: handle songs in engine
 
-	local h , w = api.Terminal:GetSize() 
+	local h , w = api.Terminal:getSize() 
 
-	api.Terminal:HideCursor()
-	api.Terminal:ClearWindow()
+	api.Terminal:hideCursor()
+	api.Terminal:clearWindow()
 
-	local key = api.Terminal.HandleKey()
+	local key = api.Terminal.handleKey()
 	while true do
-		h , w = api.Terminal:GetSize() 
-		key = api.Terminal:HandleKey()
-		api.Window:CreateWindow(
+		h , w = api.Terminal:getSize() 
+		key = api.Terminal:handleKey()
+		api.Window:windowId(0):createWindow(
 			nil
 			, w 
 			, h
@@ -47,13 +47,21 @@ function main(configuration_object)
 			, api.BoxDrawing.HeavyBorder
 			, function(x,y,dx,dy)
 				-- TODO: pass plugins to the callback function
-				api.Window:CreateWindow(
-					api.Text:New("intern" , api.FGRed , api.SlowBlink):GetColoredText(),
-					w/2,h/2,w/4,h/8,nil,nil,api.BoxDrawing.HeavyBorder,nil
+				local one = api.Window:windowId(1)
+				one:createWindow(
+					api.Text:new("intern" , api.FGRed , api.SlowBlink):getColoredText(),
+					w/2,h/2,w/4,h/8,nil,nil,api.BoxDrawing.HeavyBorder,function(x,y,xx,yy)
+						api.Terminal:moveTo(x , y)
+						io.write(one:getId())
+					end
 				)
-				api.Window:CreateWindow(
-					api.Text:New("keys" , api.FGRed , api.SlowBlink):GetColoredText(),
-					w/4,h/4,w/10,(h-2 - h/4),nil,nil,api.BoxDrawing.HeavyBorder,nil
+				local two = api.Window:windowId(2)
+				two:createWindow(
+					api.Text:new("keys" , api.FGRed , api.SlowBlink):getColoredText(),
+					w/4,h/4,w/10,(h-2 - h/4),nil,nil,api.BoxDrawing.HeavyBorder,function(x,y,xx,yy)
+						api.Terminal:moveTo(x , y)
+						io.write(two:getId())
+					end
 				)
 		end)
 
@@ -61,9 +69,11 @@ function main(configuration_object)
 			break
 		end
 
+		io.flush()
+
 		api.sleep(500)
 	end
 
-	api.Terminal:CloseKey();
-	api.Terminal:ShowCursor()
+	api.Terminal:closeKey();
+	api.Terminal:showCursor()
 end

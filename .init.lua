@@ -1,3 +1,5 @@
+local api = require(rmp)
+
 return {
 	-- the default configuration of the sound
 	sound_cfg = {
