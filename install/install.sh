@@ -2,8 +2,9 @@
 
 INIT_PATH="$HOME/.rmp/.init.lua"
 INCLUDE_PATH="-I../src/engine/lua/include"
-LIB_PATH="-L../src/engine/lua/lib -l:liblua.a"
-FLAGS="-shared  -fPIC  -Wall -Wextra"
+LIB_PATH="-L../src/engine/lua/lib -l:liblua.a -lm"
+FLAGS="-shared  -fPIC -Wall -Wextra"
+CC="gcc"
 
 help(){
 	echo "HELP:"
@@ -54,6 +55,8 @@ then
 	rm /usr/local/lib/lua/5.4/rmpaudio.so
 	rm /usr/local/lib/lua/5.4/keyboard.so
 	rm /usr/local/lib/lua/5.4/sleep.so
+	rm /usr/local/lib/lua/5.4/directory.so
+	rm /usr/local/lib/lua/5.4/window.so
 	rm /usr/local/share/lua/5.4/rmp.lua
 
 elif [[ "$1" == "compile" ]]
@@ -64,34 +67,52 @@ then
 		set -xe
 	fi
 
-	gcc \
+	$CC \
 		$FLAGS\
 		-o ../src/engine/core/lib/rmpaudio.so ../src/engine/core/src/rmpaudio.c \
 		$INCLUDE_PATH	\
 		$LIB_PATH
 
-	gcc \
+	$CC \
 		$FLAGS\
 		-o ../src/engine/core/lib/keyboard.so ../src/engine/core/src/keyboard.c \
 		$INCLUDE_PATH	\
 		$LIB_PATH
 
-	gcc \
+	$CC \
 		$FLAGS\
 		-o ../src/engine/core/lib/sleep.so ../src/engine/core/src/sleep.c \
 		$INCLUDE_PATH	\
 		$LIB_PATH
 
-	gcc \
+	$CC \
 		$FLAGS\
 		-o ../src/engine/core/lib/platform.so ../src/engine/core/src/platform.c \
 		$INCLUDE_PATH	\
 		$LIB_PATH
 
-	gcc \
+	$CC \
 		$FLAGS\
 		-o ../src/engine/core/lib/directory.so ../src/engine/core/src/directory.c \
 		$INCLUDE_PATH	\
+		$LIB_PATH
+
+	$CC \
+		$FLAGS\
+		-o ../src/engine/core/lib/window.so ../src/engine/core/src/window.c \
+		$INCLUDE_PATH	\
+		$LIB_PATH
+
+	$CC \
+		-Wall \
+		-Wextra \
+		-Wunused-variable\
+		../main.c\
+		-o ../rmp \
+		-I ../src/engine \
+		$INCLUDE_PATH	\
+		../src/engine/runner.c\
+		../flags.c\
 		$LIB_PATH
 
 elif [[ "$1" == "install" ]]
@@ -106,7 +127,9 @@ then
 	cp ../src/engine/core/lib/sleep.so /usr/local/lib/lua/5.4
 	cp ../src/engine/core/lib/platform.so /usr/local/lib/lua/5.4
 	cp ../src/engine/core/lib/directory.so /usr/local/lib/lua/5.4
+	cp ../src/engine/core/lib/window.so /usr/local/lib/lua/5.4
 	cp ../src/engine/core/rmp.lua /usr/local/share/lua/5.4
+	# cp ../rmp /bin
 
 	exit 0
 

@@ -119,6 +119,7 @@ local rmpaudio = require("rmpaudio")
 local sleep = require("sleep")
 local platform = require("platform")
 local directory = require("directory")
+local window = require("window")
 
 -- handle enumuration in lua using coroutine yield
 global_count_enum = -1
@@ -537,349 +538,6 @@ RMP.KEY_DBL_QUOTE = enum()
 RMP.KEY_SINGLE_QOUTE = enum()
 RMP.NONE = enum()
 
-function RMP.GetKeyStr(key)
-	if key == RMP.KEY_CTRL_A then
-		print("KEY_CTRL_A ")
-	elseif key == RMP.KEY_CTRL_B then
-		print("KEY_CTRL_B ")
-	elseif key == RMP.KEY_CTRL_C then
-
-		print("KEY_CTRL_C ")
-	elseif key == RMP.KEY_CTRL_D then
-
-		print("KEY_CTRL_D ")
-	elseif key == RMP.KEY_CTRL_E then
-
-		print("KEY_CTRL_E")
-	elseif key == RMP.KEY_CTRL_F then
-
-		print("KEY_CTRL_F ")
-	elseif key == RMP.KEY_CTRL_G then
-
-		print("KEY_CTRL_G ")
-	elseif key == RMP.KEY_CTRL_H then
-
-		print("KEY_CTRL_H ")
-	elseif key == RMP.KEY_CTRL_K then
-
-		print("KEY_CTRL_K ")
-	elseif key == RMP.KEY_CTRL_L then
-
-		print("KEY_CTRL_L ")
-	elseif key == RMP.KEY_CTRL_M then
-
-		print("KEY_CTRL_M ")
-	elseif key == RMP.KEY_CTRL_N then
-
-		print("KEY_CTRL_N ")
-	elseif key == RMP.KEY_CTRL_O then
-
-		print("KEY_CTRL_O")
-	elseif key == RMP.KEY_CTRL_P then
-
-		print("KEY_CTRL_P ")
-	elseif key == RMP.KEY_CTRL_Q then
-
-		print("KEY_CTRL_Q ")
-	elseif key == RMP.KEY_CTRL_R then
-
-		print("KEY_CTRL_R ")
-	elseif key == RMP.KEY_CTRL_S then
-
-		print("KEY_CTRL_S ")
-	elseif key == RMP.KEY_CTRL_T then
-
-		print("KEY_CTRL_T")
-	elseif key == RMP.KEY_CTRL_U then
-
-		print("KEY_CTRL_U ")
-	elseif key == RMP.KEY_CTRL_V then
-
-		print("KEY_CTRL_V ")
-	elseif key == RMP.KEY_CTRL_W then
-
-		print("KEY_CTRL_W ")
-	elseif key == RMP.KEY_CTRL_X then
-
-		print("KEY_CTRL_X ")
-	elseif key == RMP.KEY_CTRL_Y then
-
-		print("KEY_CTRL_Y")
-	elseif key == RMP.KEY_CTRL_Z then
-
-		print("KEY_CTRL_Z")
-	elseif key == RMP.KEY_ENTER then
-
-		print("KEY_ENTER ")
-	elseif key == RMP.KEY_SPACE then
-
-		print("KEY_SPACE ")
-	elseif key == RMP.KEY_ESCAPE then
-
-		print("KEY_ESCAPE ")
-	elseif key == RMP.KEY_UP then
-
-		print("KEY_UP ")
-	elseif key == RMP.KEY_DOWN then
-
-		print("KEY_DOWN")
-	elseif key == RMP.KEY_LEFT then
-
-		print("KEY_LEFT ")
-	elseif key == RMP.KEY_RIGHT then
-
-		print("KEY_RIGHT ")
-	elseif key == RMP.KEY_TAB then
-
-		print("KEY_TAB")
-	elseif key == RMP.KEY_A then
-
-		print("KEY_A ")
-	elseif key == RMP.KEY_B then
-
-		print("KEY_B ")
-	elseif key == RMP.KEY_C then
-
-		print("KEY_C ")
-	elseif key == RMP.KEY_D then
-
-		print("KEY_D ")
-	elseif key == RMP.KEY_E then
-
-		print("KEY_E ")
-	elseif key == RMP.KEY_F then
-
-		print("KEY_F ")
-	elseif key == RMP.KEY_G then
-
-		print("KEY_G ")
-	elseif key == RMP.KEY_H then
-
-		print("KEY_H")
-	elseif key == RMP.KEY_I then
-
-		print("KEY_I ")
-	elseif key == RMP.KEY_J then
-
-		print("KEY_J ")
-	elseif key == RMP.KEY_K then
-
-		print("KEY_K ")
-	elseif key == RMP.KEY_L then
-
-		print("KEY_L ")
-	elseif key == RMP.KEY_M then
-
-		print("KEY_M ")
-	elseif key == RMP.KEY_N then
-
-		print("KEY_N ")
-	elseif key == RMP.KEY_O then
-
-		print("KEY_O ")
-	elseif key == RMP.KEY_P then
-
-		print("KEY_P")
-	elseif key == RMP.KEY_Q then
-
-		print("KEY_Q ")
-	elseif key == RMP.KEY_R then
-
-		print("KEY_R ")
-	elseif key == RMP.KEY_S then
-
-		print("KEY_S ")
-	elseif key == RMP.KEY_T then
-
-		print("KEY_T ")
-	elseif key == RMP.KEY_U then
-
-		print("KEY_U ")
-	elseif key == RMP.KEY_V then
-
-		print("KEY_V ")
-	elseif key == RMP.KEY_W then
-
-		print("KEY_W ")
-	elseif key == RMP.KEY_X then
-
-		print("KEY_X")
-	elseif key == RMP.KEY_Y then
-
-		print("KEY_Y ")
-	elseif key == RMP.KEY_Z then
-
-		print("KEY_Z")
-	elseif key == RMP.KEY_SHIFT_A then
-
-		print("KEY_SHIFT_A ")
-	elseif key == RMP.KEY_SHIFT_B then
-
-		print("KEY_SHIFT_B ")
-	elseif key == RMP.KEY_SHIFT_C then
-
-		print("KEY_SHIFT_C ")
-	elseif key == RMP.KEY_SHIFT_D then
-
-		print("KEY_SHIFT_D ")
-	elseif key == RMP.KEY_SHIFT_E then
-
-		print("KEY_SHIFT_E")
-	elseif key == RMP.KEY_SHIFT_F then
-
-		print("KEY_SHIFT_F ")
-	elseif key == RMP.KEY_SHIFT_G then
-
-		print("KEY_SHIFT_G ")
-	elseif key == RMP.KEY_SHIFT_H then
-
-		print("KEY_SHIFT_H ")
-	elseif key == RMP.KEY_SHIFT_I then
-
-		print("KEY_SHIFT_I ")
-	elseif key == RMP.KEY_SHIFT_J then
-
-		print("KEY_SHIFT_J")
-	elseif key == RMP.KEY_SHIFT_K then
-
-		print("KEY_SHIFT_K ")
-	elseif key == RMP.KEY_SHIFT_L then
-
-		print("KEY_SHIFT_L ")
-	elseif key == RMP.KEY_SHIFT_M then
-
-		print("KEY_SHIFT_M ")
-	elseif key == RMP.KEY_SHIFT_N then
-
-		print("KEY_SHIFT_N ")
-	elseif key == RMP.KEY_SHIFT_O then
-
-		print("KEY_SHIFT_O")
-	elseif key == RMP.KEY_SHIFT_P then
-
-		print("KEY_SHIFT_P ")
-	elseif key == RMP.KEY_SHIFT_Q then
-
-		print("KEY_SHIFT_Q ")
-	elseif key == RMP.KEY_SHIFT_R then
-
-		print("KEY_SHIFT_R ")
-	elseif key == RMP.KEY_SHIFT_S then
-
-		print("KEY_SHIFT_S ")
-	elseif key == RMP.KEY_SHIFT_T then
-
-		print("KEY_SHIFT_T")
-	elseif key == RMP.KEY_SHIFT_U then
-
-		print("KEY_SHIFT_U ")
-	elseif key == RMP.KEY_SHIFT_V then
-
-		print("KEY_SHIFT_V ")
-	elseif key == RMP.KEY_SHIFT_W then
-
-		print("KEY_SHIFT_W ")
-	elseif key == RMP.KEY_SHIFT_X then
-
-		print("KEY_SHIFT_X ")
-	elseif key == RMP.KEY_SHIFT_Y then
-
-		print("KEY_SHIFT_Y")
-	elseif key == RMP.KEY_SHIFT_Z then
-
-		print("KEY_SHIFT_Z")
-	elseif key == RMP.KEY_0 then
-
-		print("KEY_0 ")
-	elseif key == RMP.KEY_1 then
-
-		print("KEY_1 ")
-	elseif key == RMP.KEY_2 then
-
-		print("KEY_2 ")
-	elseif key == RMP.KEY_3 then
-
-		print("KEY_3 ")
-	elseif key == RMP.KEY_4 then
-
-		print("KEY_4 ")
-	elseif key == RMP.KEY_5 then
-
-		print("KEY_5")
-	elseif key == RMP.KEY_6 then
-
-		print("KEY_6 ")
-	elseif key == RMP.KEY_7 then
-
-		print("KEY_7 ")
-	elseif key == RMP.KEY_8 then
-
-		print("KEY_8 ")
-	elseif key == RMP.KEY_9 then
-
-		print("KEY_9")
-	elseif key == RMP.KEY_PLUS then
-
-		print("KEY_PLUS ")
-	elseif key == RMP.KEY_MINUS then
-
-		print("KEY_MINUS ")
-	elseif key == RMP.KEY_GT then
-
-		print("KEY_GT ")
-	elseif key == RMP.KEY_LT then
-
-		print("KEY_LT ")
-	elseif key == RMP.KEY_HASHTAG then
-
-		print("KEY_HASHTAG")
-	elseif key == RMP.KEY_DOLAR then
-
-		print("KEY_DOLAR ")
-	elseif key == RMP.KEY_PERSANT then
-
-		print("KEY_PERSANT ")
-	elseif key == RMP.KEY_STAR then
-
-		print("KEY_STAR ")
-	elseif key == RMP.KEY_DOT then
-		print("KEY_DOT ")
-	elseif key == RMP.KEY_UNDERS then
-		print("KEY_UNDERS")
-	elseif key == RMP.KEY_SEMICOL then
-		print("KEY_SEMICOL ")
-	elseif key == RMP.KEY_QUISTION_MARK then
-		print("KEY_QUISTION_MARK ")
-	elseif key == RMP.KEY_AT then
-		print("KEY_AT ")
-	elseif key == RMP.KEY_OPCURB then
-		print("KEY_OPCURB")
-	elseif key == RMP.KEY_CLCURB then
-		print("KEY_CLCURB ")
-	elseif key == RMP.KEY_BACK_SLASH then
-		print("KEY_BACK_SLASH ")
-	elseif key == RMP.KEY_BACKTICK then
-		print("KEY_BACKTICK ")
-	elseif key == RMP.KEY_OPEN_BRAKET then
-		print("KEY_OPEN_BRAKET")
-	elseif key == RMP.KEY_CLOSED_BRAKET then
-		print("KEY_CLOSED_BRAKET ")
-	elseif key == RMP.KEY_BAR then
-
-		print("KEY_BAR ")
-	elseif key == RMP.KEY_DBL_QUOTE then
-
-		print("KEY_DBL_QUOTE ")
-	elseif key == RMP.KEY_SINGLE_QOUTE then
-
-		print("KEY_SINGLE_QOUTE")
-	elseif key == RMP.NONE then
-		print("NONE")
-	else
-		print("this is not key")
-	end
-end
-
 do	-- local functions
 	function strip_ansi(text)
 		if text == nil then 
@@ -902,10 +560,10 @@ do	-- local functions
 		return nil
 	end
 
-	function draw_box(border , title , x, y, width, height, border_color , bg_color)
+	function draw_box(border_style , title , x, y, width, height, border_color , bg_color)
 		local tha_box = ""
 
-		if border == nil then
+		if border_style == nil or type(border_style) ~= 'table' or border_style[1] == nil then
 			TL = RMP.BoxDrawing.LightBorder[3] -- "┌" Top-left corner
 			TR = RMP.BoxDrawing.LightBorder[4] -- "┐" Top-right corner
 			BL = RMP.BoxDrawing.LightBorder[5] -- "└" Bottom-left corner
@@ -913,12 +571,12 @@ do	-- local functions
 			H  = RMP.BoxDrawing.LightBorder[1] -- "─" Horizontal line
 			V  = RMP.BoxDrawing.LightBorder[2] -- "│" Vertical line
 		else
-			TL = border[3] -- "┌" Top-left corner
-			TR = border[4] -- "┐" Top-right corner
-			BL = border[5] -- "└" Bottom-left corner
-			BR = border[6] -- "┘" Bottom-right corner
-			H  = border[1] -- "─" Horizontal line
-			V  = border[2] -- "│" Vertical line
+			TL = border_style[3] -- "┌" Top-left corner
+			TR = border_style[4] -- "┐" Top-right corner
+			BL = border_style[5] -- "└" Bottom-left corner
+			BR = border_style[6] -- "┘" Bottom-right corner
+			H  = border_style[1] -- "─" Horizontal line
+			V  = border_style[2] -- "│" Vertical line
 		end
 
 		tha_box  = tha_box .. moveto(x, y , true)
@@ -954,14 +612,10 @@ do 	-- creating window
 		return self.id
 	end
 
-	function RMP.Window:createWindow(title , width , height , x , y , border_color , background_color , border , callback)
-		if title == nil then
-			title = ""
-		end
-
+	function RMP.Window:createWindow(title , width , height , x , y , border_color , background_color , border_style , callback)
 		local title = title or ""
 
-		draw_box(border 
+		draw_box(border_style 
 			, title 
 			, math.floor(x)
 			,math.floor(y)
@@ -980,12 +634,196 @@ do 	-- creating window
 end
 
 -- TODO: use  virtual terminal for more performence
+-- TODO: should integrate VirtualTerminal to all components (Window , Terminal , Text , ...)
+-- Virtual Terminal Buffer
+RMP.VirtualTerminal = {}
+RMP.VirtualTerminal.__index = RMP.VirtualTerminal
 
+function RMP.VirtualTerminal:new(width, height)
+	local obj = setmetatable({}, self)
+	local h , w = window.get_size()
+	obj.width = width or w
+	obj.height = height or h
+	obj.buffer = {}
+	obj.dirty = false
+	obj.cursor = {x = 1, y = 1}
+	obj:clear()
+	return obj
+end
+
+function RMP.VirtualTerminal:clear()
+	for y = 1, self.height do
+		self.buffer[y] = self.buffer[y] or {}
+		for x = 1, self.width do
+			self.buffer[y][x] = {char = " ", fg = nil, bg = nil, style = nil}
+		end
+	end
+	self.dirty = true
+end
+
+function RMP.VirtualTerminal:ensureBuffer(y, x)
+	y = math.max(1, math.min(y, self.height))
+	x = math.max(1, math.min(x, self.width))
+	if not self.buffer[y] then
+		self.buffer[y] = {}
+	end
+	if not self.buffer[y][x] then
+		self.buffer[y][x] = {char = " ", fg = nil, bg = nil, style = nil}
+	end
+end
+
+function RMP.VirtualTerminal:setChar(x, y, char, fg, bg, style)
+	if x >= 1 and x <= self.width and y >= 1 and y <= self.height then
+		self:ensureBuffer(y, x)
+		self.buffer[y][x] = {
+			char = char or " ",
+			fg = fg,
+			bg = bg,
+			style = style
+		}
+		self.dirty = true
+	end
+end
+
+function RMP.VirtualTerminal:writeText(x, y, text, fg, bg, style)
+	for i = 1, #text do
+		local char = text:sub(i, i)
+		self:setChar(x + i - 1, y, char, fg, bg, style)
+	end
+	self.dirty = true
+end
+
+function RMP.VirtualTerminal:drawBox(x, y, width, height, border_style, fg, bg)
+	if border_style == nil or type(border_style) ~= 'table' or border_style[1] == nil then
+		TL = RMP.BoxDrawing.LightBorder[3] -- "┌" Top-left corner
+		TR = RMP.BoxDrawing.LightBorder[4] -- "┐" Top-right corner
+		BL = RMP.BoxDrawing.LightBorder[5] -- "└" Bottom-left corner
+		BR = RMP.BoxDrawing.LightBorder[6] -- "┘" Bottom-right corner
+		H  = RMP.BoxDrawing.LightBorder[1] -- "─" Horizontal line
+		V  = RMP.BoxDrawing.LightBorder[2] -- "│" Vertical line
+	else
+		TL = border_style[3] -- "┌" Top-left corner
+		TR = border_style[4] -- "┐" Top-right corner
+		BL = border_style[5] -- "└" Bottom-left corner
+		BR = border_style[6] -- "┘" Bottom-right corner
+		H  = border_style[1] -- "─" Horizontal line
+		V  = border_style[2] -- "│" Vertical line
+	end
+
+	local end_x = math.min(x + width - 1, self.width)
+	local end_y = math.min(y + height - 1, self.height)
+
+	self:setChar(x, y, TL, fg, bg)
+	self:setChar(end_x, y, TR, fg, bg)
+	self:setChar(x, end_y, BL, fg, bg)
+	self:setChar(end_x, end_y, BR, fg, bg)
+
+	for i = x + 1, end_x - 1 do
+		self:setChar(i, y, H, fg, bg)
+		self:setChar(i, end_y, H, fg, bg)
+	end
+
+	for i = y + 1, end_y - 1 do
+		self:setChar(x, i, V, fg, bg)
+		self:setChar(end_x, i, V, fg, bg)
+	end
+
+	for i = y + 1, end_y - 1 do
+		for j = x + 1, end_x - 1 do
+			self:setChar(j, i, " ", nil, bg)
+		end
+	end
+
+	self.dirty = true
+end
+
+-- i stole this method from chat-gpt lol whatever
+function RMP.VirtualTerminal:render()
+	if not self.dirty then return end
+
+	-- i added this line , because render method will executed in every loop
+	self.height , self.width = window.get_size()
+
+	local output = {}
+
+	table.insert(output, "\27[2J\27[H")
+
+	for y = 1, self.height do
+		local line = {}
+		local current_fg, current_bg, current_style = nil, nil, nil
+
+		for x = 1, self.width do
+			self:ensureBuffer(y, x)
+			local cell = self.buffer[y][x]
+
+			local needs_reset = false
+			if (current_style and not cell.style) or (current_style ~= cell.style) then
+				needs_reset = true
+			end
+			if (current_fg and not cell.fg) or (current_fg ~= cell.fg) then
+				needs_reset = true
+			end
+			if (current_bg and not cell.bg) or (current_bg ~= cell.bg) then
+				needs_reset = true
+			end
+
+			if needs_reset then
+				table.insert(line, RMP.Default)
+				current_style, current_fg, current_bg = nil, nil, nil
+			end
+
+			if cell.style and cell.style ~= current_style then
+				table.insert(line, cell.style)
+				current_style = cell.style
+			end
+
+			if cell.fg and cell.fg ~= current_fg then
+				table.insert(line, cell.fg)
+				current_fg = cell.fg
+			end
+
+			if cell.bg and cell.bg ~= current_bg then
+				table.insert(line, cell.bg)
+				current_bg = cell.bg
+			end
+
+			table.insert(line, cell.char)
+		end
+
+		if current_style or current_fg or current_bg then
+			table.insert(line, RMP.Default)
+		end
+
+		table.insert(output, table.concat(line))
+	end
+
+	table.insert(output, moveto(self.cursor.x, self.cursor.y, true))
+
+	io.write(table.concat(output, "\n"))
+	io.flush()
+	self.dirty = false
+end
+
+function RMP.VirtualTerminal:moveCursor(x, y)
+	self.cursor.x = math.max(1, math.min(x, self.width))
+	self.cursor.y = math.max(1, math.min(y, self.height))
+end
+
+function RMP.VirtualTerminal:getSize()
+	return self.width, self.height
+end
+
+function RMP.VirtualTerminal:resize(width, height)
+	self.width = width
+	self.height = height
+	self:clear()
+end
 -- TODO: Handle Terminal  class
 -- NOTE: Terminal class uses ansii escape code i need to create shared library to handle terminal for each platform
 RMP.Terminal = {}
 RMP.Terminal.__index = Terminal
 do	-- Terminal
+
 	function RMP.Terminal:clearWindow()
 		io.write("\27[2J")
 	end
@@ -1028,37 +866,11 @@ do	-- Terminal
 		io.write("\27[?25h");
 	end
 	function RMP.Terminal:rawMode(enable)
-		if RMP.getOs() == RMP.WINDOWS then
-			if enable then
-				os.execute("mode con: cols=9999 lines=9999")
-			else
-				os.execute("mode con: cols=80 lines=25")
-			end
-		else
-			if enable then
-				os.execute("stty raw -echo")
-			else
-				os.execute("stty -raw echo")
-			end
-		end
+		window.raw_mode(enable)
 	end
 
-	function RMP.Terminal:getSize()
-		if RMP.getOs() == RMP.LINUX then
-			local handle = io.popen("stty size")
-			local result = handle:read("*a")
-			handle:close()
-			local rows, cols = result:match("(%d+)%s+(%d+)")
-			return tonumber(rows) , tonumber(cols)
-		else
-			local handle = io.popen("mode con")
-			local result = handle:read("*a")
-			handle:close()
-			local cols, rows = result:match("Columns:(%d+).*Lines:(%d+)")
-			return tonumber(rows) , tonumber(cols)
-		end
-
-		return nil , nil
+	function RMP.Terminal:getSize() -- h,w
+		return window.get_size()
 	end
 
 	-- TODO: make sure that function works on windows
@@ -1201,6 +1013,10 @@ RMP.Draw = {}
 RMP.Draw.__index = Draw
 do	-- Draw
 	function RMP.Draw:rectangle(x,y,width,height,color)
+		local x = math.floor(x)
+		local y = math.floor(y)
+		local width = math.floor(width)
+		local height = math.floor(height)
 		local tha_box = ""
 		tha_box  = tha_box .. moveto(x, y , true)
 
@@ -1245,7 +1061,7 @@ do	-- Draw
 	end
 
 	-- TODO: add thick
-	function RMP.Draw:line(x , y, width , color)
+	function RMP.Draw:line(x , y, width , color) -- thick from 0.0 to 1.0
 		RMP.Terminal:moveTo(x,y)
 		for i = 0  , width do
 			io.write(RMP.Text:new(" " , nil , color):getColoredText())
@@ -1291,32 +1107,27 @@ do	-- Popups
 		elseif poslayout == RMP.BUTTOM_RIGHT then
 			x , y = cols - (cols/4) -  2,rows - (rows/4) -  2
 		else
-			x , y = cols / 2 , rows / 2
+			x , y = (cols / 2) - (cols/8) , (rows / 2) - (rows/8)
 		end
+		
 		RMP.Window:createWindow(
 		title , 
 		-- 		cols / 2 , 
 		-- 		rows / 2 , 
-		x,
-		y,
 		cols/4 , 
 		rows/4 ,
+		x,
+		y,
 		border_color , 
 		bg_color , 
+		RMP.BoxDrawing.LightBorder , 
 		function(x, y , xx , yy)
 			-- TODO: handle emojis here
+			-- TODO: fix message inside box
 			local t = RMP.Text:new(remove_new_lines_from_str(message) , nil , nil)
-			RMP.Terminal:moveTo(math.floor(cols/4) ,math.floor(rows/4))
-			RMP.Terminal:moveDown(1)
-			RMP.Terminal:moveRight(2)
-			for i = 1 , math.floor(yy - y) - 2 do
-				io.write(t:fixTextToBox(xx - x + 2))
-				io.flush()
-				RMP.Terminal:moveTo(math.floor(cols/4) + 2,math.floor(rows/4) + i)
-				RMP.Terminal:moveDown(1)
-			end
-		end
-		)
+			io.write(t:getText())
+			io.flush()
+		end)
 	end
 
 	function RMP.Popup:error(message , delay , poslayout)
@@ -1766,7 +1577,7 @@ RMP.Config.__index = RMP.Config
 do 	-- Config
 	function RMP.Config:load()
 		local path
-		self.cfg = require(".init")
+		-- self.cfg = require(".init")
 		return self
 	end
 

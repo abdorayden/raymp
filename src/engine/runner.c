@@ -1,9 +1,10 @@
-#include "engine.h"
+#include "runner.h"
 #include <stdio.h>
+#include <string.h>
 
-RMPEngine RMPEngineInit(const char* filename)
+RMPRunner RMPRunnerInit(const char* filename)
 {
-	RMPEngine rmp_engine = {0};
+	RMPRunner rmp_engine = {0};
 	lua_State *luafile = luaL_newstate();
 	luaL_openlibs(luafile);
 
@@ -28,7 +29,7 @@ forret:{
        }
 }
 
-RMPEngineError RMPEngineRun(RMPEngine entry){
+RMPRunnerError RMPRunnerRun(RMPRunner entry){
 	if(error != NULL){
 		return __rmp__is__error;
 	}
@@ -51,7 +52,7 @@ RMPEngineError RMPEngineRun(RMPEngine entry){
 	return RMP_FINE;
 }
 
-void RMPEngineClose(RMPEngine* rmp_engine)
+void RMPRunnerClose(RMPRunner* rmp_engine)
 {
 	lua_close(rmp_engine->luafile);
 	RMP_FREE((void*)rmp_engine->filename);

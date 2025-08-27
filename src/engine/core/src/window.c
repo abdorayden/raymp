@@ -1,70 +1,137 @@
-// standerd libc 
+// standard libc
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 
-// lua lib
-#include <lua5.4/lua.h>
-#include <lua5.4/lauxlib.h>
-#include <lua5.4/lualib.h>
+// lua
+#include <lua.h>
+#include <lauxlib.h>
+#include <lualib.h>
 
 #ifndef _WIN32
-
-// posix stuff
+// POSIX
 #include <sys/ioctl.h>
 #include <unistd.h>
+#include <termios.h>   // for struct winsize on some platforms
 
-typedef struct winsize Size;
+static struct termios orig_termios;
+static int raw_mode_enabled = 0;
 
-bool GetTermSize(lua_State* state){
-	Size w;
-	if(ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == -1){
-		lua_pushnil(state);
-		lua_pushnil(state);
-		return false;
+static int lua_raw_mode(lua_State *L) {
+	int enable = lua_toboolean(L, 1);
+
+	if (enable && !raw_mode_enabled) {
+		struct termios raw;
+
+		if (tcgetattr(STDIN_FILENO, &orig_termios) == -1) {
+			lua_pushboolean(L, 0);
+			return 1;
+		}
+
+		raw = orig_termios;
+		raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+		raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+		raw.c_cflag |= (CS8);
+		raw.c_oflag &= ~(OPOST);
+		raw.c_cc[VMIN] = 1;
+		raw.c_cc[VTIME] = 0;
+
+		if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) {
+			lua_pushboolean(L, 0);
+			return 1;
+		}
+
+		raw_mode_enabled = 1;
 	}
-	lua_pushinteger(state , w.ws_row);
-	lua_pushinteger(state , w.ws_col);
-	return true;
+	else if (!enable && raw_mode_enabled) {
+		tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+		raw_mode_enabled = 0;
+	}
+
+	lua_pushboolean(L, 1);
+	return 1;
+}
+
+static int lua_get_size(lua_State* L) {
+	struct winsize w;
+	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == -1) {
+		lua_pushnil(L);
+		lua_pushnil(L);
+		return 2;
+	}
+	lua_pushinteger(L, (lua_Integer)w.ws_row);
+	lua_pushinteger(L, (lua_Integer)w.ws_col);
+	return 2;
 }
 
 #else
-
-// windows stuff
+// Windows
 #include <windows.h>
 
-typedef struct { 
-	unsigned short int ws_row;
-	unsigned short int ws_col;
-}Size;
+static CONSOLE_SCREEN_BUFFER_INFO orig_csbi;
+static DWORD orig_mode;
+static int raw_mode_enabled = 0;
 
-bool GetTermSize(lua_State* state){
-	HWND hWnd = GetForegroundWindow();
-	if(!hWnd){
-		goto exit;
+static int lua_raw_mode(lua_State *L) {
+	int enable = lua_toboolean(L, 1);
+	HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
+	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	if (enable && !raw_mode_enabled) {
+		GetConsoleMode(hIn, &orig_mode);
+		SetConsoleMode(hIn, orig_mode & ~(ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT));
+
+		GetConsoleScreenBufferInfo(hOut, &orig_csbi);
+		COORD size = {9999, 9999};
+		SetConsoleScreenBufferSize(hOut, size);
+
+		raw_mode_enabled = 1;
 	}
-	RECT rect;
-	if (GetClientRect(hWnd, &rect)) {
-		lua_pushinteger(state , rect.right);
-		lua_pushinteger(state , rect.bottom);
-		return true;
-	} else {
-		goto exit;
+	else if (!enable && raw_mode_enabled) {
+		SetConsoleMode(hIn, orig_mode);
+		SetConsoleScreenBufferSize(hOut, orig_csbi.dwSize);
+		raw_mode_enabled = 0;
 	}
-	exit :{
-		lua_pushnil(state);
-		lua_pushnil(state);
-		return false;
-	}
+
+	lua_pushboolean(L, 1);
+	return 1;
 }
 
+
+static int lua_get_size(lua_State* L) {
+	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	if (hOut == INVALID_HANDLE_VALUE || hOut == NULL) {
+		lua_pushnil(L);
+		lua_pushnil(L);
+		return 2;
+	}
+
+	CONSOLE_SCREEN_BUFFER_INFO csbi;
+	if (!GetConsoleScreenBufferInfo(hOut, &csbi)) {
+		lua_pushnil(L);
+		lua_pushnil(L);
+		return 2;
+	}
+
+	SHORT rows = (SHORT)(csbi.srWindow.Bottom - csbi.srWindow.Top + 1);
+	SHORT cols = (SHORT)(csbi.srWindow.Right  - csbi.srWindow.Left + 1);
+
+	lua_pushinteger(L, (lua_Integer)rows);
+	lua_pushinteger(L, (lua_Integer)cols);
+	return 2;
+}
 #endif
 
-// Table used to load handle_keys funtion and used in lua_core api
-bool RMPCoreWindowdLib(lua_State *L) {
-	lua_newtable(L);
-	lua_pushcfunction(L, GetTermSize);
-	lua_setfield(L, -2, "GetTermSize");
-	return true;
+static const luaL_Reg lib[] = {
+	{"get_size", lua_get_size},
+	{"raw_mode", lua_raw_mode},
+
+	{NULL, NULL}
+};
+
+// Module entry point: require("window")
+int luaopen_window(lua_State *L) {
+	luaL_newlib(L, lib);
+	return 1;
 }
