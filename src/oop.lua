@@ -7,7 +7,7 @@
 -- Example:
 -- 	I)- Inheritance:
 -- 		I)- Definition
--- 			local Animal = JavaStyle.class("Animal")
+-- 			local Animal = OOP.class("Animal")
 
 -- 			function Animal:constructor(name)
 -- 			    self.name = name
@@ -21,7 +21,7 @@
 -- 			    return self.name
 -- 			end
 
--- 			local Dog = JavaStyle.class("Dog", Animal)
+-- 			local Dog = OOP.class("Dog", Animal)
 
 -- 			function Dog:constructor(name, breed)
 -- 			    self:super("constructor", name)
@@ -46,10 +46,10 @@
 --	II)- extends + implements
 --		I)- Definition:
 --			// define interfaces
--- 			local Drawable = JavaStyle.interface("Drawable", "draw", "getDimensions")
--- 			local Resizable = JavaStyle.interface("Resizable", "resize", "getScale")
+-- 			local Drawable = OOP.interface("Drawable", "draw", "getDimensions")
+-- 			local Resizable = OOP.interface("Resizable", "resize", "getScale")
 --			// define class
--- 			local Shape = JavaStyle.class("Shape")
+-- 			local Shape = OOP.class("Shape")
 -- 			function Shape:constructor(x, y)
 -- 			    self.x = x or 0
 -- 			    self.y = y or 0
@@ -63,7 +63,7 @@
 -- 			    return {x = self.x, y = self.y}
 -- 			end
 
--- 			local Circle = JavaStyle.class("Circle", Shape, Drawable, Resizable)
+-- 			local Circle = OOP.class("Circle", Shape, Drawable, Resizable)
 
 -- 			function Circle:constructor(x, y, radius)
 -- 			    self:super("constructor", x, y)
@@ -120,7 +120,7 @@
 -- 	III)- Multi-level Inheritance:
 --		
 --		I)- Definition:
---			local Vehicle = JavaStyle.class("Vehicle")
+--			local Vehicle = OOP.class("Vehicle")
 --			
 --			function Vehicle:constructor(make, model)
 --			    self.make = make
@@ -138,7 +138,7 @@
 --			end
 --			
 --			-- Car extends Vehicle
---			local Car = JavaStyle.class("Car", Vehicle)
+--			local Car = OOP.class("Car", Vehicle)
 --			
 --			function Car:constructor(make, model, doors)
 --			    self:super("constructor", make, model)
@@ -151,7 +151,7 @@
 --			end
 --			
 --			-- SportsCar extends Car
---			local SportsCar = JavaStyle.class("SportsCar", Car)
+--			local SportsCar = OOP.class("SportsCar", Car)
 --			
 --			function SportsCar:constructor(make, model, doors, turbo)
 --			    self:super("constructor", make, model, doors)
@@ -186,7 +186,7 @@
 --	VI)- Abstract Base Class Pattern:
 --
 --		I)- Definition:
---			local AbstractDatabase = JavaStyle.class("AbstractDatabase")
+--			local AbstractDatabase = OOP.class("AbstractDatabase")
 --			
 --			function AbstractDatabase:constructor(connectionString)
 --			    self.connectionString = connectionString
@@ -207,7 +207,7 @@
 --			end
 --			
 --			-- Concrete implementation
---			local MySQLDatabase = JavaStyle.class("MySQLDatabase", AbstractDatabase)
+--			local MySQLDatabase = OOP.class("MySQLDatabase", AbstractDatabase)
 --			
 --			function MySQLDatabase:constructor(connectionString)
 --			    self:super("constructor", connectionString)
@@ -310,6 +310,7 @@ function OOP.class(name, superClass, ...)
 		return false
 	end
 
+	-- TODO: bug
 	function class:instanceOf(targetClass)
 		if self == targetClass then
 			return true
@@ -336,5 +337,4 @@ function OOP.class(name, superClass, ...)
 
 	return class
 end
-
 return OOP

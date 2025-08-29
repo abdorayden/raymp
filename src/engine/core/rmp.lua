@@ -394,11 +394,12 @@ end
 -- Text class used to work with texts
 RMP.Text = OOP.class("Text")
 do	-- text
-
 	-- constructor
-	function RMP.Text:constructor(text , style , color)
+	function RMP.Text:constructor(text , style , fg , bg)
+		self.vterm = RMP.VirtualTerminal.new()
 		self.text = text or ""
-		self.color = color or RMP.Default
+		self.fg = fg or RMP.Default
+		self.bg = bg or RMP.Default
 		self.style = style or RMP.Default
 		self.start_pos = 1
 		return self
@@ -406,16 +407,35 @@ do	-- text
 
 	-- method Position in lua used to controle position of the text 
 	function RMP.Text:setPosition(x,y)
-		moveto(x , y)
+		self.x = x
+		self.y = y
+		return self
+	end
+
+	function RMP.Text:asVTerm()
+		self.vterm:writeText(self.x , self.y , self.text , self.fg , self.bg , self,style)
+		return vterm
 	end
 
 	-- ColoredText accept text and color and return colored text
 	function RMP.Text:getColoredText()
-		return self.style..self.color..self.text..RMP.Default
+		return self.style..self.bg..self.fg..self.text..RMP.Default
 	end
 
 	function RMP.Text:getText()
 		return self.text
+	end
+
+	function RMP.Text:getStyle()
+		return self.style
+	end
+
+	function RMP.Text:getFGColor()
+		return self.fg
+	end
+
+	function RMP.Text:getBGColor()
+		return self.bg
 	end
 
 	function RMP.Text:fixTextToBox(w)
@@ -589,7 +609,12 @@ do	-- local functions
 		local title_len = #strip_ansi(title) 
 		local padding = math.floor((width - title_len - 2) / 2)
 
-		tha_box = tha_box .. RMP.Text:new(TL , nil , border_color):getColoredText() .. string.rep(RMP.Text:new(H , nil , border_color):getColoredText(),padding).. title .. string.rep(RMP.Text:new(H , nil , border_color):getColoredText(), width - title_len - padding- 2) ..  RMP.Text:new(TR , nil , border_color):getColoredText()
+		tha_box = tha_box 
+			.. RMP.Text:new(TL , nil , border_color):getColoredText() 
+			.. string.rep(RMP.Text:new(H , nil , border_color):getColoredText(),padding)
+			.. title 
+			.. string.rep(RMP.Text:new(H , nil , border_color):getColoredText(), width - title_len - padding- 2) 
+			..  RMP.Text:new(TR , nil , border_color):getColoredText()
 
 		for i = 1, height - 2 do
 			tha_box  = tha_box .. moveto(x, y + i, true)
@@ -622,35 +647,31 @@ do 	-- creating window
 	end
 
 	function RMP.Window:createWindow(title , width , height , x , y , border_color , background_color , border_style , callback)
-		local title = title or ""
+		local vterm = RMP.VirtualTerminal.new()
 
-		draw_box(border_style 
-			, title 
-			, math.floor(x)
-			,math.floor(y)
-			,math.floor(width)
-			,math.floor(height) 
-			, border_color 
-			, background_color
-		)
-
-		moveto(x + 1 , y + 1)
+		vterm:drawBox(title , math.floor(x) , math.floor(y) , math.floor(width) , math.floor(height) , border_style , border_color , background_color)
 
 		if callback ~= nil and type(callback) == "function" then
-			callback(x , y , x + width , y + height)
+			vterm:merge(callback(math.floor(x) , math.floor(y) , math.floor(x + width) , math.floor(y + height))) -- handle async
 		end
+
+		return vterm
 	end
 end
 
 -- TODO: use  virtual terminal for more performence
 -- TODO: should integrate VirtualTerminal to all components (Window , Terminal , Text , ...)
 -- Virtual Terminal Buffer
+
+-- all components should return VirtualTerminal obj
 RMP.VirtualTerminal = OOP.class("VirtualTerminal")
 do	-- VirtualTerminal
 	function RMP.VirtualTerminal:constructor(width, height) -- constructor
 		local h , w = window.get_size()
 		self.width = width or w
 		self.height = height or h
+		self.width  = math.floor(self.width)
+		self.height = math.floor(self.height)
 		self.buffer = {}
 		self.dirty = false
 		self.cursor = {x = 1, y = 1}
@@ -680,6 +701,9 @@ do	-- VirtualTerminal
 	end
 
 	function RMP.VirtualTerminal:setChar(x, y, char, fg, bg, style)
+
+		local x = x or self.cursor.x
+		local y = y or self.cursor.y
 		if x >= 1 and x <= self.width and y >= 1 and y <= self.height then
 			self:ensureBuffer(y, x)
 			self.buffer[y][x] = {
@@ -693,6 +717,14 @@ do	-- VirtualTerminal
 	end
 
 	function RMP.VirtualTerminal:writeText(x, y, text, fg, bg, style)
+
+		if not text then
+			return 
+		end
+
+		local x = math.floor(x or self.cursor.x)
+		local y = math.floor(y or self.cursor.y)
+
 		for i = 1, #text do
 			local char = text:sub(i, i)
 			self:setChar(x + i - 1, y, char, fg, bg, style)
@@ -700,7 +732,7 @@ do	-- VirtualTerminal
 		self.dirty = true
 	end
 
-	function RMP.VirtualTerminal:drawBox(x, y, width, height, border_style, fg, bg)
+	function RMP.VirtualTerminal:drawBox(title, x, y, width, height, border_style, fg, bg)
 		if border_style == nil or type(border_style) ~= 'table' or border_style[1] == nil then
 			TL = RMP.BoxDrawing.LightBorder[3] -- "┌" Top-left corner
 			TR = RMP.BoxDrawing.LightBorder[4] -- "┐" Top-right corner
@@ -726,13 +758,18 @@ do	-- VirtualTerminal
 		self:setChar(end_x, end_y, BR, fg, bg)
 
 		for i = x + 1, end_x - 1 do
-			self:setChar(i, y, H, fg, bg)
-			self:setChar(i, end_y, H, fg, bg)
+			self:setChar(i, y, H, fg, bg)      -- Top border
+			self:setChar(i, end_y, H, fg, bg)  -- Bottom border
 		end
 
 		for i = y + 1, end_y - 1 do
-			self:setChar(x, i, V, fg, bg)
-			self:setChar(end_x, i, V, fg, bg)
+			self:setChar(x, i, V, fg, bg)      -- Left border
+			self:setChar(end_x, i, V, fg, bg)  -- Right border
+		end
+
+		if title and title ~= "" then
+			-- TODO: fix bug , the title applied only when we put bg color to the title
+			self:writeText(math.floor((x*1.5 + ((width - x)/2)) - #(title:getText())/2) , y , title:getText() , title:getFGColor() , title:getBGColor() , title:getStyle()) 
 		end
 
 		for i = y + 1, end_y - 1 do
@@ -816,6 +853,26 @@ do	-- VirtualTerminal
 		self.cursor.y = math.max(1, math.min(y, self.height))
 	end
 
+	function RMP.VirtualTerminal:moveUp(y)
+		local y = y or 1
+		self:moveCursor(self.cursor.x , math.max(1,self.cursor.y - y))
+	end
+
+	function RMP.VirtualTerminal:moveDown(y)
+		local y = y or 1
+		self:moveCursor(self.cursor.x ,math.min(y + self.cursor.y, self.width))
+	end
+
+	function RMP.VirtualTerminal:moveRight(x)
+		local x = x or 1
+		self:moveCursor(math.min(x + self.cursor.x, self.width), self.cursor.y)
+	end
+
+	function RMP.VirtualTerminal:moveLeft(x)
+		local x = x or 1
+		self:moveCursor(math.max(1,self.cursor.x - x),self.cursor.y)
+	end
+
 	function RMP.VirtualTerminal:getSize()
 		return self.width, self.height
 	end
@@ -825,6 +882,66 @@ do	-- VirtualTerminal
 		self.height = height
 		self:clear()
 	end
+
+	-- these methods are used to merge two virtual terminal 
+	-- if there is no way to pass vterm object to function parameters 
+	-- so you can merge the other virtual terminal to the main object
+	function RMP.VirtualTerminal:merge(thatTerm, offsetX, offsetY)
+
+		if thatTerm == nil then
+			return
+		end
+		offsetX = offsetX or 0
+		offsetY = offsetY or 0
+
+		for y = 1, thatTerm.height do
+			local source_row = thatTerm.buffer[y]
+			if source_row then
+				for x = 1, thatTerm.width do
+					local source_cell = source_row[x]
+					if source_cell then
+						local target_x = x + offsetX
+						local target_y = y + offsetY
+
+						if target_x >= 1 and target_x <= self.width and target_y >= 1 and target_y <= self.height then
+							if source_cell.char ~= " " or source_cell.fg or source_cell.bg or source_cell.style then
+								self:setChar(target_x, target_y, source_cell.char, source_cell.fg, source_cell.bg, source_cell.style)
+							end
+						end
+					end
+				end
+			end
+		end
+		self.dirty = true
+	end
+
+	function RMP.VirtualTerminal:mergeAll(thoseTerms)
+		for i = 1 , #thoseTerms do
+			self:merge(thoseTerms[i].thatTerm,thoseTerms[i].offsetX,thoseTerms[i].offsetY)
+		end
+		self.dirty = true
+	end
+
+	function RMP.VirtualTerminal:copy()
+		local copy = RMP.VirtualTerminal.new(self.width, self.height)
+		for y = 1, self.height do
+			copy.buffer[y] = {}
+			for x = 1, self.width do
+				if self.buffer[y] and self.buffer[y][x] then
+					copy.buffer[y][x] = {
+						char = self.buffer[y][x].char,
+						fg = self.buffer[y][x].fg,
+						bg = self.buffer[y][x].bg,
+						style = self.buffer[y][x].style
+					}
+				else
+					copy.buffer[y][x] = {char = " ", fg = nil, bg = nil, style = nil}
+				end
+			end
+		end
+		return copy
+	end
+
 end
 
 -- TODO: Handle Terminal  class
@@ -868,6 +985,9 @@ do	-- Terminal
 		end
 		io.write("\27[" .. x .. "C");
 	end
+
+
+
 	function RMP.Terminal:hideCursor()
 		io.write("\27[?25l");
 	end
@@ -897,6 +1017,8 @@ end
 -- TODO: handle Tables 
 -- TODO: handle Panel
 -- TODO: handle Loading  
+
+-- TODO: handle Options class
 RMP.Options = OOP.class("Options")
 do	-- Options
 	-- options : array of options 
@@ -952,7 +1074,7 @@ do	-- Options
 	function RMP.Options:focusPos(position)
 		self.pos = position or 1
 		text = self.options[self.pos]
-		self.options[self.pos] = RMP.Text:new(text , self.symbl , self.color):getColoredText()
+		self.options[self.pos] = RMP.Text.new(text , self.symbl , self.color):getColoredText()
 		return self
 	end
 
@@ -1002,8 +1124,7 @@ do	-- Options
 	end
 
 	-- Log method will print the options to standerd output
-	function RMP.Options:log(x , y)
-		RMP.Terminal:moveTo(x,y)
+	function RMP.Options:parse()
 		for i = 1 , #self.options do
 			if self.marked_table[i] then
 				io.write(self.selected)
@@ -1011,7 +1132,6 @@ do	-- Options
 				io.write(self.unselected)
 			end
 			io.write(self.options[i])
-			RMP.Terminal:moveTo(x,y + i)
 		end
 	end
 end
@@ -1020,68 +1140,79 @@ end
 RMP.Draw = OOP.class("Draw")
 do	-- Draw
 	function RMP.Draw:rectangle(x,y,width,height,color)
+
+		local x = x or 0
 		local x = math.floor(x)
+
+		local y = y or 0
 		local y = math.floor(y)
-		local width = math.floor(width)
-		local height = math.floor(height)
-		local tha_box = ""
-		tha_box  = tha_box .. moveto(x, y , true)
 
-		tha_box  = tha_box .. RMP.Text:new(" " , nil , color):getColoredText()  .. string.rep(RMP.Text:new(" " , nil , color):getColoredText(), width - 2) ..  RMP.Text:new(" " , nil , color):getColoredText()
-
-		for i = 1, height - 2 do
-			tha_box  = tha_box .. moveto(x, y + i , true)
-			tha_box  = tha_box .. RMP.Text:new(" " , nil , color):getColoredText() .. string.rep(RMP.Text:new(" " , nil , color):getColoredText(), width - 2) .. RMP.Text:new(" " , nil , color):getColoredText()
+		if not width or not height then
+			return
 		end
 
-		tha_box  = tha_box .. moveto(x, y + height - 1 , true)
-		tha_box  = tha_box .. RMP.Text:new(" " , nil , color):getColoredText() .. string.rep(RMP.Text:new(" " , nil , color):getColoredText(), width - 2) .. RMP.Text:new(" " , nil , color):getColoredText()
-		io.write(tha_box)
-		io.flush()
-		tha_box = ""
-		-- TODO: flush output
-		-- TODO: write by buffer
+		local width = math.floor(width)
+		local height = math.floor(height)
+
+		local vterm = RMP.VirtualTerminal.new()
+		vterm:moveCursor(x,y)
+
+		for i = y , height + y do
+			for j = x , width + x do
+				vterm:setChar(j , i , " " , nil , color , nil)
+			end
+		end
+
+		return vterm
 	end
 
-	function RMP.Draw:circle(px, py, r , color)
+	function RMP.Draw:circle(centerX, centerY, r, color)
+		r = math.floor(r or 5)
+		if r <= 0 then return nil end
+
+		local vterm = RMP.VirtualTerminal.new()
 		for y = -r, r do
-			RMP.Terminal:moveTo(px , py + y + r)
 			for x = -r, r do
 				if x * x + y * y <= r * r then
-					io.write(RMP.Text:new("  " , nil ,color):getColoredText())
-				else
-					io.write("  ")
+					local term_x = x + r + 1
+					local term_y = y + r + 1
+					vterm:setChar(term_x, term_y, " ", nil, color, nil)
 				end
 			end
 		end
+		return vterm
 	end
 
 	function RMP.Draw:triangle(height, pos_x, pos_y, color)
-		char = RMP.Text:new(" " , nil , color):getColoredText()
+		local vterm = RMP.VirtualTerminal.new()
+		char = RMP.Text.new(" " , nil , nil):getColoredText()
 		for y = 0, height - 1 do
 			local spaces = height - y - 1
 			local stars = 2 * y + 1
 
-			RMP.Terminal:moveTo(pos_x + spaces , pos_y + y)
-			io.write(string.rep(char, stars), "\n")
+			-- vterm:moveCursor(pos_x + spaces , pos_y + y)
+			vterm:setChar(pos_x + spaces , pos_y + y , string.rep(char, stars), nil , color , nil)
 		end
+		return vterm
 	end
 
 	-- TODO: add thick
 	function RMP.Draw:line(x , y, width , color) -- thick from 0.0 to 1.0
-		RMP.Terminal:moveTo(x,y)
-		for i = 0  , width do
-			io.write(RMP.Text:new(" " , nil , color):getColoredText())
+		local vterm = RMP.VirtualTerminal.new()
+		vterm:moveCursor(x,y)
+		for i = x  , width + x do
+			vterm:setChar(i , y , " " , nil , color , nil)
 		end
+
+		return vterm
 	end
 
 	function RMP.Draw:column(x, y , height , color)
-		RMP.Terminal:moveTo(x,y)
-		for i = 0  , height do
-			io.write(RMP.Text:new(" " , nil , color):getColoredText())
-			RMP.Terminal:moveDown(1)
-			RMP.Terminal:moveLeft(1)
+		local vterm = RMP.VirtualTerminal.new()
+		for i = y  , height + y do
+			vterm:setChar(x , i , " " , nil , color , nil)
 		end
+		return vterm
 	end
 end
 
@@ -1118,7 +1249,7 @@ do	-- Popups
 			x , y = (cols / 2) - (cols/8) , (rows / 2) - (rows/8)
 		end
 		
-		RMP.Window:createWindow(
+		return RMP.Window.new(99):createWindow(
 		title , 
 		-- 		cols / 2 , 
 		-- 		rows / 2 , 
@@ -1132,82 +1263,94 @@ do	-- Popups
 		function(x, y , xx , yy)
 			-- TODO: handle emojis here
 			-- TODO: fix message inside box
-			local t = RMP.Text:new(remove_new_lines_from_str(message) , nil , nil)
-			io.write(t:getText())
-			io.flush()
+			local vterm = RMP.VirtualTerminal.new()
+			vterm:moveCursor(x + 1 , y + 1)
+			local text = remove_new_lines_from_str(message)
+
+			local spl = 1
+			local remider = 0
+			if #text > (xx - x - 1) then
+				if spl == math.floor((xx-x-1)/#text) then
+					spl = math.floor(#text/(xx-x-1)) + 1
+				else
+					spl = math.floor(#text/(xx-x-1))
+				end
+				remider = #text%(xx-x)
+			end
+
+			for i=0 , math.min(spl , yy-y - 4) do
+				vterm:writeText(x + 1 , y + 1 + i , string.sub(text , (xx-x-1)*i+1 , (xx-x - 1)*(i+1) - 1) , nil , nil , nil)
+			end
+			return vterm
 		end)
 	end
 
-	function RMP.Popup:error(message , delay , poslayout)
-		local delay = delay or 3	-- 3 seconds
+	function RMP.Popup:error(message, poslayout)
 		local poslayout = poslayout or RMP.CENTER
-		RMP.Popup:run(
+		return RMP.Popup:run(
 			message , 
-			"[ " .. RMP.Text:new(
-			"ERROR" , 
+			RMP.Text.new(
+			"[ " .. "ERROR" .. " ]", 
 			RMP.Bold , 
-			RMP.BGBRed
-			):getColoredText() .. " ]", 
+			RMP.FGWhite,
+			RMP.BGRed
+			), 
 			RMP.ERROR , 
 			RMP.FGRed , 
 			nil,
 			poslayout
 		)
-		RMP.sleep(RMP.Duration:fromSec(delay))
 	end
 
-	function RMP.Popup:info(message , delay , poslayout)
-		local delay = delay or 3	-- 3 seconds
+	function RMP.Popup:info(message , poslayout)
 		local poslayout = poslayout or RMP.CENTER
-		RMP.Popup:run(
+		return RMP.Popup:run(
 			message ,
-			"[ " .. RMP.Text:new(
-			"INFO" , 
+			RMP.Text.new(
+			"[ " .. "INFO" .. " ]" , 
 			RMP.Bold , 
+			RMP.FGWhite , 
 			RMP.BGBGreen
-			):getColoredText()  .. " ]", 
+			), 
 			RMP.INFO , 
 			RMP.FGGreen , 
 			nil,
 			poslayout
 		)
-		RMP.sleep(RMP.Duration:fromSec(delay))
 	end
 
-	function RMP.Popup:message(message , delay , poslayout)
-		local delay = delay or 3	-- 3 seconds
+	function RMP.Popup:message(message , poslayout)
 		local poslayout = poslayout or RMP.CENTER
-		RMP.Popup:run(
+		return RMP.Popup:run(
 			message ,  
-			"[ " .. RMP.Text:new(
-			"Message" , 
+			RMP.Text.new(
+			"[ " .. "Message" .. " ]" , 
 			RMP.Bold , 
+			RMP.FGWhite,
 			RMP.BGBBlue
-			):getColoredText()   .. " ]", 
+			), 
 			RMP.MESSAGE , 
 			RMP.FGBlue , 
 			nil,
 			poslayout
 		)
-		RMP.sleep(RMP.Duration:fromSec(delay))
 	end
 
-	function RMP.Popup:warning(message , delay , poslayout)
-		local delay = delay or 3	-- 3 seconds
+	function RMP.Popup:warning(message , poslayout)
 		local poslayout = poslayout or RMP.CENTER
-		RMP.Popup:run(
+		return RMP.Popup:run(
 			message ,  
-			"[ " .. RMP.Text:new(
-			"Warning" , 
+			RMP.Text.new(
+			"[ " .. "Warning" .. " ]" , 
 			RMP.Bold , 
+			RMP.FGWhite,
 			RMP.BGBYellow
-			):getColoredText()   .. " ]", 
+			), 
 			RMP.WARNING , 
 			RMP.FGYellow , 
 			nil,
 			poslayout
 		)
-		RMP.sleep(RMP.Duration:fromSec(delay))
 	end
 end
 
