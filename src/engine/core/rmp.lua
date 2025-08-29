@@ -121,6 +121,10 @@ local platform = require("platform")
 local directory = require("directory")
 local window = require("window")
 
+-- require rmp utility
+local OOP = require("oop")
+local Promise = require("promises")
+
 -- handle enumuration in lua using coroutine yield
 global_count_enum = -1
 local function enum(reset)
@@ -368,17 +372,19 @@ local function moveto(x,y , ret)
 	end
 end
 
-RMP.Duration = {}
-RMP.Duration.__index = Duration
+RMP.Duration = OOP.class("Duration")
 do
-	function RMP.Duration:fromSec(sec)
-		return sec * 1000
+	function RMP.Duration:constructor(time)
+		self.time = time or 1
+		return self
+	end
+	function RMP.Duration:fromSec()
+		return self.time * 1000
 	end
 
-	function RMP.Duration:fromMilsec(sec)
-		return sec
+	function RMP.Duration:fromMilsec()
+		return self.time
 	end
-
 end
 
 function RMP.sleep(time)
@@ -386,11 +392,11 @@ function RMP.sleep(time)
 end
 
 -- Text class used to work with texts
-RMP.Text = {}
-RMP.Text.__index = Text
+RMP.Text = OOP.class("Text")
 do	-- text
+
 	-- constructor
-	function RMP.Text:new(text , style , color)
+	function RMP.Text:constructor(text , style , color)
 		self.text = text or ""
 		self.color = color or RMP.Default
 		self.style = style or RMP.Default
@@ -598,14 +604,17 @@ do	-- local functions
 	end
 end
 
-RMP.Window = {}
-RMP.Window.__index = Window
+RMP.Window = OOP.class("Window")
 do 	-- creating window
 	-- callback function accept 4 agrs 
 
-	function RMP.Window:windowId(id)
-		self.id = id
+	function RMP.Window:constructor(id)
+		self.id = id or nil
 		return self
+	end
+
+	function RMP.Window:setId(id)
+		self.id = id
 	end
 
 	function RMP.Window:getId()
@@ -636,197 +645,197 @@ end
 -- TODO: use  virtual terminal for more performence
 -- TODO: should integrate VirtualTerminal to all components (Window , Terminal , Text , ...)
 -- Virtual Terminal Buffer
-RMP.VirtualTerminal = {}
-RMP.VirtualTerminal.__index = RMP.VirtualTerminal
+RMP.VirtualTerminal = OOP.class("VirtualTerminal")
+do	-- VirtualTerminal
+	function RMP.VirtualTerminal:constructor(width, height) -- constructor
+		local h , w = window.get_size()
+		self.width = width or w
+		self.height = height or h
+		self.buffer = {}
+		self.dirty = false
+		self.cursor = {x = 1, y = 1}
+		self:clear()
+		return self
+	end
 
-function RMP.VirtualTerminal:new(width, height)
-	local obj = setmetatable({}, self)
-	local h , w = window.get_size()
-	obj.width = width or w
-	obj.height = height or h
-	obj.buffer = {}
-	obj.dirty = false
-	obj.cursor = {x = 1, y = 1}
-	obj:clear()
-	return obj
-end
+	function RMP.VirtualTerminal:clear()
+		for y = 1, self.height do
+			self.buffer[y] = self.buffer[y] or {}
+			for x = 1, self.width do
+				self.buffer[y][x] = {char = " ", fg = nil, bg = nil, style = nil}
+			end
+		end
+		self.dirty = true
+	end
 
-function RMP.VirtualTerminal:clear()
-	for y = 1, self.height do
-		self.buffer[y] = self.buffer[y] or {}
-		for x = 1, self.width do
+	function RMP.VirtualTerminal:ensureBuffer(y, x)
+		y = math.max(1, math.min(y, self.height))
+		x = math.max(1, math.min(x, self.width))
+		if not self.buffer[y] then
+			self.buffer[y] = {}
+		end
+		if not self.buffer[y][x] then
 			self.buffer[y][x] = {char = " ", fg = nil, bg = nil, style = nil}
 		end
 	end
-	self.dirty = true
-end
 
-function RMP.VirtualTerminal:ensureBuffer(y, x)
-	y = math.max(1, math.min(y, self.height))
-	x = math.max(1, math.min(x, self.width))
-	if not self.buffer[y] then
-		self.buffer[y] = {}
+	function RMP.VirtualTerminal:setChar(x, y, char, fg, bg, style)
+		if x >= 1 and x <= self.width and y >= 1 and y <= self.height then
+			self:ensureBuffer(y, x)
+			self.buffer[y][x] = {
+				char = char or " ",
+				fg = fg,
+				bg = bg,
+				style = style
+			}
+			self.dirty = true
+		end
 	end
-	if not self.buffer[y][x] then
-		self.buffer[y][x] = {char = " ", fg = nil, bg = nil, style = nil}
-	end
-end
 
-function RMP.VirtualTerminal:setChar(x, y, char, fg, bg, style)
-	if x >= 1 and x <= self.width and y >= 1 and y <= self.height then
-		self:ensureBuffer(y, x)
-		self.buffer[y][x] = {
-			char = char or " ",
-			fg = fg,
-			bg = bg,
-			style = style
-		}
+	function RMP.VirtualTerminal:writeText(x, y, text, fg, bg, style)
+		for i = 1, #text do
+			local char = text:sub(i, i)
+			self:setChar(x + i - 1, y, char, fg, bg, style)
+		end
 		self.dirty = true
 	end
-end
 
-function RMP.VirtualTerminal:writeText(x, y, text, fg, bg, style)
-	for i = 1, #text do
-		local char = text:sub(i, i)
-		self:setChar(x + i - 1, y, char, fg, bg, style)
-	end
-	self.dirty = true
-end
-
-function RMP.VirtualTerminal:drawBox(x, y, width, height, border_style, fg, bg)
-	if border_style == nil or type(border_style) ~= 'table' or border_style[1] == nil then
-		TL = RMP.BoxDrawing.LightBorder[3] -- "┌" Top-left corner
-		TR = RMP.BoxDrawing.LightBorder[4] -- "┐" Top-right corner
-		BL = RMP.BoxDrawing.LightBorder[5] -- "└" Bottom-left corner
-		BR = RMP.BoxDrawing.LightBorder[6] -- "┘" Bottom-right corner
-		H  = RMP.BoxDrawing.LightBorder[1] -- "─" Horizontal line
-		V  = RMP.BoxDrawing.LightBorder[2] -- "│" Vertical line
-	else
-		TL = border_style[3] -- "┌" Top-left corner
-		TR = border_style[4] -- "┐" Top-right corner
-		BL = border_style[5] -- "└" Bottom-left corner
-		BR = border_style[6] -- "┘" Bottom-right corner
-		H  = border_style[1] -- "─" Horizontal line
-		V  = border_style[2] -- "│" Vertical line
-	end
-
-	local end_x = math.min(x + width - 1, self.width)
-	local end_y = math.min(y + height - 1, self.height)
-
-	self:setChar(x, y, TL, fg, bg)
-	self:setChar(end_x, y, TR, fg, bg)
-	self:setChar(x, end_y, BL, fg, bg)
-	self:setChar(end_x, end_y, BR, fg, bg)
-
-	for i = x + 1, end_x - 1 do
-		self:setChar(i, y, H, fg, bg)
-		self:setChar(i, end_y, H, fg, bg)
-	end
-
-	for i = y + 1, end_y - 1 do
-		self:setChar(x, i, V, fg, bg)
-		self:setChar(end_x, i, V, fg, bg)
-	end
-
-	for i = y + 1, end_y - 1 do
-		for j = x + 1, end_x - 1 do
-			self:setChar(j, i, " ", nil, bg)
+	function RMP.VirtualTerminal:drawBox(x, y, width, height, border_style, fg, bg)
+		if border_style == nil or type(border_style) ~= 'table' or border_style[1] == nil then
+			TL = RMP.BoxDrawing.LightBorder[3] -- "┌" Top-left corner
+			TR = RMP.BoxDrawing.LightBorder[4] -- "┐" Top-right corner
+			BL = RMP.BoxDrawing.LightBorder[5] -- "└" Bottom-left corner
+			BR = RMP.BoxDrawing.LightBorder[6] -- "┘" Bottom-right corner
+			H  = RMP.BoxDrawing.LightBorder[1] -- "─" Horizontal line
+			V  = RMP.BoxDrawing.LightBorder[2] -- "│" Vertical line
+		else
+			TL = border_style[3] -- "┌" Top-left corner
+			TR = border_style[4] -- "┐" Top-right corner
+			BL = border_style[5] -- "└" Bottom-left corner
+			BR = border_style[6] -- "┘" Bottom-right corner
+			H  = border_style[1] -- "─" Horizontal line
+			V  = border_style[2] -- "│" Vertical line
 		end
+
+		local end_x = math.min(x + width - 1, self.width)
+		local end_y = math.min(y + height - 1, self.height)
+
+		self:setChar(x, y, TL, fg, bg)
+		self:setChar(end_x, y, TR, fg, bg)
+		self:setChar(x, end_y, BL, fg, bg)
+		self:setChar(end_x, end_y, BR, fg, bg)
+
+		for i = x + 1, end_x - 1 do
+			self:setChar(i, y, H, fg, bg)
+			self:setChar(i, end_y, H, fg, bg)
+		end
+
+		for i = y + 1, end_y - 1 do
+			self:setChar(x, i, V, fg, bg)
+			self:setChar(end_x, i, V, fg, bg)
+		end
+
+		for i = y + 1, end_y - 1 do
+			for j = x + 1, end_x - 1 do
+				self:setChar(j, i, " ", nil, bg)
+			end
+		end
+
+		self.dirty = true
 	end
 
-	self.dirty = true
-end
+	-- i stole this method from chat-gpt lol whatever
+	function RMP.VirtualTerminal:render()
+		if not self.dirty then return end
 
--- i stole this method from chat-gpt lol whatever
-function RMP.VirtualTerminal:render()
-	if not self.dirty then return end
+		-- i added this line , because render method will executed in every loop
+		self.height , self.width = window.get_size()
 
-	-- i added this line , because render method will executed in every loop
-	self.height , self.width = window.get_size()
+		local output = {}
 
-	local output = {}
+		table.insert(output, "\27[2J\27[H")
 
-	table.insert(output, "\27[2J\27[H")
+		for y = 1, self.height do
+			local line = {}
+			local current_fg, current_bg, current_style = nil, nil, nil
 
-	for y = 1, self.height do
-		local line = {}
-		local current_fg, current_bg, current_style = nil, nil, nil
+			for x = 1, self.width do
+				self:ensureBuffer(y, x)
+				local cell = self.buffer[y][x]
 
-		for x = 1, self.width do
-			self:ensureBuffer(y, x)
-			local cell = self.buffer[y][x]
+				local needs_reset = false
+				if (current_style and not cell.style) or (current_style ~= cell.style) then
+					needs_reset = true
+				end
+				if (current_fg and not cell.fg) or (current_fg ~= cell.fg) then
+					needs_reset = true
+				end
+				if (current_bg and not cell.bg) or (current_bg ~= cell.bg) then
+					needs_reset = true
+				end
 
-			local needs_reset = false
-			if (current_style and not cell.style) or (current_style ~= cell.style) then
-				needs_reset = true
+				if needs_reset then
+					table.insert(line, RMP.Default)
+					current_style, current_fg, current_bg = nil, nil, nil
+				end
+
+				if cell.style and cell.style ~= current_style then
+					table.insert(line, cell.style)
+					current_style = cell.style
+				end
+
+				if cell.fg and cell.fg ~= current_fg then
+					table.insert(line, cell.fg)
+					current_fg = cell.fg
+				end
+
+				if cell.bg and cell.bg ~= current_bg then
+					table.insert(line, cell.bg)
+					current_bg = cell.bg
+				end
+
+				table.insert(line, cell.char)
 			end
-			if (current_fg and not cell.fg) or (current_fg ~= cell.fg) then
-				needs_reset = true
-			end
-			if (current_bg and not cell.bg) or (current_bg ~= cell.bg) then
-				needs_reset = true
-			end
 
-			if needs_reset then
+			if current_style or current_fg or current_bg then
 				table.insert(line, RMP.Default)
-				current_style, current_fg, current_bg = nil, nil, nil
 			end
 
-			if cell.style and cell.style ~= current_style then
-				table.insert(line, cell.style)
-				current_style = cell.style
-			end
-
-			if cell.fg and cell.fg ~= current_fg then
-				table.insert(line, cell.fg)
-				current_fg = cell.fg
-			end
-
-			if cell.bg and cell.bg ~= current_bg then
-				table.insert(line, cell.bg)
-				current_bg = cell.bg
-			end
-
-			table.insert(line, cell.char)
+			table.insert(output, table.concat(line))
 		end
 
-		if current_style or current_fg or current_bg then
-			table.insert(line, RMP.Default)
-		end
+		table.insert(output, moveto(self.cursor.x, self.cursor.y, true))
 
-		table.insert(output, table.concat(line))
+		io.write(table.concat(output, "\n"))
+		io.flush()
+		self.dirty = false
 	end
 
-	table.insert(output, moveto(self.cursor.x, self.cursor.y, true))
+	function RMP.VirtualTerminal:moveCursor(x, y)
+		self.cursor.x = math.max(1, math.min(x, self.width))
+		self.cursor.y = math.max(1, math.min(y, self.height))
+	end
 
-	io.write(table.concat(output, "\n"))
-	io.flush()
-	self.dirty = false
+	function RMP.VirtualTerminal:getSize()
+		return self.width, self.height
+	end
+
+	function RMP.VirtualTerminal:resize(width, height)
+		self.width = width
+		self.height = height
+		self:clear()
+	end
 end
 
-function RMP.VirtualTerminal:moveCursor(x, y)
-	self.cursor.x = math.max(1, math.min(x, self.width))
-	self.cursor.y = math.max(1, math.min(y, self.height))
-end
-
-function RMP.VirtualTerminal:getSize()
-	return self.width, self.height
-end
-
-function RMP.VirtualTerminal:resize(width, height)
-	self.width = width
-	self.height = height
-	self:clear()
-end
 -- TODO: Handle Terminal  class
 -- NOTE: Terminal class uses ansii escape code i need to create shared library to handle terminal for each platform
-RMP.Terminal = {}
-RMP.Terminal.__index = Terminal
+RMP.Terminal = OOP.class("Terminal")
 do	-- Terminal
 
 	function RMP.Terminal:clearWindow()
 		io.write("\27[2J")
 	end
+
 	function RMP.Terminal:moveTo(x , y)
 		if x < 1 then
 			x = 1
@@ -888,11 +897,10 @@ end
 -- TODO: handle Tables 
 -- TODO: handle Panel
 -- TODO: handle Loading  
-RMP.Options = {}
-RMP.Options.__index = Options
+RMP.Options = OOP.class("Options")
 do	-- Options
 	-- options : array of options 
-	function RMP.Options:addOption(options)
+	function RMP.Options:constructor(options) -- constructor
 		self.options = options
 		self.color = RMP.Default
 		self.symbl = "" 
@@ -1009,8 +1017,7 @@ do	-- Options
 end
 
 -- TODO: handle Layout
-RMP.Draw = {}
-RMP.Draw.__index = Draw
+RMP.Draw = OOP.class("Draw")
 do	-- Draw
 	function RMP.Draw:rectangle(x,y,width,height,color)
 		local x = math.floor(x)
@@ -1077,22 +1084,23 @@ do	-- Draw
 		end
 	end
 end
+
+-- status
+RMP.MESSAGE = enum(true)
+RMP.INFO = enum()
+RMP.ERROR = enum()
+RMP.WARNING = enum()
+
+-- Position Layout
+RMP.CENTER 	= enum(true)
+RMP.TOP_LEFT 	= enum()
+RMP.TOP_RIGHT 	= enum()
+RMP.BUTTOM_LEFT 	= enum()
+RMP.BUTTOM_RIGHT 	= enum()
+
 -- TODO: handle Bar  
-RMP.Popup = {}
-RMP.Popup.__index = Popup
+RMP.Popup = OOP.class("Popup")
 do	-- Popups
-	RMP.MESSAGE = enum(true)
-	RMP.INFO = enum()
-	RMP.ERROR = enum()
-	RMP.WARNING = enum()
-
-	-- Position Layout
-	RMP.CENTER 	= enum(true)
-	RMP.TOP_LEFT 	= enum()
-	RMP.TOP_RIGHT 	= enum()
-	RMP.BUTTOM_LEFT 	= enum()
-	RMP.BUTTOM_RIGHT 	= enum()
-
 	-- TODO: add emojis for each status
 	function RMP.Popup:run(message , title , status , border_color , bg_color , poslayout)
 		rows , cols = RMP.Terminal:getSize()
@@ -1204,16 +1212,15 @@ do	-- Popups
 end
 
 -- Scroller class
-RMP.Scroller = {}
-RMP.Scroller.__index = RMP.Scroller
+-- Assosiative relation with Options class
+RMP.Scroller = OOP.class("Scroller")
 do	-- Scroller
-	function RMP.Scroller:new(h, optObj)
-		local obj = setmetatable({}, self)
-		obj.h = h
-		obj.data = optObj:getOptions()
-		obj.cur = 0
-		obj.options = optObj:setOptions(obj:getSlice())
-		return obj
+	function RMP.Scroller:constructor(h, optObj)
+		self.h = h
+		self.data = optself:getOptions()
+		self.cur = 0
+		self.options = optself:setOptions(self:getSlice())
+		return self
 	end
 
 	function RMP.Scroller:getSlice()
@@ -1270,16 +1277,14 @@ end
 -- TODO: bind miniaudio
 -- TODO: handle the class Sound
 -- TODO: handle Albome class : albome manager
-RMP.Sound = {}
-RMP.Sound.__index = RMP.Sound
 
+RMP.PLAYLIST_LOOP 	= enum(true)
+RMP.SINGLE_LOOP 	= enum()
+RMP.ONES 		= enum()
+
+RMP.Sound = OOP.class("Sound")
 do 	-- Sound
-
-	RMP.PLAYLIST_LOOP 	= enum(true)
-	RMP.SINGLE_LOOP 	= enum()
-	RMP.ONES 		= enum()
-
-	function RMP.Sound:new(array_sounds)
+	function RMP.Sound:constructor(array_sounds)
 		self.sound_name = array_sounds or nil
 		if type(array_sounds) == "table" then
 			self.sound_name = array_sounds
@@ -1448,10 +1453,9 @@ do 	-- Sound
 
 end
 
-RMP.Path = {}
-RMP.Path.__index = RMP.Path
+RMP.Path = OOP.class("Path")
 do	-- Path
-	function RMP.Path:new(path)
+	function RMP.Path:constructor(path)
 		self.path = path or self:getCurrentPath()
 	end
 
@@ -1571,10 +1575,13 @@ end
 -- TODO: make init.lua contains confguration like add plugins and configure keys
 
 -- TODO: introduce configuration system to manage lua configuration file 
-RMP.Config = {}
-RMP.Config.__index = RMP.Config
-
+RMP.Config = OOP.class("Config")
 do 	-- Config
+
+	function RMP.Config:constructor(confPath)
+		self.confPath = confPath -- or default_conf_path
+	end
+
 	function RMP.Config:load()
 		local path
 		-- self.cfg = require(".init")

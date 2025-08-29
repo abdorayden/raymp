@@ -1,0 +1,340 @@
+-- Copyright (C) by rayden at 27/08/2025
+--
+-- this is an java oop syntax implemented in lua
+-- the goal is make the code more readable to define interfaces and class so the programmer and even me i can understand that 
+-- this is an interface and what's the methods that i shoul implements
+--
+-- Example:
+-- 	I)- Inheritance:
+-- 		I)- Definition
+-- 			local Animal = JavaStyle.class("Animal")
+
+-- 			function Animal:constructor(name)
+-- 			    self.name = name
+-- 			end
+
+-- 			function Animal:speak()
+-- 			    return "Some generic animal sound"
+-- 			end
+
+-- 			function Animal:getName()
+-- 			    return self.name
+-- 			end
+
+-- 			local Dog = JavaStyle.class("Dog", Animal)
+
+-- 			function Dog:constructor(name, breed)
+-- 			    self:super("constructor", name)
+-- 			    self.breed = breed
+-- 			end
+
+-- 			function Dog:speak()
+-- 			    return "Woof!"
+-- 			end
+
+-- 			function Dog:getBreed()
+-- 			    return self.breed
+-- 			end
+--
+-- 		II)- Usage :
+-- 			local dog = Dog.new("Buddy", "Golden Retriever")
+-- 			print(dog:getName())    -- Output: Buddy (inherited from Animal)
+-- 			print(dog:speak())      -- Output: Woof! (overridden)
+-- 			print(dog:getBreed())   -- Output: Golden Retriever (Dog-specific)
+-- 			print("Is Animal:", dog:instanceOf(Animal)) -- Output: true
+-- 			print("Is Dog:", dog:instanceOf(Dog))       -- Output: true
+--	II)- extends + implements
+--		I)- Definition:
+--			// define interfaces
+-- 			local Drawable = JavaStyle.interface("Drawable", "draw", "getDimensions")
+-- 			local Resizable = JavaStyle.interface("Resizable", "resize", "getScale")
+--			// define class
+-- 			local Shape = JavaStyle.class("Shape")
+-- 			function Shape:constructor(x, y)
+-- 			    self.x = x or 0
+-- 			    self.y = y or 0
+-- 			end
+-- 			function Shape:move(newX, newY)
+-- 			    self.x = newX
+-- 			    self.y = newY
+-- 			    print(string.format("Moved to (%d, %d)", newX, newY))
+-- 			end
+-- 			function Shape:getPosition()
+-- 			    return {x = self.x, y = self.y}
+-- 			end
+
+-- 			local Circle = JavaStyle.class("Circle", Shape, Drawable, Resizable)
+
+-- 			function Circle:constructor(x, y, radius)
+-- 			    self:super("constructor", x, y)
+-- 			    self.radius = radius or 1
+-- 			    self.scale = 1
+-- 			end
+
+-- 			function Circle:draw()
+-- 			    print(string.format("Drawing circle at (%d, %d) with radius: %.2f", 
+-- 			        self.x, self.y, self.radius * self.scale))
+-- 			end
+
+-- 			function Circle:getDimensions()
+-- 			    return {
+-- 			        type = "circle",
+-- 			        radius = self.radius * self.scale,
+-- 			        x = self.x,
+-- 			        y = self.y
+-- 			    }
+-- 			end
+
+-- 			function Circle:resize(factor)
+-- 			    self.scale = factor
+-- 			    print("Circle resized by factor: " .. factor)
+-- 			end
+
+-- 			function Circle:getScale()
+-- 			    return self.scale
+-- 			end
+
+-- 			function Circle:move(newX, newY)
+-- 			    print("Moving circle...")
+-- 			    self:super("move", newX, newY)
+-- 			end
+
+-- 		II)- Usage:
+-- 			local circle = Circle.new(10, 20, 5)
+
+-- 			-- Inherited methods from Shape
+-- 			circle:move(15, 25) -- Output: Moving circle... Moved to (15, 25)
+-- 			local pos = circle:getPosition()
+-- 			print("Position:", pos.x, pos.y) -- Output: Position: 15 25
+
+-- 			-- Interface methods
+-- 			circle:draw() -- Output: Drawing circle at (15, 25) with radius: 5.00
+-- 			circle:resize(2.0) -- Output: Circle resized by factor: 2.0
+
+-- 			-- Type checking
+-- 			print("Is Shape:", circle:instanceOf(Shape)) -- Output: true
+-- 			print("Is Circle:", circle:instanceOf(Circle)) -- Output: true
+-- 			print("Implements Drawable:", circle:implements(Drawable)) -- Output: true
+-- 			print("Implements Resizable:", circle:implements(Resizable)) -- Output: true
+--
+-- 	III)- Multi-level Inheritance:
+--		
+--		I)- Definition:
+--			local Vehicle = JavaStyle.class("Vehicle")
+--			
+--			function Vehicle:constructor(make, model)
+--			    self.make = make
+--			    self.model = model
+--			    self.speed = 0
+--			end
+--			
+--			function Vehicle:start()
+--			    print("Vehicle started")
+--			end
+--			
+--			function Vehicle:stop()
+--			    self.speed = 0
+--			    print("Vehicle stopped")
+--			end
+--			
+--			-- Car extends Vehicle
+--			local Car = JavaStyle.class("Car", Vehicle)
+--			
+--			function Car:constructor(make, model, doors)
+--			    self:super("constructor", make, model)
+--			    self.doors = doors
+--			end
+--			
+--			function Car:accelerate(amount)
+--			    self.speed = self.speed + amount
+--			    print(string.format("Car accelerated to %d km/h", self.speed))
+--			end
+--			
+--			-- SportsCar extends Car
+--			local SportsCar = JavaStyle.class("SportsCar", Car)
+--			
+--			function SportsCar:constructor(make, model, doors, turbo)
+--			    self:super("constructor", make, model, doors)
+--			    self.turbo = turbo or false
+--			end
+--			
+--			function SportsCar:activateTurbo()
+--			    self.turbo = true
+--			    print("Turbo activated!")
+--			end
+--			
+--			function SportsCar:accelerate(amount)
+--			    local boost = self.turbo and amount * 2 or amount
+--			    self:super("accelerate", boost)
+--			end
+--		
+--		II)- Usage:
+--			local sportsCar = SportsCar.new("Ferrari", "488", 2, true)
+--			
+--			sportsCar:start() // Output: Vehicle started (from Vehicle)
+--			sportsCar:activateTurbo() // Output: Turbo activated! (SportsCar specific)
+--			sportsCar:accelerate(50) // Output: Car accelerated to 100 km/h (with turbo boost)
+--			
+--			print("Make:", sportsCar.make) // Output: Ferrari (from Vehicle)
+--			print("Doors:", sportsCar.doors) // Output: 2 (from Car)
+--			print("Turbo:", sportsCar.turbo) // Output: true (from SportsCar)
+--			
+--			print("Is Vehicle:", sportsCar:instanceOf(Vehicle)) // Output: true
+--			print("Is Car:", sportsCar:instanceOf(Car)) // Output: true
+--			print("Is SportsCar:", sportsCar:instanceOf(SportsCar)) // Output: true
+--
+--	VI)- Abstract Base Class Pattern:
+--
+--		I)- Definition:
+--			local AbstractDatabase = JavaStyle.class("AbstractDatabase")
+--			
+--			function AbstractDatabase:constructor(connectionString)
+--			    self.connectionString = connectionString
+--			    self.connected = false
+--			end
+--			
+--			-- Abstract method (should be overridden)
+--			function AbstractDatabase:connect()
+--			    error("Abstract method 'connect' must be implemented")
+--			end
+--			
+--			function AbstractDatabase:query(sql)
+--			    error("Abstract method 'query' must be implemented")
+--			end
+--			
+--			function AbstractDatabase:close()
+--			    error("Abstract method 'close' must be implemented")
+--			end
+--			
+--			-- Concrete implementation
+--			local MySQLDatabase = JavaStyle.class("MySQLDatabase", AbstractDatabase)
+--			
+--			function MySQLDatabase:constructor(connectionString)
+--			    self:super("constructor", connectionString)
+--			end
+--			
+--			function MySQLDatabase:connect()
+--			    print("Connecting to MySQL: " .. self.connectionString)
+--			    self.connected = true
+--			    return true
+--			end
+--			
+--			function MySQLDatabase:query(sql)
+--			    if not self.connected then
+--			        error("Not connected to database")
+--			    end
+--			    print("Executing MySQL query: " .. sql)
+--			    return {result = "MySQL result"}
+--			end
+--			
+--			function MySQLDatabase:close()
+--			    print("Closing MySQL connection")
+--			    self.connected = false
+--			end
+--		
+--		II)- Usage:
+--			local db = MySQLDatabase.new("mysql://localhost:3306/mydb")
+--			db:connect()
+--			local result = db:query("SELECT * FROM users")
+--			db:close()
+
+
+local OOP = {}
+
+function OOP.interface(name, ...)
+	local methods = {...}
+	local interface = {
+		name = name,
+		methods = methods,
+		__type = "interface"
+	}
+
+	function interface:validateImplementation(class, className)
+		local missingMethods = {}
+
+		for _, method in ipairs(self.methods) do
+			if type(class[method]) ~= "function" then
+				table.insert(missingMethods, method)
+			end
+		end
+
+		if #missingMethods > 0 then
+			error(string.format("Class '%s' must implement interface '%s'. Missing methods: %s",
+			className, self.name, table.concat(missingMethods, ", ")))
+		end
+	end
+
+	return interface
+end
+
+function OOP.class(name, superClass, ...)
+	local interfaces = {...}
+	local class = {
+		__name = name,
+		__super = superClass,
+		__interfaces = interfaces,
+		__type = "class"
+	}
+
+	if superClass then
+		setmetatable(class, {__index = superClass})
+	end
+
+	class.__index = class
+
+	function class.new(...)
+		local self = setmetatable({}, class)
+
+		for _, interface in ipairs(interfaces) do
+			interface:validateImplementation(class, name)
+		end
+
+		if self.constructor then
+			self:constructor(...)
+		end
+
+		return self
+	end
+
+	function class:implements(interface)
+		for _, iface in ipairs(self.__interfaces) do
+			if iface == interface then
+				return true
+			end
+		end
+
+		if self.__super and self.__super.implements then
+			return self.__super:implements(interface)
+		end
+
+		return false
+	end
+
+	function class:instanceOf(targetClass)
+		if self == targetClass then
+			return true
+		end
+
+		if self.__super then
+			return self.__super:instanceOf(targetClass)
+		end
+
+		return false
+	end
+
+	function class:super(methodName, ...)
+		if not self.__super then
+			error("No super class available")
+		end
+
+		if not self.__super[methodName] then
+			error("Method '" .. methodName .. "' not found in super class")
+		end
+
+		return self.__super[methodName](self, ...)
+	end
+
+	return class
+end
+
+return OOP

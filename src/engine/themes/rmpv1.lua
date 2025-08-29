@@ -29,10 +29,19 @@ local sleep = api.sleep
 
 function main(configuration_object)
 
+	-- local duration = api.Duration.new(1000)
+	-- print(duration:fromMilsec())
+
+	-- local text = api.Text.new("Hello")
+	-- io.write(text:getColoredText())
+
+
+	-- VTERM
+
 	local h , w = Terminal:getSize()
 
 	-- Initialize
-	local vterm = RMP.VirtualTerminal:new(w,h)
+	local vterm = RMP.VirtualTerminal.new(w,h)
 
 	-- Draw something
 	local x = 5

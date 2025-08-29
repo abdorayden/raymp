@@ -58,6 +58,8 @@ then
 	rm /usr/local/lib/lua/5.4/directory.so
 	rm /usr/local/lib/lua/5.4/window.so
 	rm /usr/local/share/lua/5.4/rmp.lua
+	rm /usr/local/share/lua/5.4/promises.lua
+	rm /usr/local/share/lua/5.4/oop.lua
 
 elif [[ "$1" == "compile" ]]
 then
@@ -128,6 +130,9 @@ then
 	cp ../src/engine/core/lib/platform.so /usr/local/lib/lua/5.4
 	cp ../src/engine/core/lib/directory.so /usr/local/lib/lua/5.4
 	cp ../src/engine/core/lib/window.so /usr/local/lib/lua/5.4
+
+	cp ../src/promises.lua /usr/local/share/lua/5.4
+	cp ../src/oop.lua /usr/local/share/lua/5.4
 	cp ../src/engine/core/rmp.lua /usr/local/share/lua/5.4
 	# cp ../rmp /bin
 
