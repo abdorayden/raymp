@@ -352,7 +352,7 @@ static const luaL_Reg keyboard_lib[] = {
 	{NULL, NULL}
 };
 
-int luaopen_keyboard(lua_State *L) {
+int luaopen_rmp_keyboard(lua_State *L) {
 	luaL_newlib(L, keyboard_lib);
 	return 1;
 }

@@ -29,7 +29,7 @@ static const luaL_Reg lib[] = {
     {NULL, NULL}
 };
 
-int luaopen_sleep(lua_State *L)
+int luaopen_rmp_sleep(lua_State *L)
 {
     luaL_newlib(L, lib);
     return 1;

@@ -32,10 +32,11 @@ int main(int argc , char** argv)
 	// for test
 	/* RMPRunner engine = RMPRunnerInit("./src/engine/plugins/music_waves.lua"); */
 	/* RMPRunner engine = RMPRunnerInit("plugins/main.lua"); */
-	RMPRunner engine = RMPRunnerInit("./src/engine/themes/rmpv1.lua");
+	/* RMPRunner engine = RMPRunnerInit("./src/engine/selfrmp/themes/rmpv1.lua"); */
 	/* RMPRunner engine = RMPRunnerInit("./src/engine/plugins/rmplikemp3.lua"); */
 	/* RMPRunner engine = RMPRunnerInit("plugins/test.lua"); */
 
+	RMPRunner engine = RMPRunnerInit("./src/engine/RMPManager.lua");
 	RMPRunnerError status = RMPRunnerRun(engine);
 	if(status != RMP_FINE)
 	{

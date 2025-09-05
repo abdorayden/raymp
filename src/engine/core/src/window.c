@@ -131,7 +131,7 @@ static const luaL_Reg lib[] = {
 };
 
 // Module entry point: require("window")
-int luaopen_window(lua_State *L) {
+int luaopen_rmp_window(lua_State *L) {
 	luaL_newlib(L, lib);
 	return 1;
 }

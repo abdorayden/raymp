@@ -313,7 +313,7 @@ static const luaL_Reg miniaudio_lib[] = {
 	{NULL, NULL}
 };
 // Lua module entry point
-int luaopen_rmpaudio(lua_State *L) {
+int luaopen_rmp_rmpaudio(lua_State *L) {
 	luaL_newlib(L, miniaudio_lib);
 	return 1;
 }

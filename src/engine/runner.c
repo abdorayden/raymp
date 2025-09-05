@@ -40,12 +40,12 @@ RMPRunnerError RMPRunnerRun(RMPRunner entry){
 		return RMP_ERROR_CALLING_MAIN_FUNCTION;
 	}
 	// TODO: push main parameter (waves)
-	lua_getglobal(entry.luafile , "main");
-	if (lua_pcall(entry.luafile, 0, 0, 0) != LUA_OK){
-		error = (error == NULL) ? strdup(lua_tostring(entry.luafile , -1)) : error;
-		printf("ERROR : %s\n",lua_tostring(entry.luafile , -1));
-		return RMP_ERROR_CALLING_MAIN_FUNCTION;
-	}
+	/* lua_getglobal(entry.luafile , "main"); */
+	/* if (lua_pcall(entry.luafile, 0, 0, 0) != LUA_OK){ */
+	/* 	error = (error == NULL) ? strdup(lua_tostring(entry.luafile , -1)) : error; */
+	/* 	printf("ERROR : %s\n",lua_tostring(entry.luafile , -1)); */
+	/* 	return RMP_ERROR_CALLING_MAIN_FUNCTION; */
+	/* } */
 
 	if(script_count < MAX_SCRIPTS)
 		script_count++;

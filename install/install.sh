@@ -35,14 +35,19 @@ if [ "$1" = "install" ] || [ "$1" = "clean" ]; then
 	fi
 fi
 
+#TODO: create rmp dir to store my libs
+
+LUA_SHARE="/usr/local/share/lua/5.4/rmp"
+LUA_LIB="/usr/local/lib/lua/5.4/rmp"
+
 # for lua files
-if [ ! -d "/usr/local/share/lua/5.4" ]; then
-	mkdir -p "/usr/local/share/lua/5.4"
+if [ ! -d $LUA_SHARE ]; then
+	mkdir -p $LUA_SHARE
 fi
 
 # for shared library files
-if [ ! -d "/usr/local/lib/lua/5.4" ]; then
-	mkdir -p "/usr/local/lib/lua/5.4"
+if [ ! -d $LUA_LIB ]; then
+	mkdir -p $LUA_LIB
 fi
 
 if [[ "$1" == "clean" ]]
@@ -52,14 +57,16 @@ then
 	then
 		set -xe
 	fi
-	rm /usr/local/lib/lua/5.4/rmpaudio.so
-	rm /usr/local/lib/lua/5.4/keyboard.so
-	rm /usr/local/lib/lua/5.4/sleep.so
-	rm /usr/local/lib/lua/5.4/directory.so
-	rm /usr/local/lib/lua/5.4/window.so
-	rm /usr/local/share/lua/5.4/rmp.lua
-	rm /usr/local/share/lua/5.4/promises.lua
-	rm /usr/local/share/lua/5.4/oop.lua
+	rm "$LUA_LIB/rmpaudio.so"
+	rm "$LUA_LIB/keyboard.so"
+	rm "$LUA_LIB/sleep.so"
+	rm "$LUA_LIB/directory.so"
+	rm "$LUA_LIB/window.so"
+
+	rm "$LUA_SHARE/rmp.lua"
+	rm "$LUA_SHARE/promises.lua"
+	rm "$LUA_SHARE/util.lua"
+	rm "$LUA_SHARE/oop.lua"
 
 elif [[ "$1" == "compile" ]]
 then
@@ -124,16 +131,20 @@ then
 	then
 		set -xe
 	fi
-	cp ../src/engine/core/lib/rmpaudio.so /usr/local/lib/lua/5.4
-	cp ../src/engine/core/lib/keyboard.so /usr/local/lib/lua/5.4
-	cp ../src/engine/core/lib/sleep.so /usr/local/lib/lua/5.4
-	cp ../src/engine/core/lib/platform.so /usr/local/lib/lua/5.4
-	cp ../src/engine/core/lib/directory.so /usr/local/lib/lua/5.4
-	cp ../src/engine/core/lib/window.so /usr/local/lib/lua/5.4
+	cp ../src/engine/core/lib/rmpaudio.so $LUA_LIB
+	cp ../src/engine/core/lib/keyboard.so $LUA_LIB
+	cp ../src/engine/core/lib/sleep.so $LUA_LIB
+	cp ../src/engine/core/lib/platform.so $LUA_LIB
+	cp ../src/engine/core/lib/directory.so $LUA_LIB
+	cp ../src/engine/core/lib/window.so $LUA_LIB
 
-	cp ../src/promises.lua /usr/local/share/lua/5.4
-	cp ../src/oop.lua /usr/local/share/lua/5.4
-	cp ../src/engine/core/rmp.lua /usr/local/share/lua/5.4
+	# install the local plugins and themes if the configuration dir not found on home dir
+	cp -r ../src/engine/selfrmp $LUA_SHARE
+
+	cp ../src/promises.lua 		$LUA_SHARE
+	cp ../src/util.lua 		$LUA_SHARE
+	cp ../src/oop.lua 		$LUA_SHARE
+	cp ../src/engine/core/rmp.lua 	$LUA_SHARE
 	# cp ../rmp /bin
 
 	exit 0

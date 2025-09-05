@@ -310,14 +310,17 @@ function OOP.class(name, superClass, ...)
 		return false
 	end
 
-	-- TODO: bug
 	function class:instanceOf(targetClass)
-		if self == targetClass then
+		local currentClass = getmetatable(self).__index
+		if currentClass == targetClass then
 			return true
 		end
-
-		if self.__super then
-			return self.__super:instanceOf(targetClass)
+		local parent = currentClass.__super
+		while parent do
+			if parent == targetClass then
+				return true
+			end
+			parent = parent.__super
 		end
 
 		return false

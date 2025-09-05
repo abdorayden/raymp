@@ -114,16 +114,17 @@ RMP = {}
 -- require library's
 -- TODO: add directory handling
 local io = require("io")
-local keyboard = require("keyboard")
-local rmpaudio = require("rmpaudio")
-local sleep = require("sleep")
-local platform = require("platform")
-local directory = require("directory")
-local window = require("window")
+local keyboard = require("rmp.keyboard")
+local rmpaudio = require("rmp.rmpaudio")
+local sleep = require("rmp.sleep")
+local platform = require("rmp.platform")
+local directory = require("rmp.directory")
+local window = require("rmp.window")
 
 -- require rmp utility
-local OOP = require("oop")
-local Promise = require("promises")
+local OOP = require("rmp.oop")
+local Promise = require("rmp.promises")
+local Util = require("rmp.util")
 
 -- handle enumuration in lua using coroutine yield
 global_count_enum = -1
@@ -138,10 +139,12 @@ local function enum(reset)
 end
 
 do	-- os detection
-	RMP.LINUX  = enum(true)
-	RMP.WINDOWS  = enum()
-	RMP.MAC  = enum()
-	RMP.UNKOW  = enum()
+	RMP.PlatformType = {
+		LINUX  = enum(true),
+		WINDOWS  = enum(),
+		MAC  = enum(),
+		UNKOW  = enum()
+	}
 
 	function RMP.getOs() -- it will return enum value
 		return platform.platform() 
@@ -154,58 +157,69 @@ end
 
 -- check ansi escape code : https://en.wikipedia.org/wiki/ANSI_escape_code
 -- line style
-RMP.Strike		= "\27[9m"
-RMP.Hide		= "\27[8m"
-RMP.SlowBlink 		= "\27[5m"
-RMP.OverUnderline 	= "\27[53m"
-RMP.Underline 		= "\27[4m"
-RMP.DoubleUnderline	= "\27[21m"
-RMP.Italic	   	= "\27[3m"
-RMP.Bold	   	= "\27[1m"
-RMP.Regular   		= "\27[0m"
+RMP.TextStyle = {
+	Strike		= "\27[9m",
+	Hide		= "\27[8m",
+	SlowBlink 	= "\27[5m",
+	OverUnderline 	= "\27[53m",
+	Underline 	= "\27[4m",
+	DoubleUnderline	= "\27[21m",
+	Italic	   	= "\27[3m",
+	Bold	   	= "\27[1m",
+	Regular   	= "\27[0m"
+}
 
 -- colors
 -- TODO: handle colors using ColorFromHex
 -- ForeGround 
-RMP.FGBlack		= "\27[30m"
-RMP.FGRed	 	= "\27[31m" 
-RMP.FGGreen		= "\27[32m"
-RMP.FGYellow		= "\27[33m"
-RMP.FGBlue	 	= "\27[34m"
-RMP.FGMagenta 		= "\27[35m"
-RMP.FGCyan	 	= "\27[36m"
-RMP.FGWhite		= "\27[37m"
-
--- ForeGround bright
-RMP.FGBBlack		= "\27[90m"
-RMP.FGBRed	 	= "\27[91m" 
-RMP.FGBGreen		= "\27[92m"
-RMP.FGBYellow		= "\27[93m"
-RMP.FGBBlue		= "\27[94m"
-RMP.FGBMagenta 		= "\27[95m"
-RMP.FGBCyan		= "\27[96m"
-RMP.FGBWhite		= "\27[97m"
+RMP.FGColors = {
+	NoBrights = {
+		Black		= "\27[30m",
+		Red	 	= "\27[31m",
+		Green		= "\27[32m",
+		Yellow		= "\27[33m",
+		Blue	 	= "\27[34m",
+		Magenta 	= "\27[35m",
+		Cyan	 	= "\27[36m",
+		White		= "\27[37m"
+	},
+	Brights = {
+		-- ForeGround bright
+		Black		= "\27[90m",
+		Red	 	= "\27[91m",
+		Green		= "\27[92m",
+		Yellow		= "\27[93m",
+		Blue		= "\27[94m",
+		Magenta 	= "\27[95m",
+		Cyan		= "\27[96m",
+		White		= "\27[97m"
+	}
+}
 
 -- BackGround 
-RMP.BGBlack		= "\27[40m"
-RMP.BGRed	 	= "\27[41m" 
-RMP.BGGreen		= "\27[42m"
-RMP.BGYellow		= "\27[43m"
-RMP.BGBlue	 	= "\27[44m"
-RMP.BGMagenta 		= "\27[45m"
-RMP.BGCyan	 	= "\27[46m"
-RMP.BGWhite		= "\27[47m"
-
--- BackGround bright
-RMP.BGBBlack		= "\27[100m"
-RMP.BGBRed	 	= "\27[101m" 
-RMP.BGBGreen		= "\27[102m"
-RMP.BGBYellow		= "\27[103m"
-RMP.BGBBlue 		= "\27[104m"
-RMP.BGBMagenta 		= "\27[105m"
-RMP.BGBCyan		= "\27[106m"
-RMP.BGBWhite		= "\27[107m"
-
+RMP.BGColors = {
+	NoBrights = {
+		Black		= "\27[40m",
+		Red	 	= "\27[41m" ,
+		Green		= "\27[42m",
+		Yellow		= "\27[43m",
+		Blue	 	= "\27[44m",
+		Magenta 	= "\27[45m",
+		Cyan	 	= "\27[46m",
+		White		= "\27[47m"
+	},
+	Brights = {
+		-- BackGround bright
+		Black		= "\27[100m",
+		Red	 	= "\27[101m" ,
+		Green		= "\27[102m",
+		Yellow		= "\27[103m",
+		Blue 		= "\27[104m",
+		Magenta 	= "\27[105m",
+		Cyan		= "\27[106m",
+		White		= "\27[107m"
+	}
+}
 -- Imojis
 RMP.File_pos 	= "➯"
 RMP.Pause_start 	= "⏯"
@@ -268,7 +282,7 @@ RMP.Bar_100_per 	= "█"
 RMP.IError 	= "❌"
 RMP.IWarning 	= "⚠️"
 RMP.IMessage 	= "💬"
-RMP.IInfo 		= "ℹ️"
+RMP.IInfo 	= "ℹ️"
 
 -- TODO: create table class to create tables
 
@@ -395,26 +409,28 @@ end
 RMP.Text = OOP.class("Text")
 do	-- text
 	-- constructor
+	-- TODO: fix the error
 	function RMP.Text:constructor(text , style , fg , bg)
 		self.vterm = RMP.VirtualTerminal.new()
 		self.text = text or ""
 		self.fg = fg or RMP.Default
 		self.bg = bg or RMP.Default
 		self.style = style or RMP.Default
-		self.start_pos = 1
+		self.x = 1
+		self.y = 1
 		return self
 	end
 
 	-- method Position in lua used to controle position of the text 
 	function RMP.Text:setPosition(x,y)
-		self.x = x
-		self.y = y
+		self.x = tonumber(x or 1)
+		self.y = tonumber(y or 1)
 		return self
 	end
 
 	function RMP.Text:asVTerm()
 		self.vterm:writeText(self.x , self.y , self.text , self.fg , self.bg , self,style)
-		return vterm
+		return self.vterm
 	end
 
 	-- ColoredText accept text and color and return colored text
@@ -436,12 +452,6 @@ do	-- text
 
 	function RMP.Text:getBGColor()
 		return self.bg
-	end
-
-	function RMP.Text:fixTextToBox(w)
-		local text = string.sub(self.text , self.start_pos , math.floor(w) - 7 + self.start_pos)
-		self.start_pos = self.start_pos + math.floor(w) - 6
-		return text
 	end
 end
 
@@ -649,27 +659,32 @@ do 	-- creating window
 	function RMP.Window:createWindow(title , width , height , x , y , border_color , background_color , border_style , callback)
 		local vterm = RMP.VirtualTerminal.new()
 
+		if not width and not height and not x and not y then
+			return 
+		end
+
 		vterm:drawBox(title , math.floor(x) , math.floor(y) , math.floor(width) , math.floor(height) , border_style , border_color , background_color)
 
+		-- marked as deprecated
 		if callback ~= nil and type(callback) == "function" then
-			vterm:merge(callback(math.floor(x) , math.floor(y) , math.floor(x + width) , math.floor(y + height))) -- handle async
+			local lvt = callback(math.floor(x) , math.floor(y) , math.floor(x + width) , math.floor(y + height))
+			if lvt ~= nil then
+				vterm:merge() -- handle async
+			end
 		end
 
 		return vterm
 	end
 end
 
--- TODO: use  virtual terminal for more performence
--- TODO: should integrate VirtualTerminal to all components (Window , Terminal , Text , ...)
--- Virtual Terminal Buffer
-
 -- all components should return VirtualTerminal obj
+-- TODO: rewrite all VirtualTermminal methods to a native functions
 RMP.VirtualTerminal = OOP.class("VirtualTerminal")
 do	-- VirtualTerminal
 	function RMP.VirtualTerminal:constructor(width, height) -- constructor
 		local h , w = window.get_size()
-		self.width = width or w
-		self.height = height or h
+		self.width = width or w or 80
+		self.height = height or h or 24
 		self.width  = math.floor(self.width)
 		self.height = math.floor(self.height)
 		self.buffer = {}
@@ -730,9 +745,18 @@ do	-- VirtualTerminal
 			self:setChar(x + i - 1, y, char, fg, bg, style)
 		end
 		self.dirty = true
+
+		return self
 	end
 
 	function RMP.VirtualTerminal:drawBox(title, x, y, width, height, border_style, fg, bg)
+
+		local x = math.floor(x or 1)
+		local y = math.floor(y or 1)
+
+		local width  = math.floor(width or 80)
+		local height = math.floor(height or 24)
+
 		if border_style == nil or type(border_style) ~= 'table' or border_style[1] == nil then
 			TL = RMP.BoxDrawing.LightBorder[3] -- "┌" Top-left corner
 			TR = RMP.BoxDrawing.LightBorder[4] -- "┐" Top-right corner
@@ -767,7 +791,7 @@ do	-- VirtualTerminal
 			self:setChar(end_x, i, V, fg, bg)  -- Right border
 		end
 
-		if title and title ~= "" then
+		if title and title ~= "" and title:instanceOf(RMP.Text) then
 			-- TODO: fix bug , the title applied only when we put bg color to the title
 			self:writeText(math.floor((x*1.5 + ((width - x)/2)) - #(title:getText())/2) , y , title:getText() , title:getFGColor() , title:getBGColor() , title:getStyle()) 
 		end
@@ -888,9 +912,10 @@ do	-- VirtualTerminal
 	-- so you can merge the other virtual terminal to the main object
 	function RMP.VirtualTerminal:merge(thatTerm, offsetX, offsetY)
 
-		if thatTerm == nil then
+		if thatTerm == nil or not thatTerm:instanceOf(RMP.VirtualTerminal) then
 			return
 		end
+
 		offsetX = offsetX or 0
 		offsetY = offsetY or 0
 
@@ -999,7 +1024,10 @@ do	-- Terminal
 	end
 
 	function RMP.Terminal:getSize() -- h,w
-		return window.get_size()
+		local h , w = window.get_size()
+		h = tonumber(h) or 24
+		w = tonumber(w) or 80
+		return h, w
 	end
 
 	-- TODO: make sure that function works on windows
@@ -1018,7 +1046,7 @@ end
 -- TODO: handle Panel
 -- TODO: handle Loading  
 
--- TODO: handle Options class
+-- NOTE: untested
 RMP.Options = OOP.class("Options")
 do	-- Options
 	-- options : array of options 
@@ -1125,14 +1153,18 @@ do	-- Options
 
 	-- Log method will print the options to standerd output
 	function RMP.Options:parse()
+		local forRet = {} -- this tables contains parsed
 		for i = 1 , #self.options do
+			local text = ""
 			if self.marked_table[i] then
-				io.write(self.selected)
+				text = text .. self.selected .. " "
 			else
-				io.write(self.unselected)
+				text = text .. self.unselected .. " "
 			end
-			io.write(self.options[i])
+			text = text .. self.options[i]
+			table.insert(text , forRet)
 		end
+		return forRet
 	end
 end
 
@@ -1216,34 +1248,31 @@ do	-- Draw
 	end
 end
 
--- status
-RMP.MESSAGE = enum(true)
-RMP.INFO = enum()
-RMP.ERROR = enum()
-RMP.WARNING = enum()
-
 -- Position Layout
-RMP.CENTER 	= enum(true)
-RMP.TOP_LEFT 	= enum()
-RMP.TOP_RIGHT 	= enum()
-RMP.BUTTOM_LEFT 	= enum()
-RMP.BUTTOM_RIGHT 	= enum()
+RMP.PopupPosition = {
+	CENTER 		= enum(true),
+	TOP_LEFT 	= enum(),
+	TOP_RIGHT 	= enum(),
+	BUTTOM_LEFT 	= enum(),
+	BUTTOM_RIGHT 	= enum()
+}
 
 -- TODO: handle Bar  
+-- TODO: handle timeout async for popups
 RMP.Popup = OOP.class("Popup")
 do	-- Popups
 	-- TODO: add emojis for each status
-	function RMP.Popup:run(message , title , status , border_color , bg_color , poslayout)
+	function RMP.Popup:run(message , title , border_color , bg_color , poslayout)
 		rows , cols = RMP.Terminal:getSize()
-		local poslayout = poslayout or RMP.CENTER
+		local poslayout = poslayout or RMP.PopupPosition.CENTER
 		local x , y = nil , nil
-		if poslayout == RMP.TOP_LEFT then
+		if poslayout == RMP.PopupPosition.TOP_LEFT then
 			x , y = 2,2
-		elseif poslayout == RMP.TOP_RIGHT then
+		elseif poslayout == RMP.PopupPosition.TOP_RIGHT then
 			x , y = cols - (cols/4) -  2,2
-		elseif poslayout == RMP.BUTTOM_LEFT then
+		elseif poslayout == RMP.PopupPosition.BUTTOM_LEFT then
 			x , y = 2,rows - (rows/4) -  2
-		elseif poslayout == RMP.BUTTOM_RIGHT then
+		elseif poslayout == RMP.PopupPosition.BUTTOM_RIGHT then
 			x , y = cols - (cols/4) -  2,rows - (rows/4) -  2
 		else
 			x , y = (cols / 2) - (cols/8) , (rows / 2) - (rows/8)
@@ -1284,73 +1313,112 @@ do	-- Popups
 			return vterm
 		end)
 	end
+end
 
-	function RMP.Popup:error(message, poslayout)
-		local poslayout = poslayout or RMP.CENTER
-		return RMP.Popup:run(
-			message , 
-			RMP.Text.new(
-			"[ " .. "ERROR" .. " ]", 
-			RMP.Bold , 
-			RMP.FGWhite,
-			RMP.BGRed
-			), 
-			RMP.ERROR , 
-			RMP.FGRed , 
-			nil,
-			poslayout
-		)
+RMP.Notify = OOP.class("Notify" , RMP.Popup)
+do
+	function RMP.Notify:constructor(
+		time,		-- the time will live on the Frame , should be ms
+		fps,		-- the fps time
+		message		-- the message
+	)
+		self.message = message or ""
+		self.time = time
+		self.counter = 0
+		self.fps = fps
 	end
 
-	function RMP.Popup:info(message , poslayout)
-		local poslayout = poslayout or RMP.CENTER
-		return RMP.Popup:run(
-			message ,
-			RMP.Text.new(
-			"[ " .. "INFO" .. " ]" , 
-			RMP.Bold , 
-			RMP.FGWhite , 
-			RMP.BGBGreen
-			), 
-			RMP.INFO , 
-			RMP.FGGreen , 
-			nil,
-			poslayout
-		)
+	function RMP.Notify:setMessage(message)
+		self.message = message or ""
 	end
 
-	function RMP.Popup:message(message , poslayout)
-		local poslayout = poslayout or RMP.CENTER
-		return RMP.Popup:run(
-			message ,  
-			RMP.Text.new(
-			"[ " .. "Message" .. " ]" , 
-			RMP.Bold , 
-			RMP.FGWhite,
-			RMP.BGBBlue
-			), 
-			RMP.MESSAGE , 
-			RMP.FGBlue , 
-			nil,
-			poslayout
-		)
+	function RMP.Notify:reset()
+		self.counter = 0
 	end
 
-	function RMP.Popup:warning(message , poslayout)
-		local poslayout = poslayout or RMP.CENTER
-		return RMP.Popup:run(
-			message ,  
-			RMP.Text.new(
-			"[ " .. "Warning" .. " ]" , 
-			RMP.Bold , 
-			RMP.FGWhite,
-			RMP.BGBYellow
-			), 
-			RMP.WARNING , 
-			RMP.FGYellow , 
-			nil,
-			poslayout
-		)
+	function RMP.Notify:error(poslayout)
+		local poslayout = poslayout or RMP.PopupPosition.CENTER
+
+		if self.counter < math.floor(self.fps*self.time/(self.fps/10)) then
+			self.counter = self.counter + 1
+			return self:super( 
+				"run" ,
+					self.message, 
+					RMP.Text.new(
+						"[ " .. "ERROR" .. " ]", 
+						RMP.TextStyle.Bold , 
+						RMP.FGColors.NoBrights.White,
+						RMP.BGColors.NoBrights.BGRed
+					), 
+					RMP.FGColors.NoBrights.Red , 
+					nil,
+					poslayout
+			)
+		end
+	end
+
+	function RMP.Notify:info(poslayout)
+		local poslayout = poslayout or RMP.PopupPosition.CENTER
+
+		if self.counter < self.time then
+			self.counter = self.counter + self.delta
+			return self:super(
+				"run",
+					self.message ,
+					RMP.Text.new(
+						"[ " .. "INFO" .. " ]" , 
+						RMP.TextStyle.Bold , 
+						RMP.FGColors.NoBrights.White , 
+						RMP.BGColors.NoBrights.Green
+					), 
+					RMP.FGColors.NoBrights.Green , 
+					nil,
+					poslayout
+			)
+		end
+	end
+
+	function RMP.Notify:message(poslayout)
+		local poslayout = poslayout or RMP.PopupPosition.CENTER
+
+		if self.counter < self.time then
+			self.counter = self.counter + self.delta
+			return self:super(
+				"run",
+					self.message ,  
+					RMP.Text.new(
+						"[ " .. "Message" .. " ]" , 
+						RMP.TextStyle.Bold , 
+						RMP.FGColors.NoBrights.White,
+						RMP.BGColors.NoBrights.Blue
+					), 
+					RMP.FGColors.NoBrights.Blue , 
+					nil,
+					poslayout
+			)
+		end
+	end
+
+	function RMP.Notify:warning(poslayout)
+		local poslayout = poslayout or RMP.PopupPosition.CENTER
+
+		if self.counter < self.time then
+			self.counter = self.counter + self.delta
+			return self:super(
+				"run",
+					self.message ,  
+					RMP.Text.new(
+						"[ " .. "Warning" .. " ]" , 
+						RMP.TextStyle.Bold , 
+						RMP.FGColors.NoBrights.White,
+						RMP.BGColors.NoBrights.Yellow
+					), 
+					RMP.FGColors.NoBrights.Yellow , 
+					nil,
+					poslayout
+
+			)
+		end
 	end
 end
 
@@ -1602,6 +1670,14 @@ do	-- Path
 		self.path = path or self:getCurrentPath()
 	end
 
+	function RMP.Path:setPath(path)
+		self.path = path
+	end
+
+	function RMP.Path:getPath()
+		return self.path
+	end
+
 	function RMP.Path:getCurrentPath()
 		return directory.get_current_path()
 	end
@@ -1721,19 +1797,175 @@ end
 RMP.Config = OOP.class("Config")
 do 	-- Config
 
+	-- TODO: if load configuration failed we should run the default themes and plugins
+	-- TODO: check windows version
 	function RMP.Config:constructor(confPath)
-		self.confPath = confPath -- or default_conf_path
-	end
+		self.cfgObj = nil
+		self.isValidFile = false
+		self.isError = nil
 
-	function RMP.Config:load()
-		local path
-		-- self.cfg = require(".init")
+		self.currentPath = RMP.Path.new()
+		self.homePath = RMP.Path.new(self.currentPath:getHomePath())
+
+		if not self.homePath:find(".rmp" , false) then
+			self.isError = ".rmp directory not found in home dir"
+			return
+		end
+
+		self.configurationPath = RMP.Path.new(self.homePath:getPath().."/.rmp/")
+
+		if not self.configurationPath:find("init.lua" , true) then
+			self.isError = "init.lua not found in .rmp dir"
+			return
+		end
+
+		self.initPath = RMP.Path.new(self.configurationPath:getPath().."/init.lua") -- this path should be required
+		self.isValidFile = true
+
 		return self
 	end
 
-	function RMP.Config:integratePlugUsingId(id)
+	function RMP.Config:load() -- (boolean , Error)
+		if not self.isValidFile then
+			return false , self.isError
+		end
+
+		if not self.cfgObj then
+			local ok , res = pcall(function()
+				return dofile(self.initPath:getPath())
+			end)
+
+			if not ok then -- not okay :`(
+				self.isError = "failed to load init.lua configuration file: " .. tostring(res)
+				return false , self.isError
+			end
+
+			if type(res) ~= "table" then
+				self.isError = "init.lua file must return a table , check documentation"
+				return false , self.isError
+			end
+			self. cfgObj = res
+		end
+		return true , nil
+	end
+
+	function RMP.Config:isValidConfig()
+		return self.isValidFile and self.cfgObj ~= nil
+	end
+
+	function RMP.Config:getInitFileAsObject()
+		if self.cfgObj and type(self.cfgObj) == "table" then
+			return self.cfgObj
+		end
+		return nil
+	end
+
+	function RMP.Config:getThemesAsObject()
+		if self.cfgObj and self.cfgObj.theme and type(self.cfgObj.theme) == "string" then
+			return self.cfgObj.theme
+		end
+		return nil
+	end
+
+	function RMP.Config:getSoundKeyMaps()
+		if self.cfgObj and self.cfgObj.soundMap and type(self.cfgObj.soundMap) == "table" then
+			return self.cfgObj.soundMap
+		end
+		-- redefine keymaps if not found on configuration file
+		return {}
+	end
+
+	function RMP.Config:getAllPlugins()
+		if not self.cfgObj or not self.cfgObj.plugins or type(self.cfgObj.plugins) ~= "table" then
+			return {}
+		end
+		return self.cfgObj.plugins
+	end
+
+	function RMP.Config:getPluginFromThemeWindowId(id)
+
+		if not self.cfgObj or not self.cfgObj.plugins or type(self.cfgObj.plugins) ~= "table" then
+			return nil
+		end
+
+		local id = id or 0
+
+		for _ , obj in ipairs(self.cfgObj.plugins) do
+			if obj.themeWindowId and obj.isActivated and obj.name then
+				if id == obj.themeWindowId then
+					local ok , res = pcall(function() 
+						local pluginPath = RMP.Path.new(self.initPath:getPath().."/plugins/"..obj.name.."/")
+						if not pluginPath:find(obj.name..".lua" , true) then
+							return nil
+						end
+						return dofile(pluginPath:getPath()..onj.name..".lua")
+					end)
+
+					if ok and res then
+						return res , nil
+					else
+						return nil , "Warning: Failed to load plugin '" .. obj.name .. "': " .. tostring(res)
+					end
+				end
+			end
+		end
+
+		return nil
 		-- TODO: handle multiple plugins in same window , and check the input key to change between them
 		-- search key id in table and return the callback function 
+	end
+
+	function RMP.Config:getLoadError()
+		return self.isError
+	end
+end
+
+-- TODO: create Frame class
+-- /////////////////////////////////////////////////////
+-- Hight Level API
+-- /////////////////////////////////////////////////////
+
+RMP.Frame = OOP.class("Frame" , RMP.VirtualTerminal)
+do
+	function RMP.Frame:constructor(width , heigth)
+		self:super("constructor", width , heigth)
+		self.fps = 30
+	end
+
+	function RMP.Frame:setFps(fps)
+		self.fps = fps
+	end
+
+	function RMP.Frame:getFps()
+		return self.fps
+	end
+
+	function RMP.Frame:getDeltaTime()
+		return 1/self.fps -- second
+	end
+
+	function RMP.Frame:positionedFrame(x , y)
+		local x = x or 1
+		local y = y or 1
+		self:super("moveCursor" , x , y)
+	end
+
+	function RMP.Frame:add(component)
+		self:super("merge" , component)
+	end
+
+	function RMP.Frame:run()
+		self:super("render")
+		self:super("clear")
+		RMP.sleep(math.floor(RMP.Duration.new(self:getDeltaTime()):fromSec()))
+	end
+end
+
+-- TODO: create ComponentManager
+RMP.ComponentManager = OOP.class("ComponentManager")
+do
+	function RMP.ComponentManager:constructor()
+		io.write("ComponentManager not implemented")
 	end
 end
 
