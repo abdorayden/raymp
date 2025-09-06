@@ -139,7 +139,7 @@ return function (cfgObj)
 					, math.floor(lw - (lw/4))
 					, math.floor(lh - (lh/2))
 					, math.floor(lw/8)
-					, math.floor(lh/8)
+					, math.floor(lh/8) + 2
 					, nil 
 					, nil 
 					, nil
@@ -151,14 +151,22 @@ return function (cfgObj)
 							if success and win then
 								mainFrame:add(win)
 							else
-								mainFrame:add(api.VirtualTerminal.new():writeText(xxx + 2 , yyy + 2 , "Hello"))
-								Notify.new(2 , 70 , "plug error"):error()
+								-- mainFrame:add(api.VirtualTerminal.new():writeText(xxx + 2 , yyy + 2 , "Hello"))
+								mainFrame:add(plug_error)
 							end
 						end
 						return nil
 					end
 			)
 
+			local statusWindow = Window.new(-1):createWindow(
+				nil,
+				lw/4,
+				lh/2 - lh/8 - 1,
+				2,
+				lh/8 + lh - (lh/2) + 2)
+
+			mainFrame:add(statusWindow)
 			mainFrame:add(secondWindow)
 
 			return nil

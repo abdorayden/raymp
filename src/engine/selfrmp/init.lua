@@ -27,7 +27,8 @@ return {
 				themeWindowId = 2, -- if this attr is not nil or exists , the runner ignore activate
 				isActivated = true,
 				activate = api.KEY_E,
-				name = "rmplikemp3" -- this name should be the same directory and same lua file
+				name = "music_waves" -- this name should be the same directory and same lua file
+				-- name = "plasma_wave_effect" -- this name should be the same directory and same lua file
 			},
 	-- 		{
 	-- 			isactivate = false,

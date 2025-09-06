@@ -1,27 +1,18 @@
 local api = require("rmp.rmp")
-
 local Window = api.Window
 
--- return function(sound_cfg)
--- this function accept 4 params
 return api.quickRoutine(function(x , y , xx , yy)
-	-- local vt = api.VirtualTerminal.new()
-	-- vt:writeText((xx - x)/2,(yy-y)/2 , "plugin" , nil,nil,nil)
-	-- while true do
-        	-- coroutine.yield(vt)
-	-- end
-
 	local x = x + 1 
 	local y = y+1 
-	local xx = xx+16 
-	local yy = yy+4
+	local xx = xx*1.15
+	local yy = yy*1.3
 
 	local h , w = (yy-y) , (xx-x)
 	local rmpmp3 = "Rmp_Mp3"
 	-- local  rh , rw = 1 , #rmpmp3
 	local  rh , rw = h/4 , w/4
 	local dx , dy = 1 , 1
-	local ux , uy = x+1,y
+	local ux , uy = x,y
 
 	local bgcolor = api.BGColors.NoBrights.Black
 	local fgcolor = api.FGColors.NoBrights.Blue

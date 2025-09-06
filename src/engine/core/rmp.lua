@@ -158,15 +158,24 @@ end
 -- check ansi escape code : https://en.wikipedia.org/wiki/ANSI_escape_code
 -- line style
 RMP.TextStyle = {
-	Strike		= "\27[9m",
-	Hide		= "\27[8m",
-	SlowBlink 	= "\27[5m",
-	OverUnderline 	= "\27[53m",
-	Underline 	= "\27[4m",
-	DoubleUnderline	= "\27[21m",
-	Italic	   	= "\27[3m",
-	Bold	   	= "\27[1m",
-	Regular   	= "\27[0m"
+	Strike			= "\27[9m",
+	Hide			= "\27[8m",
+	SlowBlink 		= "\27[5m",
+	OverUnderline 		= "\27[53m",
+	Underline 		= "\27[4m",
+	DoubleUnderline		= "\27[21m",
+	Italic	   		= "\27[3m",
+	Bold	   		= "\27[1m",
+	RapidBlink      	= "\27[6m",
+	Faint           	= "\27[2m",
+	Reverse         	= "\27[7m",
+	Framed          	= "\27[51m",
+	Encircled       	= "\27[52m",
+	Overline        	= "\27[55m",
+	ProportionalSpacing 	= "\27[26m",
+	Superscript     	= "\27[73m",
+	Subscript       	= "\27[74m",
+	Regular   		= "\27[0m"
 }
 
 -- colors
@@ -316,6 +325,19 @@ RMP.BoxDrawing = {
 		"╦",  -- Heavy down and horizontal tee (U+2566)
 		"╩",  -- Heavy up and horizontal tee (U+2569)
 		"╬",  -- Heavy vertical and horizontal cross (U+256C)
+	},
+	RoundedCorners = {
+		"─",  -- Light horizontal line (U+2500)
+		"│",  -- Light vertical line (U+2502)
+		"╭",  -- Light down and right corner (U+250C)
+		"╮",  -- Light down and left corner (U+2510)
+		"╰",  -- Light up and right corner (U+2514)
+		"╯",  -- Light up and left corner (U+2518)
+		"├",  -- Light vertical and right tee (U+251C)
+		"┤",  -- Light vertical and left tee (U+2524)
+		"┬",  -- Light down and horizontal tee (U+252C)
+		"┴",  -- Light up and horizontal tee (U+2534)
+		"┼",  -- Light vertical and horizontal cross (U+253C)
 	}
 }
 	-- -- Rounded corners (light)
@@ -667,7 +689,7 @@ do 	-- creating window
 
 		-- marked as deprecated
 		if callback ~= nil and type(callback) == "function" then
-			local lvt = callback(math.floor(x) , math.floor(y) , math.floor(x + width) , math.floor(y + height))
+			local lvt = callback(math.floor(x + 1) , math.floor(y + 1) , math.floor(x + width - 1) , math.floor(y + height - 1))
 			if lvt ~= nil then
 				vterm:merge() -- handle async
 			end
@@ -1961,11 +1983,21 @@ do
 	end
 end
 
+-- you don't have to think about yield or another loop
+-- just accept boundries and return virtual terminal object
+function RMP.plug(callback)
+	return RMP.quickRoutine(function(x,y,xx,yy) 
+		while true do
+			coroutine.yield(callback(x,y,xx,yy))
+		end
+	end)
+end
+
 -- TODO: create ComponentManager
-RMP.ComponentManager = OOP.class("ComponentManager")
+RMP.Plug = OOP.class("Plug")
 do
-	function RMP.ComponentManager:constructor()
-		io.write("ComponentManager not implemented")
+	function RMP.Plug:constructor()
+		io.write("Plug not implemented")
 	end
 end
 
