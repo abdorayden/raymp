@@ -129,6 +129,11 @@ return function (cfgObj)
 			local lw = xx-x
 			local lh = yy-y
 
+			local x = math.floor(lw/8)
+			local y = math.floor(lh/8) + 2
+			local w = math.floor(lw - (lw/4))
+			local h = math.floor(lh - (lh/2))
+
 			local secondWindow = Window.new(2)
 				-- TODO: add checks for the type of the title
 				:createWindow(
@@ -136,24 +141,24 @@ return function (cfgObj)
 						, nil 
 						, api.FGColors.Brights.Red
 						, api.BGColors.NoBrights.Black)
-					, math.floor(lw - (lw/4))
-					, math.floor(lh - (lh/2))
-					, math.floor(lw/8)
-					, math.floor(lh/8) + 2
+					, w
+					, h
+					, x
+					, y
 					, nil 
 					, nil 
 					, nil
 					-- inject plug directly here and implemens Plug class to simplify all of this
 					, function(xxx,yyy,xxxx,yyyy)
 						-- mainFrame:add(api.VirtualTerminal.new():writeText(xxx + 78 , yyy + 13 , "Hello"))
-						if cfgObj[2] then
-							local success, win = coroutine.resume(cfgObj[2] , xxx , yyy , xxxx , yyyy)
-							if success and win then
-								mainFrame:add(win)
-							else
+						if type(cfgObj[2]) == "function" then
+							-- local success, win = coroutine.resume(cfgObj[2] , x , y , x + w , y + h)
+							-- if success and win then
+							mainFrame:add(cfgObj[2](xxx,yyy,xxxx,yyyy))
+							-- else
 								-- mainFrame:add(api.VirtualTerminal.new():writeText(xxx + 2 , yyy + 2 , "Hello"))
-								mainFrame:add(plug_error)
-							end
+								-- mainFrame:add(plug_error)
+							-- end
 						end
 						return nil
 					end

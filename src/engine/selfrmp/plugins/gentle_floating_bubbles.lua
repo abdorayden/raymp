@@ -1,6 +1,6 @@
 local api = require("rmp.rmp")
 
-return api.quickRoutine(function(x, y, xx, yy)
+return function(x, y, xx, yy)
 	local h, w = (yy - y), (xx - x)
 	local bubbles = {}
 
@@ -13,35 +13,32 @@ return api.quickRoutine(function(x, y, xx, yy)
 			sway = math.random(-5, 5) / 20
 		}
 	end
+	local vt = api.VirtualTerminal.new()
 
-	while true do
-		local vt = api.VirtualTerminal.new()
+	vt:merge(api.Draw:rectangle(x, y, w, h, api.BGColors.NoBrights.Blue))
 
-		vt:merge(api.Draw:rectangle(x, y, w, h, api.BGColors.NoBrights.Blue))
+	for i, b in ipairs(bubbles) do
+		b.y = b.y - b.speed
+		b.x = b.x + b.sway
 
-		for i, b in ipairs(bubbles) do
-			b.y = b.y - b.speed
-			b.x = b.x + b.sway
-
-			if b.y < y then
-				b.y = yy
-				b.x = math.random(x, xx)
-			end
-
-			if b.x < x then b.x = x end
-			if b.x > xx then b.x = xx end
-
-			vt:merge(api.Draw:rectangle(
-			math.floor(b.x), math.floor(b.y),
-			b.size, b.size,
-			api.BGColors.Brights.White
-			))
+		if b.y < y then
+			b.y = yy
+			b.x = math.random(x, xx)
 		end
 
-		coroutine.yield(vt)
+		if b.x < x then b.x = x end
+		if b.x > xx then b.x = xx end
 
-		local delay = 0.1
-		local start = os.clock()
-		while os.clock() - start < delay do end
+		vt:merge(api.Draw:rectangle(
+		math.floor(b.x), math.floor(b.y),
+		b.size, b.size,
+		api.BGColors.Brights.White
+		))
 	end
-end)
+
+
+	local delay = 0.1
+	local start = os.clock()
+	while os.clock() - start < delay do end
+	return vt
+end

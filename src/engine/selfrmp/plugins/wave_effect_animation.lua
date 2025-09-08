@@ -1,8 +1,10 @@
 local api = require("rmp.rmp")
-return api.quickRoutine(function(x, y, xx, yy)
+
+return function(x, y, xx, yy)
 	local h, w = (yy - y), (xx - x)
 	local particles = {}
 	local particleCount = 50
+	local vt = api.VirtualTerminal.new()
 
 	for i = 1, particleCount do
 		particles[i] = {
@@ -14,27 +16,18 @@ return api.quickRoutine(function(x, y, xx, yy)
 		}
 	end
 
-	while true do
-		local vt = api.VirtualTerminal.new()
-		for i, p in ipairs(particles) do
-			p.x = p.x + p.speed
-			if p.x > xx then p.x = x end
+	for i, p in ipairs(particles) do
+		p.x = p.x + p.speed
+		if p.x > xx then p.x = x end
 
-			local waveHeight = math.sin(p.x * 0.1) * (h / 3)
-			p.y = (y + yy) / 2 + waveHeight
+		local waveHeight = math.sin(p.x * 0.1) * (h / 3)
+		p.y = (y + yy) / 2 + waveHeight
 
-			vt:merge(api.Draw:rectangle(
-			math.floor(p.x), math.floor(p.y),
-			p.size, p.size,
-			p.color
-			))
-		end
-
-		coroutine.yield(vt)
-
-		local delay = 0.05
-		local start = os.clock()
-		while os.clock() - start < delay do end
+		vt:merge(api.Draw:rectangle(
+		math.floor(p.x), math.floor(p.y),
+		p.size, p.size,
+		p.color
+		))
 	end
-end)
-
+	return vt
+end

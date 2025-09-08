@@ -127,23 +127,25 @@ local Promise = require("rmp.promises")
 local Util = require("rmp.util")
 
 -- handle enumuration in lua using coroutine yield
-global_count_enum = -1
-local function enum(reset)
-	reset = reset or false
+local global_count_enum = -1
+function RMP.enum(reset , value , start)
+	local reset = reset or false
+	local value = value or 1
+	local start = start or -1
 
 	if reset then
-		global_count_enum = -1
+		global_count_enum = start
 	end
-	global_count_enum = global_count_enum + 1
+	global_count_enum = global_count_enum + value
 	return global_count_enum
 end
 
 do	-- os detection
 	RMP.PlatformType = {
-		LINUX  = enum(true),
-		WINDOWS  = enum(),
-		MAC  = enum(),
-		UNKOW  = enum()
+		LINUX  = RMP.enum(true),
+		WINDOWS  = RMP.enum(),
+		MAC  = RMP.enum(),
+		UNKOW  = RMP.enum()
 	}
 
 	function RMP.getOs() -- it will return enum value
@@ -477,124 +479,124 @@ do	-- text
 	end
 end
 
--- the enumeration value returns from HandleKey input
-RMP.KEY_CTRL_A = enum(true) 
-RMP.KEY_CTRL_B = enum() 
-RMP.KEY_CTRL_C = enum() 
-RMP.KEY_CTRL_D = enum() 
-RMP.KEY_CTRL_E = enum()
-RMP.KEY_CTRL_F = enum() 
-RMP.KEY_CTRL_G = enum() 
-RMP.KEY_CTRL_H = enum() 
-RMP.KEY_CTRL_K = enum() 
-RMP.KEY_CTRL_L = enum() 
-RMP.KEY_CTRL_M = enum() 
-RMP.KEY_CTRL_N = enum() 
-RMP.KEY_CTRL_O = enum()
-RMP.KEY_CTRL_P = enum() 
-RMP.KEY_CTRL_Q = enum() 
-RMP.KEY_CTRL_R = enum() 
-RMP.KEY_CTRL_S = enum() 
-RMP.KEY_CTRL_T = enum()
-RMP.KEY_CTRL_U = enum() 
-RMP.KEY_CTRL_V = enum() 
-RMP.KEY_CTRL_W = enum() 
-RMP.KEY_CTRL_X = enum() 
-RMP.KEY_CTRL_Y = enum()
-RMP.KEY_CTRL_Z = enum()
-RMP.KEY_ENTER = enum() 
-RMP.KEY_SPACE = enum() 
-RMP.KEY_ESCAPE = enum() 
-RMP.KEY_UP = enum() 
-RMP.KEY_DOWN = enum()
-RMP.KEY_LEFT = enum() 
-RMP.KEY_RIGHT = enum() 
-RMP.KEY_TAB = enum()
-RMP.KEY_A = enum() 
-RMP.KEY_B = enum() 
-RMP.KEY_C = enum() 
-RMP.KEY_D = enum() 
-RMP.KEY_E = enum() 
-RMP.KEY_F = enum() 
-RMP.KEY_G = enum() 
-RMP.KEY_H = enum()
-RMP.KEY_I = enum() 
-RMP.KEY_J = enum() 
-RMP.KEY_K = enum() 
-RMP.KEY_L = enum() 
-RMP.KEY_M = enum() 
-RMP.KEY_N = enum() 
-RMP.KEY_O = enum() 
-RMP.KEY_P = enum()
-RMP.KEY_Q = enum() 
-RMP.KEY_R = enum() 
-RMP.KEY_S = enum() 
-RMP.KEY_T = enum() 
-RMP.KEY_U = enum() 
-RMP.KEY_V = enum() 
-RMP.KEY_W = enum() 
-RMP.KEY_X = enum()
-RMP.KEY_Y = enum() 
-RMP.KEY_Z = enum()
-RMP.KEY_SHIFT_A = enum() 
-RMP.KEY_SHIFT_B = enum() 
-RMP.KEY_SHIFT_C = enum() 
-RMP.KEY_SHIFT_D = enum() 
-RMP.KEY_SHIFT_E = enum()
-RMP.KEY_SHIFT_F = enum() 
-RMP.KEY_SHIFT_G = enum() 
-RMP.KEY_SHIFT_H = enum() 
-RMP.KEY_SHIFT_I = enum() 
-RMP.KEY_SHIFT_J = enum()
-RMP.KEY_SHIFT_K = enum() 
-RMP.KEY_SHIFT_L = enum() 
-RMP.KEY_SHIFT_M = enum() 
-RMP.KEY_SHIFT_N = enum() 
-RMP.KEY_SHIFT_O = enum()
-RMP.KEY_SHIFT_P = enum() 
-RMP.KEY_SHIFT_Q = enum() 
-RMP.KEY_SHIFT_R = enum() 
-RMP.KEY_SHIFT_S = enum() 
-RMP.KEY_SHIFT_T = enum()
-RMP.KEY_SHIFT_U = enum() 
-RMP.KEY_SHIFT_V = enum() 
-RMP.KEY_SHIFT_W = enum() 
-RMP.KEY_SHIFT_X = enum() 
-RMP.KEY_SHIFT_Y = enum()
-RMP.KEY_SHIFT_Z = enum()
-RMP.KEY_0 = enum() 
-RMP.KEY_1 = enum() 
-RMP.KEY_2 = enum() 
-RMP.KEY_3 = enum() 
-RMP.KEY_4 = enum() 
-RMP.KEY_5 = enum()
-RMP.KEY_6 = enum() 
-RMP.KEY_7 = enum() 
-RMP.KEY_8 = enum() 
-RMP.KEY_9 = enum()
-RMP.KEY_PLUS = enum() 
-RMP.KEY_MINUS = enum() 
-RMP.KEY_GT = enum() 
-RMP.KEY_LT = enum() 
-RMP.KEY_HASHTAG = enum()
-RMP.KEY_DOLAR = enum() 
-RMP.KEY_PERSANT = enum() 
-RMP.KEY_STAR = enum() 
-RMP.KEY_DOT = enum() 
-RMP.KEY_UNDERS = enum()
-RMP.KEY_SEMICOL = enum() 
-RMP.KEY_QUISTION_MARK = enum() 
-RMP.KEY_AT = enum() 
-RMP.KEY_OPCURB = enum()
-RMP.KEY_CLCURB = enum() 
-RMP.KEY_BACK_SLASH = enum() 
-RMP.KEY_BACKTICK = enum() 
-RMP.KEY_OPEN_BRAKET = enum()
-RMP.KEY_CLOSED_BRAKET = enum() 
-RMP.KEY_BAR = enum() 
-RMP.KEY_DBL_QUOTE = enum() 
-RMP.KEY_SINGLE_QOUTE = enum()
-RMP.NONE = enum()
+-- the RMP.enumeration value returns from HandleKey input
+RMP.KEY_CTRL_A = RMP.enum(true) 
+RMP.KEY_CTRL_B = RMP.enum() 
+RMP.KEY_CTRL_C = RMP.enum() 
+RMP.KEY_CTRL_D = RMP.enum() 
+RMP.KEY_CTRL_E = RMP.enum()
+RMP.KEY_CTRL_F = RMP.enum() 
+RMP.KEY_CTRL_G = RMP.enum() 
+RMP.KEY_CTRL_H = RMP.enum() 
+RMP.KEY_CTRL_K = RMP.enum() 
+RMP.KEY_CTRL_L = RMP.enum() 
+RMP.KEY_CTRL_M = RMP.enum() 
+RMP.KEY_CTRL_N = RMP.enum() 
+RMP.KEY_CTRL_O = RMP.enum()
+RMP.KEY_CTRL_P = RMP.enum() 
+RMP.KEY_CTRL_Q = RMP.enum() 
+RMP.KEY_CTRL_R = RMP.enum() 
+RMP.KEY_CTRL_S = RMP.enum() 
+RMP.KEY_CTRL_T = RMP.enum()
+RMP.KEY_CTRL_U = RMP.enum() 
+RMP.KEY_CTRL_V = RMP.enum() 
+RMP.KEY_CTRL_W = RMP.enum() 
+RMP.KEY_CTRL_X = RMP.enum() 
+RMP.KEY_CTRL_Y = RMP.enum()
+RMP.KEY_CTRL_Z = RMP.enum()
+RMP.KEY_ENTER = RMP.enum() 
+RMP.KEY_SPACE = RMP.enum() 
+RMP.KEY_ESCAPE = RMP.enum() 
+RMP.KEY_UP = RMP.enum() 
+RMP.KEY_DOWN = RMP.enum()
+RMP.KEY_LEFT = RMP.enum() 
+RMP.KEY_RIGHT = RMP.enum() 
+RMP.KEY_TAB = RMP.enum()
+RMP.KEY_A = RMP.enum() 
+RMP.KEY_B = RMP.enum() 
+RMP.KEY_C = RMP.enum() 
+RMP.KEY_D = RMP.enum() 
+RMP.KEY_E = RMP.enum() 
+RMP.KEY_F = RMP.enum() 
+RMP.KEY_G = RMP.enum() 
+RMP.KEY_H = RMP.enum()
+RMP.KEY_I = RMP.enum() 
+RMP.KEY_J = RMP.enum() 
+RMP.KEY_K = RMP.enum() 
+RMP.KEY_L = RMP.enum() 
+RMP.KEY_M = RMP.enum() 
+RMP.KEY_N = RMP.enum() 
+RMP.KEY_O = RMP.enum() 
+RMP.KEY_P = RMP.enum()
+RMP.KEY_Q = RMP.enum() 
+RMP.KEY_R = RMP.enum() 
+RMP.KEY_S = RMP.enum() 
+RMP.KEY_T = RMP.enum() 
+RMP.KEY_U = RMP.enum() 
+RMP.KEY_V = RMP.enum() 
+RMP.KEY_W = RMP.enum() 
+RMP.KEY_X = RMP.enum()
+RMP.KEY_Y = RMP.enum() 
+RMP.KEY_Z = RMP.enum()
+RMP.KEY_SHIFT_A = RMP.enum() 
+RMP.KEY_SHIFT_B = RMP.enum() 
+RMP.KEY_SHIFT_C = RMP.enum() 
+RMP.KEY_SHIFT_D = RMP.enum() 
+RMP.KEY_SHIFT_E = RMP.enum()
+RMP.KEY_SHIFT_F = RMP.enum() 
+RMP.KEY_SHIFT_G = RMP.enum() 
+RMP.KEY_SHIFT_H = RMP.enum() 
+RMP.KEY_SHIFT_I = RMP.enum() 
+RMP.KEY_SHIFT_J = RMP.enum()
+RMP.KEY_SHIFT_K = RMP.enum() 
+RMP.KEY_SHIFT_L = RMP.enum() 
+RMP.KEY_SHIFT_M = RMP.enum() 
+RMP.KEY_SHIFT_N = RMP.enum() 
+RMP.KEY_SHIFT_O = RMP.enum()
+RMP.KEY_SHIFT_P = RMP.enum() 
+RMP.KEY_SHIFT_Q = RMP.enum() 
+RMP.KEY_SHIFT_R = RMP.enum() 
+RMP.KEY_SHIFT_S = RMP.enum() 
+RMP.KEY_SHIFT_T = RMP.enum()
+RMP.KEY_SHIFT_U = RMP.enum() 
+RMP.KEY_SHIFT_V = RMP.enum() 
+RMP.KEY_SHIFT_W = RMP.enum() 
+RMP.KEY_SHIFT_X = RMP.enum() 
+RMP.KEY_SHIFT_Y = RMP.enum()
+RMP.KEY_SHIFT_Z = RMP.enum()
+RMP.KEY_0 = RMP.enum() 
+RMP.KEY_1 = RMP.enum() 
+RMP.KEY_2 = RMP.enum() 
+RMP.KEY_3 = RMP.enum() 
+RMP.KEY_4 = RMP.enum() 
+RMP.KEY_5 = RMP.enum()
+RMP.KEY_6 = RMP.enum() 
+RMP.KEY_7 = RMP.enum() 
+RMP.KEY_8 = RMP.enum() 
+RMP.KEY_9 = RMP.enum()
+RMP.KEY_PLUS = RMP.enum() 
+RMP.KEY_MINUS = RMP.enum() 
+RMP.KEY_GT = RMP.enum() 
+RMP.KEY_LT = RMP.enum() 
+RMP.KEY_HASHTAG = RMP.enum()
+RMP.KEY_DOLAR = RMP.enum() 
+RMP.KEY_PERSANT = RMP.enum() 
+RMP.KEY_STAR = RMP.enum() 
+RMP.KEY_DOT = RMP.enum() 
+RMP.KEY_UNDERS = RMP.enum()
+RMP.KEY_SEMICOL = RMP.enum() 
+RMP.KEY_QUISTION_MARK = RMP.enum() 
+RMP.KEY_AT = RMP.enum() 
+RMP.KEY_OPCURB = RMP.enum()
+RMP.KEY_CLCURB = RMP.enum() 
+RMP.KEY_BACK_SLASH = RMP.enum() 
+RMP.KEY_BACKTICK = RMP.enum() 
+RMP.KEY_OPEN_BRAKET = RMP.enum()
+RMP.KEY_CLOSED_BRAKET = RMP.enum() 
+RMP.KEY_BAR = RMP.enum() 
+RMP.KEY_DBL_QUOTE = RMP.enum() 
+RMP.KEY_SINGLE_QOUTE = RMP.enum()
+RMP.NONE = RMP.enum()
 
 do	-- local functions
 	function strip_ansi(text)
@@ -1272,11 +1274,11 @@ end
 
 -- Position Layout
 RMP.PopupPosition = {
-	CENTER 		= enum(true),
-	TOP_LEFT 	= enum(),
-	TOP_RIGHT 	= enum(),
-	BUTTOM_LEFT 	= enum(),
-	BUTTOM_RIGHT 	= enum()
+	CENTER 		= RMP.enum(true),
+	TOP_LEFT 	= RMP.enum(),
+	TOP_RIGHT 	= RMP.enum(),
+	BUTTOM_LEFT 	= RMP.enum(),
+	BUTTOM_RIGHT 	= RMP.enum()
 }
 
 -- TODO: handle Bar  
@@ -1355,14 +1357,14 @@ do
 	end
 
 	function RMP.Notify:reset()
-		self.counter = 0
+		self.counter = RMP.enum(true)
 	end
 
 	function RMP.Notify:error(poslayout)
 		local poslayout = poslayout or RMP.PopupPosition.CENTER
 
 		if self.counter < math.floor(self.fps*self.time/(self.fps/10)) then
-			self.counter = self.counter + 1
+			self.counter = RMP.enum()
 			return self:super( 
 				"run" ,
 					self.message, 
@@ -1511,9 +1513,9 @@ end
 -- TODO: handle the class Sound
 -- TODO: handle Albome class : albome manager
 
-RMP.PLAYLIST_LOOP 	= enum(true)
-RMP.SINGLE_LOOP 	= enum()
-RMP.ONES 		= enum()
+RMP.PLAYLIST_LOOP 	= RMP.enum(true)
+RMP.SINGLE_LOOP 	= RMP.enum()
+RMP.ONES 		= RMP.enum()
 
 RMP.Sound = OOP.class("Sound")
 do 	-- Sound

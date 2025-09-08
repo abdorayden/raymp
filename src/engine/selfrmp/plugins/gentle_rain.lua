@@ -1,6 +1,6 @@
 local api = require("rmp.rmp")
 
-return api.quickRoutine(function(x, y, xx, yy)
+return function(x, y, xx, yy)
 	local h, w = (yy - y), (xx - x)
 	local raindrops = {}
 
@@ -13,34 +13,32 @@ return api.quickRoutine(function(x, y, xx, yy)
 		}
 	end
 
-	while true do
-		local vt = api.VirtualTerminal.new()
+	local vt = api.VirtualTerminal.new()
 
-		vt:merge(api.Draw:rectangle(x, y, w, h, api.BGColors.NoBrights.Blue))
+	vt:merge(api.Draw:rectangle(x, y, w, h, api.BGColors.NoBrights.Blue))
 
-		for i, drop in ipairs(raindrops) do
-			drop.y = drop.y + drop.speed
+	for i, drop in ipairs(raindrops) do
+		drop.y = drop.y + drop.speed
 
-			if drop.y > yy then
-				drop.y = y
-				drop.x = math.random(x, xx)
-			end
-
-			for j = 0, drop.length - 1 do
-				if drop.y - j >= y then
-					vt:merge(api.Draw:rectangle(
-					math.floor(drop.x), math.floor(drop.y - j),
-					1, 1,
-					api.BGColors.Brights.White
-					))
-				end
-			end
+		if drop.y > yy then
+			drop.y = y
+			drop.x = math.random(x, xx)
 		end
 
-		coroutine.yield(vt)
-
-		local delay = 0.09
-		local start = os.clock()
-		while os.clock() - start < delay do end
+		for j = 0, drop.length - 1 do
+			if drop.y - j >= y then
+				vt:merge(api.Draw:rectangle(
+				math.floor(drop.x), math.floor(drop.y - j),
+				1, 1,
+				api.BGColors.Brights.White
+				))
+			end
+		end
 	end
-end)
+
+
+	-- local delay = 0.09
+	-- local start = os.clock()
+	-- while os.clock() - start < delay do end
+	return vt
+end

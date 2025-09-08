@@ -15,55 +15,14 @@ local bgcolors = {
 }
 
 
-return plug(function(x, y, xx, yy)
+return function(x, y, xx, yy)
 	local h, w = (yy - y), (xx - x)
 	local wrec = math.floor(w / cols)
 	for i = 1, cols do
-		values[i] = math.random(5, h - 5)
+		values[i] = math.random(3, h - 3)
 	end
-	local key = api.Terminal:handleKey()
 
 	local vt = api.VirtualTerminal.new()
-
-	-- NOTE: it's blocking sometimes
-	-- should introduce Event class , to move all events keyboard to a one handler
-	if key == api.KEY_W then
-		bgcolors = {
-			api.BGColors.Brights.Green,
-			api.BGColors.Brights.White,
-			api.BGColors.Brights.White,
-			api.BGColors.Brights.White,
-			api.BGColors.Brights.White,
-			api.BGColors.Brights.White,
-			api.BGColors.Brights.White
-		}
-	end
-
-	if key == api.KEY_H then
-		bgcolors = {
-			api.BGColors.Brights.Blue,
-			api.BGColors.Brights.White,
-			api.BGColors.Brights.White,
-			api.BGColors.Brights.White,
-			api.BGColors.Brights.White,
-			api.BGColors.Brights.White,
-			api.BGColors.Brights.White
-		}
-
-	end
-
-	if key == api.KEY_ESCAPE then
-		bgcolors = {
-			api.BGColors.Brights.Red,
-			api.BGColors.Brights.White,
-			api.BGColors.Brights.White,
-			api.BGColors.Brights.White,
-			api.BGColors.Brights.White,
-			api.BGColors.Brights.White,
-			api.BGColors.Brights.White
-		}
-
-	end
 
 	for i = 1, cols do
 		local waveHeight = (h - 10) / 2
@@ -85,7 +44,6 @@ return plug(function(x, y, xx, yy)
 		bgcolor
 		))
 	end
-	api.Terminal:handleKey()
 
 	return vt
-end)
+end

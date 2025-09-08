@@ -12,7 +12,7 @@ waveforms[1] = {color = api.BGColors.Brights.Cyan, amplitude = 0.4, frequency = 
 waveforms[2] = {color = api.BGColors.Brights.Magenta, amplitude = 0.3, frequency = 1.2, offset = math.pi/2}
 waveforms[3] = {color = api.BGColors.Brights.Green, amplitude = 0.2, frequency = 1.6, offset = math.pi}
 
-return plug(function(x, y, xx, yy)
+return function(x, y, xx, yy)
 
 	local h, w = (yy - y), (xx - x)
 	local vt = api.VirtualTerminal.new()
@@ -81,10 +81,5 @@ return plug(function(x, y, xx, yy)
 
 	vt:writeText(x + 2, y + 1, "Waveform Graph", api.FGColors.Brights.White, api.BGColors.NoBrights.Black)
 	vt:writeText(x + 2, y + 2, "Time: " .. string.format("%.1f", time), api.FGColors.Brights.White, api.BGColors.NoBrights.Black)
-
-	local delay = 0.08
-	local start = os.clock()
-	while os.clock() - start < delay do end
-
 	return vt
-end)
+end
