@@ -3,6 +3,101 @@ UTIL = {}
 local OOP = require("rmp.oop")
 
 UTIL.QueueAndStackable = OOP.interface("QueueAndStackable" , "push" , "pop" , "peek" , "isEmpty")
+UTIL.Map = OOP.interface("Map", "clear", "containsKey", "containsValue", "entrySet",
+				"get", "isEmpty", "keySet", "put",
+				"putAll", "remove", "size", "values"
+			)
+
+UTIL.HashMap = OOP.class("HashMap" , nil , UTIL.Map)
+
+function UTIL.HashMap:constructor()
+	self.data = {}
+	self.size = 0
+	return self
+end
+
+function UTIL.HashMap:clear()
+	self.data = {}
+	self.size = 0
+end
+
+function UTIL.HashMap:containsKey(key)
+	return self.data[key] ~= nil
+end
+
+function UTIL.HashMap:containsValue(value)
+	for _, v in pairs(self.data) do
+		if v == value then
+			return true
+		end
+	end
+	return false
+end
+
+function UTIL.HashMap:entrySet()
+	local entries = {}
+	for key, value in pairs(self.data) do
+		table.insert(entries, {key = key, value = value})
+	end
+	return entries
+end
+
+function UTIL.HashMap:get(key)
+	return self.data[key]
+end
+
+function UTIL.HashMap:isEmpty()
+	return self.size == 0
+end
+
+function UTIL.HashMap:keySet()
+	local keys = {}
+	for key in pairs(self.data) do
+		table.insert(keys, key)
+	end
+	return keys
+end
+
+function UTIL.HashMap:put(key, value)
+	local oldValue = self.data[key]
+	self.data[key] = value
+	if oldValue == nil then
+		self.size = self.size + 1
+	end
+	return oldValue
+end
+
+function UTIL.HashMap:putAll(map)
+	for key, value in map:entrySet() do
+		self:put(key, value)
+	end
+end
+
+function UTIL.HashMap:remove(key)
+	local value = self.data[key]
+	if value ~= nil then
+		self.data[key] = nil
+		self.size = self.size - 1
+	end
+	return value
+end
+
+function UTIL.HashMap:size()
+	return self.size
+end
+
+function UTIL.HashMap:values()
+	local values = {}
+	for _, value in pairs(self.data) do
+		table.insert(values, value)
+	end
+	return values
+end
+
+
+
+
+
 
 UTIL.Queue = OOP.class("Queue", nil, UTIL.QueueAndStackable)
 do

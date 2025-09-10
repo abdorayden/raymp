@@ -1,3 +1,4 @@
+-- TODO: recreate albome plug in new api version
 local api = require("rmp")
 
 return function(cfg_sound)

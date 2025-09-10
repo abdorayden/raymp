@@ -5,9 +5,9 @@
 #include <stdbool.h>
 
 // lua
-#include <lua.h>
-#include <lauxlib.h>
-#include <lualib.h>
+#include "lua.h"
+#include "lauxlib.h"
+#include "lualib.h"
 
 #ifndef _WIN32
 // POSIX

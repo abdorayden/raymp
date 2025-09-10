@@ -27,13 +27,24 @@ return {
 				themeWindowId = 2, -- if this attr is not nil or exists , the runner ignore activate
 				isActivated = true,
 				activate = api.KEY_E,
-				name = "matrix_digital_rain_effect" -- this name should be the same directory and same lua file
-				-- name = "plasma_wave_effect" -- this name should be the same directory and same lua file
+				-- this name should be the same directory and same lua file
+				-- plugins/plug_name.lua or plugins/plug_name/init.lua
+				switchPluginKey = api.KEY_I,
+				names = {
+					"matrix_digital_rain_effect",
+					"music_waves",
+					"3d_cube"
+				}
+				
 			},
-	-- 		{
-	-- 			isactivate = false,
-	-- 			activate = api.KEY_E,
-	-- 			path = "...",
-	-- 		}
+			{
+				themeWindowId = 3, -- if this attr is not nil or exists , the runner ignore activate
+				isActivated = true,
+				activate = api.KEY_E,
+				-- switchPluginKey = api.KEY_I,
+				names = {
+					"center_text"
+				}
+			}
 	}
 }

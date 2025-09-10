@@ -2,9 +2,9 @@
 #include "../../../third_party/miniaudio.h"
 
 #ifndef _WIN32
-#include <lua.h>
-#include <lua5.4/lauxlib.h>
-#include <lua5.4/lualib.h>
+#include "lua.h"
+#include "lauxlib.h"
+#include "lualib.h"
 #else
 #include "./lua/include/lua.h"
 // #include "./lua/include/lauxlib.h"
