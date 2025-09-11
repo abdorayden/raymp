@@ -126,6 +126,8 @@ local OOP = require("rmp.oop")
 local Promise = require("rmp.promises")
 local Util = require("rmp.util")
 
+local HashMap = Util.HashMap
+
 -- handle enumuration in lua using coroutine yield
 local global_count_enum = -1
 function RMP.enum(reset , value , start)
@@ -701,11 +703,39 @@ do 	-- creating window
 	end
 end
 
+RMP.EventListener = OOP.class("EventListener")
+do
+	function RMP.EventListener:constructor()
+		self.events = HashMap.new()	-- Queue{{key , callback}, {key , callback}}
+		return self
+	end
+
+	function RMP.EventListener:addEventListener(key , callback)
+		self.events:put(key , callback)
+		return self
+	end
+
+	function RMP.EventListener:handleCurrentKey(key)
+		local foundCallback = self.events:get(key)
+
+		if foundCallback and type(foundCallback) == 'function' then
+			foundCallback()
+		end
+
+		return self
+	end
+
+	function RMP.EventListener:getEventQueue()
+		return self.events
+	end
+end
+
 -- all components should return VirtualTerminal obj
 -- TODO: rewrite all VirtualTermminal methods to a native functions
-RMP.VirtualTerminal = OOP.class("VirtualTerminal")
+RMP.VirtualTerminal = OOP.class("VirtualTerminal" , RMP.EventListener)
 do	-- VirtualTerminal
 	function RMP.VirtualTerminal:constructor(width, height) -- constructor
+		self:super("constructor")
 		local h , w = window.get_size()
 		self.width = width or w or 80
 		self.height = height or h or 24
@@ -717,6 +747,7 @@ do	-- VirtualTerminal
 		self:clear()
 		return self
 	end
+
 
 	function RMP.VirtualTerminal:clear()
 		for y = 1, self.height do
@@ -830,9 +861,10 @@ do	-- VirtualTerminal
 	end
 
 	-- i stole this method from chat-gpt lol whatever
-	function RMP.VirtualTerminal:render()
-		if not self.dirty then return end
+	function RMP.VirtualTerminal:render(key)
 
+		self:super("handleCurrentKey" , key)
+		if not self.dirty then return end
 		-- i added this line , because render method will executed in every loop
 		self.height , self.width = window.get_size()
 
@@ -938,6 +970,12 @@ do	-- VirtualTerminal
 
 		if thatTerm == nil or not thatTerm:instanceOf(RMP.VirtualTerminal) then
 			return
+		end
+
+		local eventQueue = thatTerm:getEventQueue()
+			-- self:addEventListener(table.unpack(eventQueue:pop()))
+		if eventQueue:instanceOf(HashMap) then
+			self:getEventQueue():putAll(eventQueue)
 		end
 
 		offsetX = offsetX or 0
@@ -1978,28 +2016,14 @@ do
 		self:super("merge" , component)
 	end
 
-	function RMP.Frame:run()
-		self:super("render")
+	function RMP.Frame:addEventListener(key , callback)
+		self:super("addEventListener" , key , callback)
+	end
+
+	function RMP.Frame:run(key)
+		self:super("render" , key)
 		self:super("clear")
 		RMP.sleep(math.floor(RMP.Duration.new(self:getDeltaTime()):fromSec()))
-	end
-end
-
--- you don't have to think about yield or another loop
--- just accept boundries and return virtual terminal object
-function RMP.plug(callback)
-	return RMP.quickRoutine(function(x,y,xx,yy) 
-		while true do
-			coroutine.yield(callback(x,y,xx,yy))
-		end
-	end)
-end
-
--- TODO: create ComponentManager
-RMP.Plug = OOP.class("Plug")
-do
-	function RMP.Plug:constructor()
-		io.write("Plug not implemented")
 	end
 end
 

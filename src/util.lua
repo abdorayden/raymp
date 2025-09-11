@@ -68,8 +68,8 @@ function UTIL.HashMap:put(key, value)
 end
 
 function UTIL.HashMap:putAll(map)
-	for key, value in map:entrySet() do
-		self:put(key, value)
+	for _, entry in ipairs(map:entrySet()) do
+		self:put(entry.key, entry.value)
 	end
 end
 

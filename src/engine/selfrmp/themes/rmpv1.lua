@@ -64,7 +64,7 @@ return function (plugs)
 	local mainFrame = api.Frame.new()
 
 	-- setting FPS
-	mainFrame:setFps(70)
+	mainFrame:setFps(20)
 
 	-- hide cursor on
 	Terminal:hideCursor()
@@ -145,7 +145,7 @@ return function (plugs)
 					-- inject plug directly here and implemens Plug class to simplify all of this
 					, function(xxx,yyy,xxxx,yyyy)
 						if type(currentPlugSecondWindow) == "function" then
-							mainFrame:add(currentPlugSecondWindow(xxx,yyy,xxxx,yyyy))
+							mainFrame:add(currentPlugSecondWindow(xxx,yyy,xxxx,yyyy) , xxx , yyy)
 						end
 						return nil
 					end
@@ -174,7 +174,7 @@ return function (plugs)
 		mainFrame:add(window)
 
 		-- render
-		mainFrame:run()
+		mainFrame:run(key)
 	end
 
 	-- clean

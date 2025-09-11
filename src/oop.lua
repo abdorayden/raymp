@@ -1,4 +1,5 @@
 -- Copyright (C) by rayden at 27/08/2025
+-- Fixed: multi-level inheritance 'super' resolution to avoid stack overflow
 --
 -- this is an java oop syntax implemented in lua
 -- the goal is make the code more readable to define interfaces and class so the programmer and even me i can understand that 
@@ -238,7 +239,6 @@
 --			local result = db:query("SELECT * FROM users")
 --			db:close()
 
-
 local OOP = {}
 
 function OOP.interface(name, ...)
@@ -281,6 +281,19 @@ function OOP.class(name, superClass, ...)
 	end
 
 	class.__index = class
+
+	local function find_class_by_function(startClass, func)
+		local c = startClass
+		while c do
+			for k, v in pairs(c) do
+				if type(v) == "function" and v == func then
+					return c
+				end
+			end
+			c = c.__super
+		end
+		return nil
+	end
 
 	function class.new(...)
 		local self = setmetatable({}, class)
@@ -326,18 +339,53 @@ function OOP.class(name, superClass, ...)
 		return false
 	end
 
+	-- robust 'super' implementation: detect the class whose method called 'super',
+	-- then call the next superclass *above* that class that actually implements the requested method.
 	function class:super(methodName, ...)
-		if not self.__super then
-			error("No super class available")
+		local instanceClass = getmetatable(self).__index
+
+		local callerFunc
+		if debug and debug.getinfo then
+			local info = debug.getinfo(2, "f")
+			callerFunc = info and info.func
 		end
 
-		if not self.__super[methodName] then
-			error("Method '" .. methodName .. "' not found in super class")
+		local callerClass
+		if callerFunc then
+			callerClass = find_class_by_function(instanceClass, callerFunc)
 		end
 
-		return self.__super[methodName](self, ...)
+		-- if we couldn't find the caller class by looking for the function,
+		-- fallback to finding the class that defines 'methodName' first (closest to instance),
+		-- and treat that as the caller class. This makes calling super("constructor") work when
+		-- constructors are defined at different levels.
+		if not callerClass then
+			local c = instanceClass
+			while c do
+				if type(c[methodName]) == "function" then
+					callerClass = c
+					break
+				end
+				c = c.__super
+			end
+		end
+
+		if not callerClass then
+			error("Method '" .. methodName .. "' not found in inheritance chain")
+		end
+
+		local parent = callerClass.__super
+		while parent do
+			if type(parent[methodName]) == "function" then
+				return parent[methodName](self, ...)
+			end
+			parent = parent.__super
+		end
+
+		error("No superclass implements method '" .. methodName .. "' above caller class")
 	end
 
 	return class
 end
+
 return OOP
