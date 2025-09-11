@@ -64,7 +64,7 @@ return function (plugs)
 	local mainFrame = api.Frame.new()
 
 	-- setting FPS
-	mainFrame:setFps(20)
+	mainFrame:setFps(40)
 
 	-- hide cursor on
 	Terminal:hideCursor()
@@ -85,9 +85,9 @@ return function (plugs)
 		currentPlugStatusWindow = function()end
 	end
 
-
 	while key ~= api.KEY_Q do
-
+		-- render
+		mainFrame:run(key)
 		-- update
 		key = api.Terminal:handleKey()
 		h , w = Terminal:getSize()
@@ -120,6 +120,7 @@ return function (plugs)
 
 		-- init component
 		local window = Window.new(1):createWindow(nil, w , h , 1 , 2 , nil , nil , api.BoxDrawing.HeavyBorder , function(x,y,xx,yy)
+
 			local lw = xx-x
 			local lh = yy-y
 
@@ -170,11 +171,12 @@ return function (plugs)
 			return nil
 		end)
 
+		mainFrame:resize(w,h)
+
+
 		-- adding component to the main frame
 		mainFrame:add(window)
 
-		-- render
-		mainFrame:run(key)
 	end
 
 	-- clean

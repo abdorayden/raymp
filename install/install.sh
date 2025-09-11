@@ -84,6 +84,12 @@ then
 
 	$CC \
 		$FLAGS\
+		-o ../src/engine/core/lib/virtualterminalrmp.so ../src/engine/core/src/virtualterminalrmp.c \
+		$INCLUDE_PATH	\
+		$LIB_PATH
+
+	$CC \
+		$FLAGS\
 		-o ../src/engine/core/lib/keyboard.so ../src/engine/core/src/keyboard.c \
 		$INCLUDE_PATH	\
 		$LIB_PATH
@@ -137,6 +143,7 @@ then
 	cp ../src/engine/core/lib/platform.so $LUA_LIB
 	cp ../src/engine/core/lib/directory.so $LUA_LIB
 	cp ../src/engine/core/lib/window.so $LUA_LIB
+	cp ../src/engine/core/lib/virtualterminalrmp.so $LUA_LIB
 
 	# install the local plugins and themes if the configuration dir not found on home dir
 	cp -r ../src/engine/selfrmp $LUA_SHARE

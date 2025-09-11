@@ -120,6 +120,7 @@ local sleep = require("rmp.sleep")
 local platform = require("rmp.platform")
 local directory = require("rmp.directory")
 local window = require("rmp.window")
+local vt_rmp = require("rmp.virtualterminalrmp")
 
 -- require rmp utility
 local OOP = require("rmp.oop")
@@ -695,7 +696,7 @@ do 	-- creating window
 		if callback ~= nil and type(callback) == "function" then
 			local lvt = callback(math.floor(x + 1) , math.floor(y + 1) , math.floor(x + width - 1) , math.floor(y + height - 1))
 			if lvt ~= nil then
-				vterm:merge() -- handle async
+				vterm:merge(lvt) -- handle async
 			end
 		end
 
@@ -737,12 +738,11 @@ do	-- VirtualTerminal
 	function RMP.VirtualTerminal:constructor(width, height) -- constructor
 		self:super("constructor")
 		local h , w = window.get_size()
-		self.width = width or w or 80
-		self.height = height or h or 24
-		self.width  = math.floor(self.width)
-		self.height = math.floor(self.height)
-		self.buffer = {}
-		self.dirty = false
+
+		self.realWidth = width or w
+		self.realHeight = height or h
+
+		self.native_vt_rmp = vt_rmp.init(self.realWidth , self.realHeight)
 		self.cursor = {x = 1, y = 1}
 		self:clear()
 		return self
@@ -750,68 +750,32 @@ do	-- VirtualTerminal
 
 
 	function RMP.VirtualTerminal:clear()
-		for y = 1, self.height do
-			self.buffer[y] = self.buffer[y] or {}
-			for x = 1, self.width do
-				self.buffer[y][x] = {char = " ", fg = nil, bg = nil, style = nil}
-			end
-		end
-		self.dirty = true
-	end
-
-	function RMP.VirtualTerminal:ensureBuffer(y, x)
-		y = math.max(1, math.min(y, self.height))
-		x = math.max(1, math.min(x, self.width))
-		if not self.buffer[y] then
-			self.buffer[y] = {}
-		end
-		if not self.buffer[y][x] then
-			self.buffer[y][x] = {char = " ", fg = nil, bg = nil, style = nil}
-		end
+		vt_rmp.clear(self.native_vt_rmp)
 	end
 
 	function RMP.VirtualTerminal:setChar(x, y, char, fg, bg, style)
-
 		local x = x or self.cursor.x
 		local y = y or self.cursor.y
-		if x >= 1 and x <= self.width and y >= 1 and y <= self.height then
-			self:ensureBuffer(y, x)
-			self.buffer[y][x] = {
-				char = char or " ",
-				fg = fg,
-				bg = bg,
-				style = style
-			}
-			self.dirty = true
-		end
-	end
-
-	function RMP.VirtualTerminal:writeText(x, y, text, fg, bg, style)
-
-		if not text then
-			return 
-		end
-
-		local x = math.floor(x or self.cursor.x)
-		local y = math.floor(y or self.cursor.y)
-
-		for i = 1, #text do
-			local char = text:sub(i, i)
-			self:setChar(x + i - 1, y, char, fg, bg, style)
-		end
-		self.dirty = true
-
+		vt_rmp.setchar(self.native_vt_rmp , x , y , char , fg , bg , style)
 		return self
 	end
 
+	function RMP.VirtualTerminal:writeText(x, y, text, fg, bg, style)
+		if not text then
+			return 
+		end
+		local x = math.floor(x or self.cursor.x)
+		local y = math.floor(y or self.cursor.y)
+		vt_rmp.writetext(self.native_vt_rmp, x, y, text, fg, bg, style)
+		return self
+	end
 	function RMP.VirtualTerminal:drawBox(title, x, y, width, height, border_style, fg, bg)
-
 		local x = math.floor(x or 1)
 		local y = math.floor(y or 1)
-
-		local width  = math.floor(width or 80)
+		local width = math.floor(width or 80)
 		local height = math.floor(height or 24)
 
+		-- Default border style if not provided
 		if border_style == nil or type(border_style) ~= 'table' or border_style[1] == nil then
 			TL = RMP.BoxDrawing.LightBorder[3] -- "┌" Top-left corner
 			TR = RMP.BoxDrawing.LightBorder[4] -- "┐" Top-right corner
@@ -828,9 +792,10 @@ do	-- VirtualTerminal
 			V  = border_style[2] -- "│" Vertical line
 		end
 
-		local end_x = math.min(x + width - 1, self.width)
-		local end_y = math.min(y + height - 1, self.height)
+		local end_x = math.min(x + width - 1,  self.realWidth)
+		local end_y = math.min(y + height - 1, self.realHeight)
 
+		-- Draw the box
 		self:setChar(x, y, TL, fg, bg)
 		self:setChar(end_x, y, TR, fg, bg)
 		self:setChar(x, end_y, BL, fg, bg)
@@ -846,186 +811,150 @@ do	-- VirtualTerminal
 			self:setChar(end_x, i, V, fg, bg)  -- Right border
 		end
 
-		if title and title ~= "" and title:instanceOf(RMP.Text) then
-			-- TODO: fix bug , the title applied only when we put bg color to the title
-			self:writeText(math.floor((x*1.5 + ((width - x)/2)) - #(title:getText())/2) , y , title:getText() , title:getFGColor() , title:getBGColor() , title:getStyle()) 
-		end
-
+		-- Fill interior with background color
 		for i = y + 1, end_y - 1 do
 			for j = x + 1, end_x - 1 do
 				self:setChar(j, i, " ", nil, bg)
 			end
 		end
 
+		-- Handle title if provided
+		if title and title ~= "" and title:instanceOf(RMP.Text) then
+			local title_text = title:getText()
+			-- Calculate available space for title (width - 2 for borders)
+			local available_width = width - 2
+			-- Truncate title if it's too long
+			if #title_text > available_width then
+				title_text = title_text:sub(1, available_width)
+			end
+
+			-- Calculate centered position for title
+			local title_x = x + 1 + math.floor((available_width - #title_text) / 2)
+			local title_y = y
+
+			-- Write the title
+			self:writeText(title_x, title_y, title_text, title:getFGColor(), title:getBGColor(), title:getStyle())
+		end
+
 		self.dirty = true
 	end
 
+	-- function RMP.VirtualTerminal:drawBox(title, x, y, width, height, border_style, fg, bg)
+	-- 	local x = math.floor(x or 1)
+	-- 	local y = math.floor(y or 1)
+
+	-- 	local width  = math.floor(width or 80)
+	-- 	local height = math.floor(height or 24)
+
+	-- 	if border_style == nil or type(border_style) ~= 'table' or border_style[1] == nil then
+	-- 		TL = RMP.BoxDrawing.LightBorder[3] -- "┌" Top-left corner
+	-- 		TR = RMP.BoxDrawing.LightBorder[4] -- "┐" Top-right corner
+	-- 		BL = RMP.BoxDrawing.LightBorder[5] -- "└" Bottom-left corner
+	-- 		BR = RMP.BoxDrawing.LightBorder[6] -- "┘" Bottom-right corner
+	-- 		H  = RMP.BoxDrawing.LightBorder[1] -- "─" Horizontal line
+	-- 		V  = RMP.BoxDrawing.LightBorder[2] -- "│" Vertical line
+	-- 	else
+	-- 		TL = border_style[3] -- "┌" Top-left corner
+	-- 		TR = border_style[4] -- "┐" Top-right corner
+	-- 		BL = border_style[5] -- "└" Bottom-left corner
+	-- 		BR = border_style[6] -- "┘" Bottom-right corner
+	-- 		H  = border_style[1] -- "─" Horizontal line
+	-- 		V  = border_style[2] -- "│" Vertical line
+	-- 	end
+
+
+	-- 	local end_x = math.min(x + width - 1, self.realWidth)
+	-- 	local end_y = math.min(y + height - 1, self.realHeight)
+
+	-- 	self:setChar(x, y, TL, fg, bg)
+	-- 	self:setChar(end_x, y, TR, fg, bg)
+	-- 	self:setChar(x, end_y, BL, fg, bg)
+	-- 	self:setChar(end_x, end_y, BR, fg, bg)
+
+	-- 	for i = x + 1, end_x - 1 do
+	-- 		self:setChar(i, y, H, fg, bg)      -- Top border
+	-- 		self:setChar(i, end_y, H, fg, bg)  -- Bottom border
+	-- 	end
+
+	-- 	for i = y + 1, end_y - 1 do
+	-- 		self:setChar(x, i, V, fg, bg)      -- Left border
+	-- 		self:setChar(end_x, i, V, fg, bg)  -- Right border
+	-- 	end
+
+	-- 	if title and title ~= "" and title:instanceOf(RMP.Text) then
+	-- 		-- TODO: fix bug , the title applied only when we put bg color to the title
+	-- 		self:writeText(math.floor((x*1.5 + ((width - x)/2)) - #(title:getText())/2) , y , title:getText() , title:getFGColor() , title:getBGColor() , title:getStyle()) 
+	-- 	end
+
+	-- 	for i = y + 1, end_y - 1 do
+	-- 		for j = x + 1, end_x - 1 do
+	-- 			self:setChar(j, i, " ", nil, bg)
+	-- 		end
+	-- 	end
+
+	-- 	self.dirty = true
+	-- end
+
 	-- i stole this method from chat-gpt lol whatever
 	function RMP.VirtualTerminal:render(key)
-
 		self:super("handleCurrentKey" , key)
-		if not self.dirty then return end
-		-- i added this line , because render method will executed in every loop
-		self.height , self.width = window.get_size()
-
-		local output = {}
-
-		table.insert(output, "\27[2J\27[H")
-
-		for y = 1, self.height do
-			local line = {}
-			local current_fg, current_bg, current_style = nil, nil, nil
-
-			for x = 1, self.width do
-				self:ensureBuffer(y, x)
-				local cell = self.buffer[y][x]
-
-				local needs_reset = false
-				if (current_style and not cell.style) or (current_style ~= cell.style) then
-					needs_reset = true
-				end
-				if (current_fg and not cell.fg) or (current_fg ~= cell.fg) then
-					needs_reset = true
-				end
-				if (current_bg and not cell.bg) or (current_bg ~= cell.bg) then
-					needs_reset = true
-				end
-
-				if needs_reset then
-					table.insert(line, RMP.Default)
-					current_style, current_fg, current_bg = nil, nil, nil
-				end
-
-				if cell.style and cell.style ~= current_style then
-					table.insert(line, cell.style)
-					current_style = cell.style
-				end
-
-				if cell.fg and cell.fg ~= current_fg then
-					table.insert(line, cell.fg)
-					current_fg = cell.fg
-				end
-
-				if cell.bg and cell.bg ~= current_bg then
-					table.insert(line, cell.bg)
-					current_bg = cell.bg
-				end
-
-				table.insert(line, cell.char)
-			end
-
-			if current_style or current_fg or current_bg then
-				table.insert(line, RMP.Default)
-			end
-
-			table.insert(output, table.concat(line))
-		end
-
-		table.insert(output, moveto(self.cursor.x, self.cursor.y, true))
-
-		io.write(table.concat(output, "\n"))
-		io.flush()
-		self.dirty = false
+		vt_rmp.render(self.native_vt_rmp)
 	end
 
 	function RMP.VirtualTerminal:moveCursor(x, y)
-		self.cursor.x = math.max(1, math.min(x, self.width))
-		self.cursor.y = math.max(1, math.min(y, self.height))
+		vt_rmp.movecursor(self.native_vt_rmp , x , y)
 	end
 
 	function RMP.VirtualTerminal:moveUp(y)
-		local y = y or 1
-		self:moveCursor(self.cursor.x , math.max(1,self.cursor.y - y))
+		vt_rmp.moveup(self.native_vt_rmp, y or 1)
 	end
 
 	function RMP.VirtualTerminal:moveDown(y)
-		local y = y or 1
-		self:moveCursor(self.cursor.x ,math.min(y + self.cursor.y, self.width))
+    		vt_rmp.movedown(self.native_vt_rmp, y or 1)
 	end
 
 	function RMP.VirtualTerminal:moveRight(x)
-		local x = x or 1
-		self:moveCursor(math.min(x + self.cursor.x, self.width), self.cursor.y)
+  		vt_rmp.moveright(self.native_vt_rmp, x or 1)
 	end
 
 	function RMP.VirtualTerminal:moveLeft(x)
-		local x = x or 1
-		self:moveCursor(math.max(1,self.cursor.x - x),self.cursor.y)
+		vt_rmp.moveleft(self.native_vt_rmp, x or 1)
 	end
 
 	function RMP.VirtualTerminal:getSize()
-		return self.width, self.height
+ 		return vt_rmp.getsize(self.native_vt_rmp)
 	end
 
 	function RMP.VirtualTerminal:resize(width, height)
-		self.width = width
-		self.height = height
-		self:clear()
+ 		vt_rmp.resize(self.native_vt_rmp, width, height)
+	end
+
+	function RMP.VirtualTerminal:getVT()
+		return self.native_vt_rmp
 	end
 
 	-- these methods are used to merge two virtual terminal 
 	-- if there is no way to pass vterm object to function parameters 
 	-- so you can merge the other virtual terminal to the main object
 	function RMP.VirtualTerminal:merge(thatTerm, offsetX, offsetY)
-
-		if thatTerm == nil or not thatTerm:instanceOf(RMP.VirtualTerminal) then
-			return
-		end
-
-		local eventQueue = thatTerm:getEventQueue()
-			-- self:addEventListener(table.unpack(eventQueue:pop()))
-		if eventQueue:instanceOf(HashMap) then
-			self:getEventQueue():putAll(eventQueue)
-		end
-
-		offsetX = offsetX or 0
-		offsetY = offsetY or 0
-
-		for y = 1, thatTerm.height do
-			local source_row = thatTerm.buffer[y]
-			if source_row then
-				for x = 1, thatTerm.width do
-					local source_cell = source_row[x]
-					if source_cell then
-						local target_x = x + offsetX
-						local target_y = y + offsetY
-
-						if target_x >= 1 and target_x <= self.width and target_y >= 1 and target_y <= self.height then
-							if source_cell.char ~= " " or source_cell.fg or source_cell.bg or source_cell.style then
-								self:setChar(target_x, target_y, source_cell.char, source_cell.fg, source_cell.bg, source_cell.style)
-							end
-						end
-					end
-				end
+		if thatTerm or thatTerm:instanceOf(RMP.VirtualTerminal) then
+			vt_rmp.merge(self.native_vt_rmp , thatTerm:getVT() , offsetX or 0, offsetY or 0)
+			local eventQueue = thatTerm:getEventQueue()
+			if eventQueue:instanceOf(HashMap) then
+				self:getEventQueue():putAll(eventQueue)
 			end
 		end
-		self.dirty = true
 	end
 
 	function RMP.VirtualTerminal:mergeAll(thoseTerms)
 		for i = 1 , #thoseTerms do
 			self:merge(thoseTerms[i].thatTerm,thoseTerms[i].offsetX,thoseTerms[i].offsetY)
 		end
-		self.dirty = true
 	end
 
 	function RMP.VirtualTerminal:copy()
-		local copy = RMP.VirtualTerminal.new(self.width, self.height)
-		for y = 1, self.height do
-			copy.buffer[y] = {}
-			for x = 1, self.width do
-				if self.buffer[y] and self.buffer[y][x] then
-					copy.buffer[y][x] = {
-						char = self.buffer[y][x].char,
-						fg = self.buffer[y][x].fg,
-						bg = self.buffer[y][x].bg,
-						style = self.buffer[y][x].style
-					}
-				else
-					copy.buffer[y][x] = {char = " ", fg = nil, bg = nil, style = nil}
-				end
-			end
-		end
+		local copy = RMP.VirtualTerminal.new()
+		copy.native_vt_rmp = vt_rmp.copy(self.native_vt_rmp)
 		return copy
 	end
 
