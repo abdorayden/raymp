@@ -1,5 +1,5 @@
 #include <runner.h>
-#include <lua5.4/lua.h>
+#include "lua.h"
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>

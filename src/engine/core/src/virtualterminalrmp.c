@@ -8,6 +8,12 @@
 #include <locale.h>
 #include <uchar.h>   // optional for char32_t, not strictly required
 
+// wcwidth is not in standard C library, but is widely available on Unix-like systems
+// on Windows you may need to provide your own implementation or use a library
+// Here we just declare it; link with -lwcwidth if available, or provide your own
+// TODO: implement a simple wcwidth on Windows if needed
+int wcwidth(wchar_t);
+
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
