@@ -1,4 +1,18 @@
-[X] create lua shared library for handling input and api for nonblocking stdin
-[ ] dll so for directory listing
-[ ] handle master.lua for managing plugins and parse init.lua
-[ ] make it cross platform
+TODO:
+-[X]: fix utf-8 unicode in my terminal virtualterminalrmp in C
+-[X]: create simple plugin to test and debug Options and Scroller classes
+-[ ]: complete file browser plugin and fix the issues
+-[ ]: introduce Input feature in rmp framework
+-[ ]: edit relations between components and classes inside rmp framework
+-[ ]: create readme and licence
+-[ ]: introduce Focuse and fix event to work with them
+-[ ]: fix Sound and add support to access the low level api using lua
+-[ ]: write waves music animation with works sound frames
+-[ ]: introduce Table and Bar , SearchAnimations , TextField , TextArea , as a hight level components and fix Text class bugs
+-[ ]: socket support with TCP,UDP implementations (optional maybe we use external libs) with asyncio support
+-[ ]: implements Albome plugin and 2 diffrent themes
+-[ ]: implement a full main and rewrite RmpManager to C with default lua codes
+-[ ]: with complete configuration management
+-[ ]: prepare the default interface for new users or who they doesn't have configurations (simple animations , help)
+-[ ]: move all plugins to external repos and implement PlugManager as plugin to manage others
+-[ ]: create docuumentation and link it to my port folio implemented using js only (challenge) , and the potentiel error or problem as documentation

@@ -33,7 +33,10 @@ return {
 				names = {
 					"matrix_digital_rain_effect",
 					"music_waves",
-					"3d_cube"
+					"tellme_yourname",
+					"digital_clock_with_effects",
+					"3d_cube",
+					"filebrowser"
 				}
 				
 			},

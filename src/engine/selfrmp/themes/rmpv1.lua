@@ -1,4 +1,12 @@
--- rmp framework
+-- create configuration lua handler
+--
+--	Copyright 2024 by rayden
+--		 
+--
+--		 this is UI Style of old rmp version
+--
+--
+
 local api = require("rmp.rmp")
 local OOP = require("rmp.oop")
 local Promise = require("rmp.promises")
@@ -32,29 +40,6 @@ do
 
 end
 
--- create configuration lua handler
---
---	Copyright 2024 by rayden
---		 
---
---		 this is UI Style of old rmp version
---
---
-
--- NOTE: the theme script should accept callback of the plug to render on the window
--- 		if the plugin run on background it should run directly without pass in it to the main function
--- NOTE: the song should handled in master.lua (the engine that i should write it in C) and read the configuration key from init.lua
--- TODO: add the way to reconfigure the plugin and the theme in init.lua
-
-
--- NOTE: the callBackPlug should accept 
--- 	x: the start position x for the window
--- 	y: the start position y for the window
--- 	dx: the end position x for the window
--- 	dy: the end position y for the window
-
--- TODO: should handle plugins from init.lua file 
-
 
 return function (plugs)
 
@@ -69,9 +54,6 @@ return function (plugs)
 	-- hide cursor on
 	Terminal:hideCursor()
 
-	-- read input
-	local key = api.Terminal:handleKey()
-
 	-- load hooked plugins
 	local changeKeySecondeWindow = plugs:getSwitchKey(2)
 	local currentPlugSecondWindow , err = plugs:getNextPlug(2)
@@ -85,38 +67,29 @@ return function (plugs)
 		currentPlugStatusWindow = function()end
 	end
 
-	while key ~= api.KEY_Q do
-		-- render
-		mainFrame:run(key)
-		-- update
-		key = api.Terminal:handleKey()
-		h , w = Terminal:getSize()
-
-		-- handle configurations keymap
-		if changeKeySecondeWindow and key == changeKeySecondeWindow then
+	-- handle configurations keymap
+	if changeKeySecondeWindow then
+		mainFrame:addEventListener(changeKeySecondeWindow , function() 
 			currentPlugSecondWindow = plugs:getNextPlug(2)
-		end
+		end)
+	end
 
-		if changeKeyStatusWindow and key == changeKeyStatusWindow then
+	if changeKeyStatusWindow then
+		mainFrame:addEventListener(changeKeyStatusWindow , function() 
 			currentPlugStatusWindow = plugs:getNextPlug(3)
-		end
+		end)
+	end
 
-		do -- later
-			-- id 0 means global window or entire window width and height
-			-- local success, win = coroutine.resume(cfgObj[1], 2 , 3 , w/2-1 , h/2-1)
-			-- if success and win then
-			-- mainFrame:add(win)
-			-- end
+	mainFrame:addEventListener(api.KEY_Q , function()
+		quit = true
+	end)
 
-			-- local s, text = coroutine.resume(TEXTPlug)
-			-- if s and text then
-			-- 	mainFrame:add(text)
-			-- end
-			-- local su, ap = coroutine.resume(AnotherPlug)
-			-- if su and ap then
-			-- 	mainFrame:add(ap)
-			-- end
-		end
+	local quit = false
+
+	while not quit do
+		-- read input
+		local key = api.Terminal:handleKey()
+		h , w = Terminal:getSize()
 
 		-- init component
 		local window = Window.new(1):createWindow(nil, w , h , 1 , 2 , nil , nil , api.BoxDrawing.HeavyBorder , function(x,y,xx,yy)
@@ -173,10 +146,11 @@ return function (plugs)
 
 		mainFrame:resize(w,h)
 
-
 		-- adding component to the main frame
 		mainFrame:add(window)
 
+		-- render
+		mainFrame:run(key)
 	end
 
 	-- clean

@@ -21,7 +21,7 @@ typedef enum {
 
 	// Special keys
 	KEY_ENTER, KEY_SPACE, KEY_ESCAPE, KEY_UP, KEY_DOWN,
-	KEY_LEFT, KEY_RIGHT, KEY_TAB,
+	KEY_LEFT, KEY_RIGHT, KEY_TAB, KEY_DELETE, KEY_HOME,KEY_END,KEY_BACKSPACE,
 
 	// Alphabet keys (lowercase)
 	KEY_A, KEY_B, KEY_C, KEY_D, KEY_E, KEY_F, KEY_G, KEY_H,
@@ -46,7 +46,7 @@ typedef enum {
 	KEY_DOLAR, KEY_PERSANT, KEY_STAR, KEY_DOT, KEY_UNDERS,
 	KEY_SEMICOL, KEY_QUISTION_MARK, KEY_AT, KEY_OPCURB,
 	KEY_CLCURB, KEY_BACK_SLASH, KEY_BACKTICK, KEY_OPEN_BRAKET,
-	KEY_CLOSED_BRAKET, KEY_BAR, KEY_DBL_QUOTE, KEY_SINGLE_QOUTE,
+	KEY_CLOSED_BRAKET, KEY_BAR, KEY_DBL_QUOTE, KEY_SINGLE_QOUTE,KEY_SLASH,
 
 	NONE
 } Keys;
@@ -129,6 +129,7 @@ static Keys handle_keys() {
 				case '"': return KEY_DBL_QUOTE;
 				case '\'': return KEY_SINGLE_QOUTE;
 				case ' ': return KEY_SPACE;
+				case '/': return KEY_SLASH;
 			}
 		}
 
@@ -136,6 +137,10 @@ static Keys handle_keys() {
 		switch (vk) {
 			case VK_ESCAPE: return KEY_ESCAPE;
 			case VK_TAB: return KEY_TAB;
+			case VK_DELETE : return KEY_DELETE;
+			case VK_HOME : return KEY_HOME;
+			case VK_END : return KEY_END;
+			case VK_BACK : return KEY_BACKSPACE;
 			case VK_RETURN: return KEY_ENTER;
 			case VK_LEFT: return KEY_LEFT;
 			case VK_UP: return KEY_UP;
@@ -214,6 +219,7 @@ static Keys handle_keys() {
 		case '\t': return KEY_TAB;
 		case '\n': return KEY_ENTER;
 		case ' ': return KEY_SPACE;
+		case 127: return KEY_BACKSPACE;
 
 			  // Numbers
 		case '0': return KEY_0;
@@ -306,10 +312,11 @@ static Keys handle_keys() {
 		case '}': return KEY_CLOSED_BRAKET;
 		case '"': return KEY_DBL_QUOTE;
 		case '\'': return KEY_SINGLE_QOUTE;
+		case '/': return KEY_SLASH;
 
 			   // Arrow keys (escape sequences)
 		case '\033': {
-				     char seq[2];
+				     char seq[3];
 				     if (read(STDIN_FILENO, &seq[0], 1) != 1) return KEY_ESCAPE;
 				     if (seq[0] == '[') {
 					     if (read(STDIN_FILENO, &seq[1], 1) == 1) {
@@ -318,6 +325,28 @@ static Keys handle_keys() {
 							     case 'B': return KEY_DOWN;
 							     case 'C': return KEY_RIGHT;
 							     case 'D': return KEY_LEFT;
+							     case 'H': return KEY_HOME;    // Home key
+							     case 'F': return KEY_END;     // End key
+							     case '3': {
+									       // Check for Delete key (ESC [ 3 ~)
+									       if (read(STDIN_FILENO, &seq[2], 1) == 1 && seq[2] == '~') {
+										       return KEY_DELETE;
+									       }
+							     }break;
+							     case '1': 
+							     case '7':{ 
+									      // Home key variants (ESC [ 1 ~ or ESC [ 7 ~)
+									      if (read(STDIN_FILENO, &seq[2], 1) == 1 && seq[2] == '~') {
+										      return KEY_HOME;
+									      }
+							     }break;
+							     case '4': 
+							     case '8':{ 
+									      // End key variants (ESC [ 4 ~ or ESC [ 8 ~)
+									      if (read(STDIN_FILENO, &seq[2], 1) == 1 && seq[2] == '~') {
+										      return KEY_END;
+									      }
+							     }break;
 						     }
 					     }
 				     }

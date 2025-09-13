@@ -59,12 +59,15 @@ function UTIL.HashMap:keySet()
 end
 
 function UTIL.HashMap:put(key, value)
+	if not key or not value then
+		return false , nil
+	end
 	local oldValue = self.data[key]
 	self.data[key] = value
 	if oldValue == nil then
 		self.size = self.size + 1
 	end
-	return oldValue
+	return true , oldValue
 end
 
 function UTIL.HashMap:putAll(map)

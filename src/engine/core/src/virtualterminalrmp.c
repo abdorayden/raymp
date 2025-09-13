@@ -3,14 +3,18 @@
 #include "lualib.h"
 #include "luaconf.h"
 
+#define _XOPEN_SOURCE	   /* See feature_test_macros(7) */
+#include <wchar.h>
+#include <locale.h>
+#include <uchar.h>   // optional for char32_t, not strictly required
+
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 
-#define CH_UTF8_SIZE	8
-
-#define CH_STRYLE_AND_COLOR_SIZE	16
+#define CH_UTF8_SIZE    64*2
+#define CH_STRYLE_AND_COLOR_SIZE    64
 
 typedef struct {
 	char ch[CH_UTF8_SIZE];
@@ -44,6 +48,8 @@ static Cell* get_cell(VirtualTerminal* vt, unsigned short x, unsigned short y) {
 static int lua_init(lua_State* L) {
 	int width = luaL_optinteger(L , 1 , 150);
 	int height = luaL_optinteger(L , 2 , 1);
+
+	setlocale(LC_CTYPE, "");
 
 	size_t vt_size = sizeof(VirtualTerminal);
 	VirtualTerminal* vt = (VirtualTerminal*)lua_newuserdata(L , vt_size);
@@ -87,21 +93,31 @@ static int lua_clear(lua_State *L) {
 	return 0;
 }
 
-static const char* next_utf8_char(const char* str, int* char_len) {
+// returns pointer into str (same pointer), and outputs byte length (via *byte_len) and display width (via *disp_width)
+// returns pointer as before. sets *byte_len and *disp_width (display columns, 0/1/2)
+static const char* next_utf8_char_info(const char* str, int* byte_len, int* disp_width) {
 	if (!str || !*str) {
-		if (char_len) *char_len = 0;
+		if (byte_len) *byte_len = 0;
+		if (disp_width) *disp_width = 0;
 		return str;
 	}
-	unsigned char c = (unsigned char)*str;
-	int len = 1;
-	if (c >= 0xF0) {
-		len = 4;
-	} else if (c >= 0xE0) {
-		len = 3;
-	} else if (c >= 0xC0) {
-		len = 2;
+
+	// Use mbrtowc to decode one multibyte character into a wide char
+	mbstate_t st;
+	memset(&st, 0, sizeof(st));
+	wchar_t wc;
+	size_t ret = mbrtowc(&wc, str, MB_CUR_MAX, &st);
+	if (ret == (size_t)-1 || ret == (size_t)-2) {
+		// invalid/partial sequence -> treat first byte as a single printable char
+		if (byte_len) *byte_len = 1;
+		if (disp_width) *disp_width = 1;
+		return str;
 	}
-	if (char_len) *char_len = len;
+
+	if (byte_len) *byte_len = (int)ret;
+	int w = wcwidth(wc);
+	if (w < 0) w = 0; // control / combining char can be 0
+	if (disp_width) *disp_width = w;
 	return str;
 }
 
@@ -128,6 +144,105 @@ static int lua_setchar(lua_State *L) {
 	return 0;
 }
 
+
+// write up to max_cols display columns, return number of columns written
+static int lua_writetext_clipped(lua_State *L) {
+    VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
+    int x = luaL_checkinteger(L, 2);
+    int y = luaL_checkinteger(L, 3);
+    size_t text_len;
+    const char* text = luaL_checklstring(L, 4, &text_len);
+    int max_cols = luaL_checkinteger(L, 5); // max display columns to write
+    const char* fg = luaL_optstring(L, 6, "");
+    const char* bg = luaL_optstring(L, 7, "");
+    const char* style = luaL_optstring(L, 8, "");
+
+    int start_x = x;
+    int current_x = x;
+    const char* ptr = text;
+    const char* end = text + text_len;
+
+    // ensure locale has been set (call setlocale in lua_init)
+    while (ptr < end && current_x <= vt->width && (current_x - start_x) < max_cols) {
+        int byte_len = 0, disp_width = 0;
+        next_utf8_char_info(ptr, &byte_len, &disp_width);
+        if (byte_len <= 0) break;
+        if (ptr + byte_len > end) byte_len = (int)(end - ptr);
+
+        // zero-width (combining/VS/ZWJ) -> append to previous base cell if it exists inside the clip
+        if (disp_width == 0) {
+            int base_x = current_x - 1;
+            while (base_x >= start_x) {
+                Cell* base = get_cell(vt, base_x, y);
+                if (!base) { base_x--; continue; }
+                if (base->ch[0] == '\0') { base_x--; continue; } // continuation cell
+                size_t existing = strlen(base->ch);
+                int can_copy = CH_UTF8_SIZE - 1 - (int)existing;
+                if (can_copy > 0) {
+                    int to_copy = (byte_len < can_copy) ? byte_len : can_copy;
+                    memcpy(base->ch + existing, ptr, to_copy);
+                    base->ch[existing + to_copy] = '\0';
+                }
+                if (fg && fg[0]) { strncpy(base->fg, fg, sizeof(base->fg)-1); base->fg[sizeof(base->fg)-1] = '\0'; }
+                if (bg && bg[0]) { strncpy(base->bg, bg, sizeof(base->bg)-1); base->bg[sizeof(base->bg)-1] = '\0'; }
+                if (style && style[0]) { strncpy(base->style, style, sizeof(base->style)-1); base->style[sizeof(base->style)-1] = '\0'; }
+                break;
+            }
+            // if no base found, skip the zero-width as it can't be rendered alone in clip
+            ptr += byte_len;
+            continue;
+        }
+
+        // check if glyph would fit fully inside max_cols
+        int consumed = current_x - start_x;
+        if (consumed + disp_width > max_cols) {
+            break; // don't draw partial glyph
+        }
+
+        if (current_x > vt->width) break;
+        Cell* cell = get_cell(vt, current_x, y);
+        if (cell) {
+            int to_copy = (byte_len < CH_UTF8_SIZE - 1) ? byte_len : (CH_UTF8_SIZE - 1);
+            memcpy(cell->ch, ptr, to_copy);
+            cell->ch[to_copy] = '\0';
+            strncpy(cell->fg, fg, sizeof(cell->fg)-1); cell->fg[sizeof(cell->fg)-1] = '\0';
+            strncpy(cell->bg, bg, sizeof(cell->bg)-1); cell->bg[sizeof(cell->bg)-1] = '\0';
+            strncpy(cell->style, style, sizeof(cell->style)-1); cell->style[sizeof(cell->style)-1] = '\0';
+
+            if (disp_width > 1) {
+                for (int k = 1; k < disp_width; ++k) {
+                    Cell* cont = get_cell(vt, current_x + k, y);
+                    if (!cont) break;
+                    cont->ch[0] = '\0'; // continuation marker
+                    strncpy(cont->fg, fg, sizeof(cont->fg)-1); cont->fg[sizeof(cont->fg)-1] = '\0';
+                    strncpy(cont->bg, bg, sizeof(cont->bg)-1); cont->bg[sizeof(cont->bg)-1] = '\0';
+                    strncpy(cont->style, style, sizeof(cont->style)-1); cont->style[sizeof(cont->style)-1] = '\0';
+                }
+            }
+        }
+
+        current_x += (disp_width > 0) ? disp_width : 1;
+        ptr += byte_len;
+    }
+
+    // clear remaining columns in the clipped region so leftover content doesn't show
+    while ((current_x - start_x) < max_cols && current_x <= vt->width) {
+        Cell* c = get_cell(vt, current_x, y);
+        if (c) {
+            strcpy(c->ch, " ");
+            c->fg[0] = '\0';
+            c->bg[0] = '\0';
+            c->style[0] = '\0';
+        }
+        current_x++;
+    }
+
+    vt->is_dirty = true;
+    int cols_written = current_x - start_x;
+    lua_pushinteger(L, cols_written);
+    return 1;
+}
+
 static int lua_writetext(lua_State *L) {
 	VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
 	int x = luaL_checkinteger(L, 2);
@@ -140,26 +255,105 @@ static int lua_writetext(lua_State *L) {
 	int current_x = x;
 	const char* ptr = text;
 	const char* end = text + text_len;
+
 	while (ptr < end) {
-		int char_len = 1;
-		ptr = next_utf8_char(ptr , &char_len);
-		if (ptr + char_len > end) {
-			char_len = end - ptr;
+		int byte_len = 0;
+		int disp_width = 0;
+		next_utf8_char_info(ptr, &byte_len, &disp_width);
+		if (byte_len <= 0) break;
+		if (ptr + byte_len > end) byte_len = (int)(end - ptr);
+
+		// If the character has display width 0 (combining mark, VS, ZWJ...)
+		// append it to the previous base cell if possible.
+		if (disp_width == 0) {
+			int base_x = current_x - 1;
+			// find the last non-continuation cell to append to
+			while (base_x >= x) {
+				Cell* base = get_cell(vt, base_x, y);
+				if (!base) break;
+				// if base->ch is continuation marker ('\0') then step left
+				if (base->ch[0] == '\0' || (base->ch[0] == ' ' && base_x == x)) {
+					base_x--;
+					continue;
+				}
+				// append bytes to this base cell
+				size_t existing = strlen(base->ch);
+				int can_copy = (CH_UTF8_SIZE - 1) - (int)existing;
+				if (can_copy > 0) {
+					int to_copy = (byte_len < can_copy) ? byte_len : can_copy;
+					memcpy(base->ch + existing, ptr, to_copy);
+					base->ch[existing + to_copy] = '\0';
+				}
+				// also copy style/fg/bg if present (preserve existing)
+				if (fg && fg[0]) {
+					strncpy(base->fg, fg, sizeof(base->fg)-1);
+					base->fg[sizeof(base->fg)-1] = '\0';
+				}
+				if (bg && bg[0]) {
+					strncpy(base->bg, bg, sizeof(base->bg)-1);
+					base->bg[sizeof(base->bg)-1] = '\0';
+				}
+				if (style && style[0]) {
+					strncpy(base->style, style, sizeof(base->style)-1);
+					base->style[sizeof(base->style)-1] = '\0';
+				}
+				break;
+			}
+			// if no base found, as a fallback write the bytes to current cell and treat as width 1
+			if (base_x < x) {
+				Cell* cell = get_cell(vt, current_x, y);
+				if (cell) {
+					int to_copy = (byte_len < CH_UTF8_SIZE - 1) ? byte_len : (CH_UTF8_SIZE - 1);
+					memcpy(cell->ch, ptr, to_copy);
+					cell->ch[to_copy] = '\0';
+					strncpy(cell->fg, fg, sizeof(cell->fg)-1);
+					cell->fg[sizeof(cell->fg)-1] = '\0';
+					strncpy(cell->bg, bg, sizeof(cell->bg)-1);
+					cell->bg[sizeof(cell->bg)-1] = '\0';
+					strncpy(cell->style, style, sizeof(cell->style)-1);
+					cell->style[sizeof(cell->style)-1] = '\0';
+				}
+				current_x += 1;
+			}
+			ptr += byte_len;
+			continue;
 		}
+
+		// Normal printable char with display width >= 1
+		if (current_x > vt->width) break;
 		Cell* cell = get_cell(vt, current_x, y);
 		if (cell) {
-			strncpy(cell->ch, ptr, char_len);
-			cell->ch[char_len] = '\0';
-			strncpy(cell->fg, fg, sizeof(cell->fg) - 1);
+			int to_copy = (byte_len < CH_UTF8_SIZE - 1) ? byte_len : (CH_UTF8_SIZE - 1);
+			memcpy(cell->ch, ptr, to_copy);
+			cell->ch[to_copy] = '\0';
+			strncpy(cell->fg, fg, sizeof(cell->fg)-1);
 			cell->fg[sizeof(cell->fg)-1] = '\0';
-			strncpy(cell->bg, bg, sizeof(cell->bg) - 1);
+			strncpy(cell->bg, bg, sizeof(cell->bg)-1);
 			cell->bg[sizeof(cell->bg)-1] = '\0';
-			strncpy(cell->style, style, sizeof(cell->style) - 1);
+			strncpy(cell->style, style, sizeof(cell->style)-1);
 			cell->style[sizeof(cell->style)-1] = '\0';
+			// mark continuation columns if glyph occupies more than one column
+			if (disp_width > 1) {
+				for (int k = 1; k < disp_width; ++k) {
+					Cell* cont = get_cell(vt, current_x + k, y);
+					if (!cont) break;
+					cont->ch[0] = '\0'; // mark as continuation
+							    // copy style/fg/bg so render applies the same styling across columns
+					strncpy(cont->fg, fg, sizeof(cont->fg)-1);
+					cont->fg[sizeof(cont->fg)-1] = '\0';
+					strncpy(cont->bg, bg, sizeof(cont->bg)-1);
+					cont->bg[sizeof(cont->bg)-1] = '\0';
+					strncpy(cont->style, style, sizeof(cont->style)-1);
+					cont->style[sizeof(cont->style)-1] = '\0';
+				}
+			}
 		}
-		ptr += char_len;
-		current_x++;
+
+		// advance by reported display width (at least 1)
+		current_x += (disp_width > 0) ? disp_width : 1;
+		ptr += byte_len;
 	}
+
 	vt->is_dirty = true;
 	return 0;
 }
@@ -217,6 +411,13 @@ static int lua_render(lua_State *L) {
 		current_bg[0] = '\0';
 		for (int x = 1; x <= vt->width; x++) {
 			Cell* cell = get_cell(vt, x, y);
+
+			// skip continuation cells (they were marked by empty ch)
+			if (cell->ch[0] == '\0') {
+				// but still we must advance the terminal column by zero bytes (we rely on the wide glyph printed earlier to occupy the columns)
+				continue;
+			}
+
 			int style_changed = strcmp(cell->style, current_style) != 0;
 			int fg_changed = strcmp(cell->fg, current_fg) != 0;
 			int bg_changed = strcmp(cell->bg, current_bg) != 0;
@@ -229,6 +430,7 @@ static int lua_render(lua_State *L) {
 				if (current_fg[0] != '\0') luaL_addstring(&B, current_fg);
 				if (current_bg[0] != '\0') luaL_addstring(&B, current_bg);
 			}
+			// if the cell contains a single space, that's fine; otherwise add the glyph bytes
 			luaL_addstring(&B, cell->ch);
 		}
 	}
@@ -339,6 +541,7 @@ static const luaL_Reg lib[] = {
 	{"clear", lua_clear},
 	{"setchar", lua_setchar},
 	{"writetext", lua_writetext},
+	{"writetext_clipped", lua_writetext_clipped},
 	{"merge", lua_merge},
 	{"render", lua_render},
 

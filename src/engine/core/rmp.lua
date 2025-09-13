@@ -345,43 +345,6 @@ RMP.BoxDrawing = {
 		"┼",  -- Light vertical and horizontal cross (U+253C)
 	}
 }
-	-- -- Rounded corners (light)
-	-- "╭",  -- Light arc down and right (U+256D)
-	-- "╮",  -- Light arc down and left (U+256E)
-	-- "╰",  -- Light arc up and right (U+2570)
-	-- "╯",   -- Light arc up and left (U+256F)
-
-	-- -- Double-line borders (mix of light and heavy)
-	-- "╓",  -- Double right/down (U+2553)
-	-- "╖",  -- Double down/left (U+2556)
-
-	-- "╙",  -- Double up/right (U+2559)
-	-- "╜",  -- Double up/left (U+255C)
-	-- "╫",  -- Double vertical/single horizontal cross (U+256B)
-	-- "╪",  -- Single vertical/double horizontal cross (U+256A)
-
-	-- -- Dashed and dotted lines
-	-- "┄",  -- Triple-dashed horizontal (U+2504)
-	-- "┅",  -- Heavy triple-dashed horizontal (U+2505)
-	-- "┆",  -- Triple-dashed vertical (U+2506)
-	-- "┇",  -- Heavy triple-dashed vertical (U+2507)
-	-- "┈",  -- Quadruple-dashed horizontal (U+2508)
-	-- "┉",  -- Heavy quadruple-dashed horizontal (U+2509)
-	-- "┊",  -- Quadruple-dashed vertical (U+250A)
-	-- "┋",  -- Heavy quadruple-dashed vertical (U+250B)
-
-	-- -- Less common but useful
-	-- "╒",  -- Down single/right double (U+2552)
-	-- "╕",  -- Down single/left double (U+2555)
-
-	-- "╘",  -- Up single/right double (U+2558)
-	-- "╛",  -- Up single/left double (U+255B)
-	-- "╞",  -- Vertical single/right double (U+255E)
-
-	-- "╡",  -- Vertical single/left double (U+2561)
-	-- "╥",  -- Down heavy/horizontal single (U+2565)
-
-	-- "╨",  -- Up heavy/horizontal single (U+2568)
 
 -- TODO: create class Animation for handling diffrent animation
 -- for animation
@@ -448,12 +411,12 @@ do	-- text
 		return self
 	end
 
-	-- method Position in lua used to controle position of the text 
-	function RMP.Text:setPosition(x,y)
-		self.x = tonumber(x or 1)
-		self.y = tonumber(y or 1)
-		return self
-	end
+	-- -- method Position in lua used to controle position of the text 
+	-- function RMP.Text:setPosition(x,y)
+		-- self.x = tonumber(x or 1)
+		-- self.y = tonumber(y or 1)
+		-- return self
+	-- end
 
 	function RMP.Text:asVTerm()
 		self.vterm:writeText(self.x , self.y , self.text , self.fg , self.bg , self,style)
@@ -515,6 +478,11 @@ RMP.KEY_DOWN = RMP.enum()
 RMP.KEY_LEFT = RMP.enum() 
 RMP.KEY_RIGHT = RMP.enum() 
 RMP.KEY_TAB = RMP.enum()
+RMP.KEY_DELETE = RMP.enum()
+RMP.KEY_HOME = RMP.enum()
+RMP.KEY_END = RMP.enum()
+RMP.KEY_BACKSPACE = RMP.enum()
+
 RMP.KEY_A = RMP.enum() 
 RMP.KEY_B = RMP.enum() 
 RMP.KEY_C = RMP.enum() 
@@ -599,72 +567,8 @@ RMP.KEY_CLOSED_BRAKET = RMP.enum()
 RMP.KEY_BAR = RMP.enum() 
 RMP.KEY_DBL_QUOTE = RMP.enum() 
 RMP.KEY_SINGLE_QOUTE = RMP.enum()
+RMP.KEY_SLASH  = RMP.enum()
 RMP.NONE = RMP.enum()
-
-do	-- local functions
-	function strip_ansi(text)
-		if text == nil then 
-			return nil
-		end
-		return text:gsub("\27%[[%d;]+m", "")
-	end
-
-	function remove_new_lines_from_str(text)
-		if text ~= nil then 
-			return string.gsub(text, "[\r\n]", "")
-		end
-		return nil
-	end
-
-	function cleanTextLocal(text)
-		if text ~= nil then 
-			return text:gsub("\27%[[^m]*m", ""):gsub("^[^%w]+%s*", "")
-		end
-		return nil
-	end
-
-	function draw_box(border_style , title , x, y, width, height, border_color , bg_color)
-		local tha_box = ""
-
-		if border_style == nil or type(border_style) ~= 'table' or border_style[1] == nil then
-			TL = RMP.BoxDrawing.LightBorder[3] -- "┌" Top-left corner
-			TR = RMP.BoxDrawing.LightBorder[4] -- "┐" Top-right corner
-			BL = RMP.BoxDrawing.LightBorder[5] -- "└" Bottom-left corner
-			BR = RMP.BoxDrawing.LightBorder[6] -- "┘" Bottom-right corner
-			H  = RMP.BoxDrawing.LightBorder[1] -- "─" Horizontal line
-			V  = RMP.BoxDrawing.LightBorder[2] -- "│" Vertical line
-		else
-			TL = border_style[3] -- "┌" Top-left corner
-			TR = border_style[4] -- "┐" Top-right corner
-			BL = border_style[5] -- "└" Bottom-left corner
-			BR = border_style[6] -- "┘" Bottom-right corner
-			H  = border_style[1] -- "─" Horizontal line
-			V  = border_style[2] -- "│" Vertical line
-		end
-
-		tha_box  = tha_box .. moveto(x, y , true)
-		local title_len = #strip_ansi(title) 
-		local padding = math.floor((width - title_len - 2) / 2)
-
-		tha_box = tha_box 
-			.. RMP.Text:new(TL , nil , border_color):getColoredText() 
-			.. string.rep(RMP.Text:new(H , nil , border_color):getColoredText(),padding)
-			.. title 
-			.. string.rep(RMP.Text:new(H , nil , border_color):getColoredText(), width - title_len - padding- 2) 
-			..  RMP.Text:new(TR , nil , border_color):getColoredText()
-
-		for i = 1, height - 2 do
-			tha_box  = tha_box .. moveto(x, y + i, true)
-			tha_box = tha_box .. RMP.Text:new(V , nil , border_color):getColoredText() .. string.rep(RMP.Text:new(" " , nil , bg_color):getColoredText(), width - 2) .. RMP.Text:new(V , nil , border_color):getColoredText()
-		end
-
-		tha_box  = tha_box .. moveto(x, y + height - 1, true)
-		tha_box = tha_box .. RMP.Text:new(BL , nil , border_color):getColoredText() .. string.rep(RMP.Text:new(H , nil , border_color):getColoredText(), width - 2) .. RMP.Text:new(BR , nil , border_color):getColoredText()
-		io.write(tha_box)
-		io.flush()
-		tha_box = ""
-	end
-end
 
 RMP.Window = OOP.class("Window")
 do 	-- creating window
@@ -692,7 +596,6 @@ do 	-- creating window
 
 		vterm:drawBox(title , math.floor(x) , math.floor(y) , math.floor(width) , math.floor(height) , border_style , border_color , background_color)
 
-		-- marked as deprecated
 		if callback ~= nil and type(callback) == "function" then
 			local lvt = callback(math.floor(x + 1) , math.floor(y + 1) , math.floor(x + width - 1) , math.floor(y + height - 1))
 			if lvt ~= nil then
@@ -707,7 +610,7 @@ end
 RMP.EventListener = OOP.class("EventListener")
 do
 	function RMP.EventListener:constructor()
-		self.events = HashMap.new()	-- Queue{{key , callback}, {key , callback}}
+		self.events = HashMap.new()
 		return self
 	end
 
@@ -717,6 +620,7 @@ do
 	end
 
 	function RMP.EventListener:handleCurrentKey(key)
+		if not key then return end
 		local foundCallback = self.events:get(key)
 
 		if foundCallback and type(foundCallback) == 'function' then
@@ -732,7 +636,6 @@ do
 end
 
 -- all components should return VirtualTerminal obj
--- TODO: rewrite all VirtualTermminal methods to a native functions
 RMP.VirtualTerminal = OOP.class("VirtualTerminal" , RMP.EventListener)
 do	-- VirtualTerminal
 	function RMP.VirtualTerminal:constructor(width, height) -- constructor
@@ -760,6 +663,16 @@ do	-- VirtualTerminal
 		return self
 	end
 
+	function RMP.VirtualTerminal:writeTextClipped(x, y, text , width , fg, bg, style)
+		if not text then
+			return 
+		end
+		local x = math.floor(x or self.cursor.x)
+		local y = math.floor(y or self.cursor.y)
+		vt_rmp.writetext_clipped(self.native_vt_rmp, x, y, text , width , fg, bg, style)
+		return self
+	end
+
 	function RMP.VirtualTerminal:writeText(x, y, text, fg, bg, style)
 		if not text then
 			return 
@@ -769,13 +682,14 @@ do	-- VirtualTerminal
 		vt_rmp.writetext(self.native_vt_rmp, x, y, text, fg, bg, style)
 		return self
 	end
+
 	function RMP.VirtualTerminal:drawBox(title, x, y, width, height, border_style, fg, bg)
+
 		local x = math.floor(x or 1)
 		local y = math.floor(y or 1)
 		local width = math.floor(width or 80)
 		local height = math.floor(height or 24)
 
-		-- Default border style if not provided
 		if border_style == nil or type(border_style) ~= 'table' or border_style[1] == nil then
 			TL = RMP.BoxDrawing.LightBorder[3] -- "┌" Top-left corner
 			TR = RMP.BoxDrawing.LightBorder[4] -- "┐" Top-right corner
@@ -795,109 +709,43 @@ do	-- VirtualTerminal
 		local end_x = math.min(x + width - 1,  self.realWidth)
 		local end_y = math.min(y + height - 1, self.realHeight)
 
-		-- Draw the box
+
 		self:setChar(x, y, TL, fg, bg)
 		self:setChar(end_x, y, TR, fg, bg)
 		self:setChar(x, end_y, BL, fg, bg)
 		self:setChar(end_x, end_y, BR, fg, bg)
 
 		for i = x + 1, end_x - 1 do
-			self:setChar(i, y, H, fg, bg)      -- Top border
-			self:setChar(i, end_y, H, fg, bg)  -- Bottom border
+			self:setChar(i, y, H, fg, bg)    
+			self:setChar(i, end_y, H, fg, bg)
 		end
 
 		for i = y + 1, end_y - 1 do
-			self:setChar(x, i, V, fg, bg)      -- Left border
-			self:setChar(end_x, i, V, fg, bg)  -- Right border
+			self:setChar(x, i, V, fg, bg)    
+			self:setChar(end_x, i, V, fg, bg)
 		end
 
-		-- Fill interior with background color
 		for i = y + 1, end_y - 1 do
 			for j = x + 1, end_x - 1 do
 				self:setChar(j, i, " ", nil, bg)
 			end
 		end
 
-		-- Handle title if provided
 		if title and title ~= "" and title:instanceOf(RMP.Text) then
 			local title_text = title:getText()
-			-- Calculate available space for title (width - 2 for borders)
 			local available_width = width - 2
-			-- Truncate title if it's too long
 			if #title_text > available_width then
 				title_text = title_text:sub(1, available_width)
 			end
-
-			-- Calculate centered position for title
 			local title_x = x + 1 + math.floor((available_width - #title_text) / 2)
 			local title_y = y
-
-			-- Write the title
 			self:writeText(title_x, title_y, title_text, title:getFGColor(), title:getBGColor(), title:getStyle())
 		end
 
 		self.dirty = true
 	end
 
-	-- function RMP.VirtualTerminal:drawBox(title, x, y, width, height, border_style, fg, bg)
-	-- 	local x = math.floor(x or 1)
-	-- 	local y = math.floor(y or 1)
-
-	-- 	local width  = math.floor(width or 80)
-	-- 	local height = math.floor(height or 24)
-
-	-- 	if border_style == nil or type(border_style) ~= 'table' or border_style[1] == nil then
-	-- 		TL = RMP.BoxDrawing.LightBorder[3] -- "┌" Top-left corner
-	-- 		TR = RMP.BoxDrawing.LightBorder[4] -- "┐" Top-right corner
-	-- 		BL = RMP.BoxDrawing.LightBorder[5] -- "└" Bottom-left corner
-	-- 		BR = RMP.BoxDrawing.LightBorder[6] -- "┘" Bottom-right corner
-	-- 		H  = RMP.BoxDrawing.LightBorder[1] -- "─" Horizontal line
-	-- 		V  = RMP.BoxDrawing.LightBorder[2] -- "│" Vertical line
-	-- 	else
-	-- 		TL = border_style[3] -- "┌" Top-left corner
-	-- 		TR = border_style[4] -- "┐" Top-right corner
-	-- 		BL = border_style[5] -- "└" Bottom-left corner
-	-- 		BR = border_style[6] -- "┘" Bottom-right corner
-	-- 		H  = border_style[1] -- "─" Horizontal line
-	-- 		V  = border_style[2] -- "│" Vertical line
-	-- 	end
-
-
-	-- 	local end_x = math.min(x + width - 1, self.realWidth)
-	-- 	local end_y = math.min(y + height - 1, self.realHeight)
-
-	-- 	self:setChar(x, y, TL, fg, bg)
-	-- 	self:setChar(end_x, y, TR, fg, bg)
-	-- 	self:setChar(x, end_y, BL, fg, bg)
-	-- 	self:setChar(end_x, end_y, BR, fg, bg)
-
-	-- 	for i = x + 1, end_x - 1 do
-	-- 		self:setChar(i, y, H, fg, bg)      -- Top border
-	-- 		self:setChar(i, end_y, H, fg, bg)  -- Bottom border
-	-- 	end
-
-	-- 	for i = y + 1, end_y - 1 do
-	-- 		self:setChar(x, i, V, fg, bg)      -- Left border
-	-- 		self:setChar(end_x, i, V, fg, bg)  -- Right border
-	-- 	end
-
-	-- 	if title and title ~= "" and title:instanceOf(RMP.Text) then
-	-- 		-- TODO: fix bug , the title applied only when we put bg color to the title
-	-- 		self:writeText(math.floor((x*1.5 + ((width - x)/2)) - #(title:getText())/2) , y , title:getText() , title:getFGColor() , title:getBGColor() , title:getStyle()) 
-	-- 	end
-
-	-- 	for i = y + 1, end_y - 1 do
-	-- 		for j = x + 1, end_x - 1 do
-	-- 			self:setChar(j, i, " ", nil, bg)
-	-- 		end
-	-- 	end
-
-	-- 	self.dirty = true
-	-- end
-
-	-- i stole this method from chat-gpt lol whatever
-	function RMP.VirtualTerminal:render(key)
-		self:super("handleCurrentKey" , key)
+	function RMP.VirtualTerminal:render()
 		vt_rmp.render(self.native_vt_rmp)
 	end
 
@@ -926,7 +774,9 @@ do	-- VirtualTerminal
 	end
 
 	function RMP.VirtualTerminal:resize(width, height)
- 		vt_rmp.resize(self.native_vt_rmp, width, height)
+		if width ~= w or height ~= h then
+			vt_rmp.resize(self.native_vt_rmp, width, height)
+		end
 	end
 
 	function RMP.VirtualTerminal:getVT()
@@ -937,7 +787,7 @@ do	-- VirtualTerminal
 	-- if there is no way to pass vterm object to function parameters 
 	-- so you can merge the other virtual terminal to the main object
 	function RMP.VirtualTerminal:merge(thatTerm, offsetX, offsetY)
-		if thatTerm or thatTerm:instanceOf(RMP.VirtualTerminal) then
+		if thatTerm and thatTerm:instanceOf(RMP.VirtualTerminal) then
 			vt_rmp.merge(self.native_vt_rmp , thatTerm:getVT() , offsetX or 0, offsetY or 0)
 			local eventQueue = thatTerm:getEventQueue()
 			if eventQueue:instanceOf(HashMap) then
@@ -960,7 +810,6 @@ do	-- VirtualTerminal
 
 end
 
--- TODO: Handle Terminal  class
 -- NOTE: Terminal class uses ansii escape code i need to create shared library to handle terminal for each platform
 RMP.Terminal = OOP.class("Terminal")
 do	-- Terminal
@@ -1032,19 +881,199 @@ do	-- Terminal
 	end
 end
 
--- TODO: handle Input 
--- TODO: handle Tables 
--- TODO: handle Panel
--- TODO: handle Loading  
+RMP.Input = OOP.class("Input")
+do
+	function RMP.Input:constructor(label, x, y, width, defaultText, cancelKey)
+		self.label = label
+		self.x = x
+		self.y = y
+		self.width = width
+		self.text = defaultText or ""
+		self.cursor_pos = #self.text + 1
+		self.cancelKey = cancelKey or api.KEY_ESCAPE
+		self.vterm = RMP.VirtualTerminal.new()
+		self.active = false
+		self.submitted = false
+	end
 
--- NOTE: untested
+	function RMP.Input:setCancelKey(key)
+		self.cancelKey = key
+	end
+
+	function RMP.Input:keyToChar(key)
+		local keyMap = {
+			[RMP.KEY_A] = "a", [RMP.KEY_B] = "b", [RMP.KEY_C] = "c", [RMP.KEY_D] = "d",
+			[RMP.KEY_E] = "e", [RMP.KEY_F] = "f", [RMP.KEY_G] = "g", [RMP.KEY_H] = "h",
+			[RMP.KEY_I] = "i", [RMP.KEY_J] = "j", [RMP.KEY_K] = "k", [RMP.KEY_L] = "l",
+			[RMP.KEY_M] = "m", [RMP.KEY_N] = "n", [RMP.KEY_O] = "o", [RMP.KEY_P] = "p",
+			[RMP.KEY_Q] = "q", [RMP.KEY_R] = "r", [RMP.KEY_S] = "s", [RMP.KEY_T] = "t",
+			[RMP.KEY_U] = "u", [RMP.KEY_V] = "v", [RMP.KEY_W] = "w", [RMP.KEY_X] = "x",
+			[RMP.KEY_Y] = "y", [RMP.KEY_Z] = "z",
+			[RMP.KEY_0] = "0", [RMP.KEY_1] = "1", [RMP.KEY_2] = "2", [RMP.KEY_3] = "3",
+			[RMP.KEY_4] = "4", [RMP.KEY_5] = "5", [RMP.KEY_6] = "6", [RMP.KEY_7] = "7",
+			[RMP.KEY_8] = "8", [RMP.KEY_9] = "9",
+			[RMP.KEY_SPACE] = " ",
+			[RMP.KEY_DOT] = ".", [RMP.KEY_MINUS] = "-", [RMP.KEY_UNDERS] = "_",
+			[RMP.KEY_PLUS] = "+", [RMP.KEY_STAR] = "*", [RMP.KEY_SLASH] = "/",
+			[RMP.KEY_BACK_SLASH] = "\\", [RMP.KEY_OPEN_BRAKET] = "[", [RMP.KEY_CLOSED_BRAKET] = "]",
+			[RMP.KEY_OPCURB] = "{", [RMP.KEY_CLCURB] = "}", [RMP.KEY_BAR] = "|",
+			[RMP.KEY_SEMICOL] = ";", [RMP.KEY_DBL_QUOTE] = "\"", [RMP.KEY_SINGLE_QOUTE] = "'",
+			[RMP.KEY_BACKTICK] = "`", [RMP.KEY_HASHTAG] = "#", [RMP.KEY_DOLAR] = "$",
+			[RMP.KEY_PERSANT] = "%", [RMP.KEY_AT] = "@", [RMP.KEY_GT] = ">", [RMP.KEY_LT] = "<"
+		}
+
+		local shiftMap = {
+			[RMP.KEY_SHIFT_A] = "A", [RMP.KEY_SHIFT_B] = "B", [RMP.KEY_SHIFT_C] = "C",
+			[RMP.KEY_SHIFT_D] = "D", [RMP.KEY_SHIFT_E] = "E", [RMP.KEY_SHIFT_F] = "F",
+			[RMP.KEY_SHIFT_G] = "G", [RMP.KEY_SHIFT_H] = "H", [RMP.KEY_SHIFT_I] = "I",
+			[RMP.KEY_SHIFT_J] = "J", [RMP.KEY_SHIFT_K] = "K", [RMP.KEY_SHIFT_L] = "L",
+			[RMP.KEY_SHIFT_M] = "M", [RMP.KEY_SHIFT_N] = "N", [RMP.KEY_SHIFT_O] = "O",
+			[RMP.KEY_SHIFT_P] = "P", [RMP.KEY_SHIFT_Q] = "Q", [RMP.KEY_SHIFT_R] = "R",
+			[RMP.KEY_SHIFT_S] = "S", [RMP.KEY_SHIFT_T] = "T", [RMP.KEY_SHIFT_U] = "U",
+			[RMP.KEY_SHIFT_V] = "V", [RMP.KEY_SHIFT_W] = "W", [RMP.KEY_SHIFT_X] = "X",
+			[RMP.KEY_SHIFT_Y] = "Y", [RMP.KEY_SHIFT_Z] = "Z"
+		}
+
+		return shiftMap[key] or keyMap[key]
+	end
+
+	function RMP.Input:handleKey(key)
+		if key == RMP.KEY_ENTER then
+			self.submitted = true
+			self.active = false
+		elseif key == self.cancelKey then
+			self.text = ""
+			self.active = false
+		elseif key == RMP.KEY_BACKSPACE then
+			if #self.text > 0 then
+				self.text = self.text:sub(1, -2)
+			end
+		else
+			local char = self:keyToChar(key)
+			if char and #self.text < self.width - #self.label - 2 then
+				self.text = self.text .. char
+			end
+		end
+	end
+
+	function RMP.Input:render()
+		self.vterm:clear()
+		self.vterm:writeText(self.x, self.y, self.label, RMP.FGColors.Brights.White, RMP.BGColors.NoBrights.Blue)
+		local displayText = self.text
+		if self.active then
+			displayText = displayText .. "_"
+		end
+
+		self.vterm:writeText(self.x + #self.label, self.y, displayText, RMP.FGColors.Brights.White, RMP.BGColors.NoBrights.Blue)
+	end
+
+	function RMP.Input:start()
+		self.active = true
+		self.submitted = false
+
+		for i = RMP.KEY_A, RMP.KEY_Z do
+			self.vterm:addEventListener(i, function()
+				if self.active then
+					self:handleKey(i)
+					self:render()
+				end
+			end)
+		end
+
+		for i = RMP.KEY_SHIFT_A, RMP.KEY_SHIFT_Z do
+			self.vterm:addEventListener(i, function()
+				if self.active then
+					self:handleKey(i)
+					self:render()
+				end
+			end)
+		end
+
+		for i = RMP.KEY_0, RMP.KEY_9 do
+			self.vterm:addEventListener(i, function()
+				if self.active then
+					self:handleKey(i)
+					self:render()
+				end
+			end)
+		end
+
+		local specialKeys = {
+			RMP.KEY_SPACE, RMP.KEY_DOT, RMP.KEY_MINUS, RMP.KEY_UNDERS,
+			RMP.KEY_PLUS, RMP.KEY_STAR, RMP.KEY_SLASH, RMP.KEY_BACK_SLASH,
+			RMP.KEY_OPEN_BRAKET, RMP.KEY_CLOSED_BRAKET, RMP.KEY_OPCURB,
+			RMP.KEY_CLCURB, RMP.KEY_BAR, RMP.KEY_SEMICOL, RMP.KEY_DBL_QUOTE,
+			RMP.KEY_SINGLE_QOUTE, RMP.KEY_BACKTICK, RMP.KEY_HASHTAG,
+			RMP.KEY_DOLAR, RMP.KEY_PERSANT, RMP.KEY_AT, RMP.KEY_GT, RMP.KEY_LT
+		}
+
+		for _, key in ipairs(specialKeys) do
+			self.vterm:addEventListener(key, function()
+				if self.active then
+					self:handleKey(key)
+					self:render()
+				end
+			end)
+		end
+
+		self.vterm:addEventListener(RMP.KEY_BACKSPACE, function()
+			if self.active then
+				self:handleKey(RMP.KEY_BACKSPACE)
+				self:render()
+			end
+		end)
+
+		self.vterm:addEventListener(RMP.KEY_ENTER, function()
+			if self.active then
+				self:handleKey(RMP.KEY_ENTER)
+				self:render()
+			end
+		end)
+
+		self.vterm:addEventListener(self.cancelKey, function()
+			if self.active then
+				self:handleKey(self.cancelKey)
+				self:render()
+			end
+		end)
+
+		self:render()
+	end
+
+	function RMP.Input:getVterm()
+		return self.vterm
+	end
+
+	function RMP.Input:clearText()
+		self.text = ""
+		self:render()
+	end
+
+	function RMP.Input:getText()
+		return self.text
+	end
+
+	function RMP.Input:setText(newText)
+		self.text = newText or ""
+		self:render()
+	end
+
+	function RMP.Input:isActive()
+		return self.active
+	end
+
+	function RMP.Input:wasSubmitted()
+		return self.submitted
+	end
+end
+-- TODO: handle Tables 
+-- TODO: handle Animation  [loading bar , spinner , progress bar ]
 RMP.Options = OOP.class("Options")
-do	-- Options
-	-- options : array of options 
-	function RMP.Options:constructor(options) -- constructor
-		self.options = options
+do
+	function RMP.Options:constructor(options)
+		self.options = options or {}
 		self.color = RMP.Default
-		self.symbl = "" 
+		self.symbl = ""
 		self.pos = 1
 
 		self.counter = false
@@ -1052,114 +1081,151 @@ do	-- Options
 		self.marked_table = {}
 		self.selected = ""
 		self.unselected = ""
+		-- init marked table
+		for i = 1, #self.options do
+			self.marked_table[i] = false
+		end
 		return self
 	end
 
 	function RMP.Options:setCounter(value)
-		self.counter  = value
+		self.counter = value
 		return self
 	end
 
-	function RMP.Options:setMark(selected , unselected)
-		self.selected = selected
-		self.unselected = unselected 
-		for i = 1 , #self.options do
+	function RMP.Options:setMark(selected, unselected)
+		self.selected = selected or ""
+		self.unselected = unselected or ""
+		self.mark = true
+		-- ensure marked_table matches length
+		self.marked_table = {}
+		for i = 1, #self.options do
 			self.marked_table[i] = false
 		end
-		self.mark = true
 		return self
 	end
 
 	function RMP.Options:setColorFocus(color)
-		self.color = color
+		self.color = color or RMP.Default
 		return self
 	end
 
 	function RMP.Options:setSymblFocus(symbl)
-		self.symbl = symbl 
+		self.symbl = symbl or ""
 		return self
 	end
 
 	function RMP.Options:setOptions(options)
-		self.options = options
+		self.options = options or {}
+		-- clamp pos
+		if #self.options == 0 then
+			self.pos = 1
+		else
+			if self.pos < 1 then self.pos = 1 end
+			if self.pos > #self.options then self.pos = #self.options end
+		end
+		-- reset marks
+		self.marked_table = {}
+		for i = 1, #self.options do
+			self.marked_table[i] = false
+		end
 		return self
 	end
 
 	function RMP.Options:getOptions()
-		return self.options
+		return self.options or {}
 	end
 
-	-- default position
+	-- set visible focus position (absolute index in options array)
 	function RMP.Options:focusPos(position)
-		self.pos = position or 1
-		text = self.options[self.pos]
-		self.options[self.pos] = RMP.Text.new(text , self.symbl , self.color):getColoredText()
+		local p = tonumber(position) or 1
+		if p < 1 then p = 1 end
+		if p > #self.options and #self.options > 0 then p = #self.options end
+		self.pos = p
 		return self
 	end
 
-	function RMP.Options:next()
-		text = self.options[self.pos]
-		self.options[self.pos] = cleanTextLocal(text)
+	function RMP.Options:next(block)
+		local block = block or false
+		if #self.options == 0 then return self end
 		if self.pos == #self.options then
-			self.pos = 1
+			if block then
+				self.pos = #self.options
+			else
+				self.pos = 1
+			end
 		else
 			self.pos = self.pos + 1
 		end
-		self:focusPos(self.pos)
 		return self
 	end
 
 	function RMP.Options:first()
 		self.pos = 1
-		self:focusPos(self.pos)
 		return self
 	end
 
 	function RMP.Options:last()
-		self.pos = #self.options
-		self:focusPos(self.pos)
+		self.pos = math.max(1, #self.options)
 		return self
 	end
 
-	function RMP.Options:prev()
-		text = self.options[self.pos]
-		self.options[self.pos] = cleanTextLocal(text)
+	function RMP.Options:prev(block)
+
+		local block = block or false
+		if #self.options == 0 then return self end
 		if self.pos == 1 then
-			self.pos = #self.options
+			if block then
+				self.pos = 1
+			else
+				self.pos = #self.options
+			end
 		else
 			self.pos = self.pos - 1
 		end
-		self:focusPos(self.pos)
 		return self
 	end
 
 	function RMP.Options:getSelected()
+		if #self.options == 0 then return nil end
 		self.marked_table[self.pos] = not self.marked_table[self.pos]
 		return cleanTextLocal(self.options[self.pos])
 	end
 
-	function RMP.Options:getOptions()
-		return self.options
-	end
-
-	-- Log method will print the options to standerd output
+	-- Returns a table of strings suitable for rendering.
+	-- It DOES NOT modify self.options in-place.
+	-- inside RMP.Options (replace existing parse)
 	function RMP.Options:parse()
-		local forRet = {} -- this tables contains parsed
-		for i = 1 , #self.options do
-			local text = ""
-			if self.marked_table[i] then
-				text = text .. self.selected .. " "
-			else
-				text = text .. self.unselected .. " "
+		local forRet = {}
+		for i = 1, #self.options do
+			local raw = tostring(self.options[i] or "")
+			local marked = (self.marked_table and self.marked_table[i]) and true or false
+
+			-- prefix (mark/unmark) shown before the item text (kept plain)
+			local prefix = ""
+			if self.mark then
+				prefix = (marked and (self.selected or "") or (self.unselected or "")) .. " "
 			end
-			text = text .. self.options[i]
-			table.insert(text , forRet)
+
+			-- Set style/fg/bg only for focused item; other items keep nil so caller can use defaults
+			local item = {
+				text  = prefix .. raw,
+				marked = marked,
+				fg    = nil,
+				bg    = nil,
+				style = nil
+			}
+			if i == self.pos then
+				item.fg = self.color or nil
+				item.style = self.symbl or nil
+			end
+
+			table.insert(forRet, item)
 		end
 		return forRet
 	end
 end
 
--- TODO: handle Layout
 RMP.Draw = OOP.class("Draw")
 do	-- Draw
 	function RMP.Draw:rectangle(x,y,width,height,color)
@@ -1213,14 +1279,12 @@ do	-- Draw
 			local spaces = height - y - 1
 			local stars = 2 * y + 1
 
-			-- vterm:moveCursor(pos_x + spaces , pos_y + y)
 			vterm:setChar(pos_x + spaces , pos_y + y , string.rep(char, stars), nil , color , nil)
 		end
 		return vterm
 	end
 
-	-- TODO: add thick
-	function RMP.Draw:line(x , y, width , color) -- thick from 0.0 to 1.0
+	function RMP.Draw:line(x , y, width , color)
 		local vterm = RMP.VirtualTerminal.new()
 		vterm:moveCursor(x,y)
 		for i = x  , width + x do
@@ -1248,11 +1312,9 @@ RMP.PopupPosition = {
 	BUTTOM_RIGHT 	= RMP.enum()
 }
 
--- TODO: handle Bar  
 -- TODO: handle timeout async for popups
 RMP.Popup = OOP.class("Popup")
 do	-- Popups
-	-- TODO: add emojis for each status
 	function RMP.Popup:run(message , title , border_color , bg_color , poslayout)
 		rows , cols = RMP.Terminal:getSize()
 		local poslayout = poslayout or RMP.PopupPosition.CENTER
@@ -1281,7 +1343,6 @@ do	-- Popups
 		bg_color , 
 		RMP.BoxDrawing.LightBorder , 
 		function(x, y , xx , yy)
-			-- TODO: handle emojis here
 			-- TODO: fix message inside box
 			local vterm = RMP.VirtualTerminal.new()
 			vterm:moveCursor(x + 1 , y + 1)
@@ -1413,72 +1474,252 @@ do
 	end
 end
 
--- Scroller class
--- Assosiative relation with Options class
 RMP.Scroller = OOP.class("Scroller")
-do	-- Scroller
-	function RMP.Scroller:constructor(h, optObj)
-		self.h = h
-		self.data = optself:getOptions()
-		self.cur = 0
-		self.options = optself:setOptions(self:getSlice())
+do
+	function RMP.Scroller:constructor(visible_height, options_obj)
+		self.visible_height = math.max(1, tonumber(visible_height) or 10)
+		self.options = options_obj or RMP.Options.new({})
+		self.scroll_offset = 0 
+		
+		
+		local data = self.options:getOptions() or {}
+		if #data > 0 then
+			if not self.options.pos or self.options.pos < 1 then
+				self.options.pos = 1
+			elseif self.options.pos > #data then
+				self.options.pos = #data
+			end
+		else
+			self.options.pos = 1
+		end
+		
+		self:_adjustScrollOffset()
 		return self
 	end
 
-	function RMP.Scroller:getSlice()
-		local local_data = {}
-		local last = math.min(self.h, #self.data)
-
-		for i = 1, last do
-			local_data[i] = self.data[i + self.cur]
+	function RMP.Scroller:setOptionsObj(options_obj)
+		self.options = options_obj or RMP.Options.new({})
+		local data = self.options:getOptions() or {}
+		
+		
+		if #data > 0 then
+			if not self.options.pos or self.options.pos < 1 then
+				self.options.pos = 1
+			elseif self.options.pos > #data then
+				self.options.pos = #data
+			end
+		else
+			self.options.pos = 1
 		end
-		return local_data
+		
+		self:_adjustScrollOffset()
+		return self
 	end
 
+	function RMP.Scroller:setHeight(visible_height)
+		self.visible_height = math.max(1, tonumber(visible_height) or 10)
+		self:_adjustScrollOffset()
+		return self
+	end
+
+	
+	function RMP.Scroller:_adjustScrollOffset()
+		local data = self.options:getOptions() or {}
+		local total_items = #data
+		
+		if total_items == 0 then
+			self.scroll_offset = 0
+			return
+		end
+		
+		
+		if self.options.pos < 1 then
+			self.options.pos = 1
+		elseif self.options.pos > total_items then
+			self.options.pos = total_items
+		end
+		
+		
+		local cursor_pos = self.options.pos 
+		
+		
+		if cursor_pos <= self.scroll_offset then
+			self.scroll_offset = math.max(0, cursor_pos - 1)
+		end
+		
+		
+		if cursor_pos > self.scroll_offset + self.visible_height then
+			self.scroll_offset = cursor_pos - self.visible_height
+		end
+		
+		
+		local max_scroll = math.max(0, total_items - self.visible_height)
+		self.scroll_offset = math.min(self.scroll_offset, max_scroll)
+	end
+
+	
+	function RMP.Scroller:getVisible()
+		local parsed_data = self.options:parse() or {}
+		local total_items = #parsed_data
+		
+		if total_items == 0 then
+			return {}, 0, 0
+		end
+		
+		
+		self:_adjustScrollOffset()
+		
+		
+		local start_index = self.scroll_offset + 1 
+		local end_index = math.min(self.scroll_offset + self.visible_height, total_items)
+		
+		
+		local visible_items = {}
+		for i = start_index, end_index do
+			local item = parsed_data[i]
+			if item then
+				
+				item.absolute_index = i
+				table.insert(visible_items, item)
+			end
+		end
+		
+		
+		local focus_index = self.options.pos - self.scroll_offset
+		
+		return visible_items, start_index, focus_index
+	end
+
+	
 	function RMP.Scroller:nextLine()
-		if self.cur + self.h < #self.data then
-			if self.options.pos < self.h then
-				self.options:next()
-			else
-				self.cur = self.cur + 1
-				self.options:setOptions(self:getSlice())
-				self.options:focusPos(self.h)
-			end
-		else
-			self.options:next()
+		local data = self.options:getOptions() or {}
+		local total_items = #data
+		
+		if total_items == 0 then return self end
+		
+		if self.options.pos < total_items then
+			self.options.pos = self.options.pos + 1
+			self:_adjustScrollOffset()
 		end
+		
+		return self
 	end
 
+	
 	function RMP.Scroller:prevLine()
-		if self.cur > 0 then
-			if self.options.pos > 1 then
-				self.options:prev()
-			else
-				self.cur = self.cur - 1
-				self.options:setOptions(self:getSlice())
-				self.options:focusPos(1)
-			end
-		else
-			self.options:prev()
+		local data = self.options:getOptions() or {}
+		
+		if #data == 0 then return self end
+		
+		if self.options.pos > 1 then
+			self.options.pos = self.options.pos - 1
+			self:_adjustScrollOffset()
 		end
-	end
-	function RMP.Scroller:nextContent()
-		local max_start = math.max(0, #self.data - self.h)
-		self.cur = math.min(self.cur + self.h, max_start)
-		self.options:setOptions(self:getSlice())
-		self.options:focusPos(1)
+		
+		return self
 	end
 
+	
+	function RMP.Scroller:nextContent()
+		local data = self.options:getOptions() or {}
+		local total_items = #data
+		
+		if total_items == 0 then return self end
+		
+		local target_pos = math.min(total_items, self.options.pos + self.visible_height)
+		self.options:focusPos(target_pos)
+		self:_adjustScrollOffset()
+		
+		return self
+	end
+
+	
 	function RMP.Scroller:prevContent()
-		self.cur = math.max(self.cur - self.h, 0)
-		self.options:setOptions(self:getSlice())
-		self.options:focusPos(1)
+		local data = self.options:getOptions() or {}
+		
+		if #data == 0 then return self end
+		
+		local target_pos = math.max(1, self.options.pos - self.visible_height)
+		self.options:focusPos(target_pos)
+		self:_adjustScrollOffset()
+		
+		return self
+	end
+
+	
+	function RMP.Scroller:toStart()
+		local data = self.options:getOptions() or {}
+		
+		if #data > 0 then
+			self.options:first()
+			self:_adjustScrollOffset()
+		end
+		
+		return self
+	end
+
+	
+	function RMP.Scroller:toEnd()
+		local data = self.options:getOptions() or {}
+		
+		if #data > 0 then
+			self.options:last()
+			self:_adjustScrollOffset()
+		end
+		
+		return self
+	end
+
+	
+	function RMP.Scroller:resetToStart()
+		self.scroll_offset = 0
+		self.options:first()
+		self:_adjustScrollOffset()
+		return self
+	end
+
+	
+	function RMP.Scroller:getCursorPosition()
+		return self.options.pos
+	end
+
+	
+	function RMP.Scroller:getScrollOffset()
+		return self.scroll_offset
+	end
+
+	
+	function RMP.Scroller:getTotalItems()
+		local data = self.options:getOptions() or {}
+		return #data
+	end
+
+	
+	function RMP.Scroller:canScrollUp()
+		return self.scroll_offset > 0
+	end
+
+	
+	function RMP.Scroller:canScrollDown()
+		local data = self.options:getOptions() or {}
+		return self.scroll_offset + self.visible_height < #data
+	end
+
+	
+	function RMP.Scroller:getScrollProgress()
+		local data = self.options:getOptions() or {}
+		local total_items = #data
+		
+		if total_items <= self.visible_height then
+			return 1.0 
+		end
+		
+		local max_scroll = total_items - self.visible_height
+		return self.scroll_offset / max_scroll
 	end
 end
 
--- TODO: bind miniaudio
--- TODO: handle the class Sound
--- TODO: handle Albome class : albome manager
+-- TODO: fix bindings for audio
 
 RMP.PLAYLIST_LOOP 	= RMP.enum(true)
 RMP.SINGLE_LOOP 	= RMP.enum()
@@ -1781,14 +2022,9 @@ do	-- Path
 
 end
 
--- TODO: write master.lua for managing lua plugins using lua coroutines
--- TODO: make init.lua contains confguration like add plugins and configure keys
-
--- TODO: introduce configuration system to manage lua configuration file 
 RMP.Config = OOP.class("Config")
 do 	-- Config
 
-	-- TODO: if load configuration failed we should run the default themes and plugins
 	-- TODO: check windows version
 	function RMP.Config:constructor(confPath)
 		self.cfgObj = nil
@@ -1911,7 +2147,6 @@ do 	-- Config
 	end
 end
 
--- TODO: create Frame class
 -- /////////////////////////////////////////////////////
 -- Hight Level API
 -- /////////////////////////////////////////////////////
@@ -1950,7 +2185,8 @@ do
 	end
 
 	function RMP.Frame:run(key)
-		self:super("render" , key)
+		self:super("handleCurrentKey" , key)
+		self:super("render")
 		self:super("clear")
 		RMP.sleep(math.floor(RMP.Duration.new(self:getDeltaTime()):fromSec()))
 	end
