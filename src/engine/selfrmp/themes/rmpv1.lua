@@ -67,26 +67,26 @@ return function (plugs)
 		currentPlugStatusWindow = function()end
 	end
 
-	-- handle configurations keymap
-	if changeKeySecondeWindow then
-		mainFrame:addEventListener(changeKeySecondeWindow , function() 
-			currentPlugSecondWindow = plugs:getNextPlug(2)
-		end)
-	end
-
-	if changeKeyStatusWindow then
-		mainFrame:addEventListener(changeKeyStatusWindow , function() 
-			currentPlugStatusWindow = plugs:getNextPlug(3)
-		end)
-	end
-
-	mainFrame:addEventListener(api.KEY_Q , function()
-		quit = true
-	end)
 
 	local quit = false
 
+
 	while not quit do
+		-- handle configurations keymap
+		if changeKeySecondeWindow then
+			mainFrame:addEventListener(changeKeySecondeWindow , function() 
+				currentPlugSecondWindow = plugs:getNextPlug(2)
+			end)
+		end
+
+		if changeKeyStatusWindow then
+			mainFrame:addEventListener(changeKeyStatusWindow , function() 
+				currentPlugStatusWindow = plugs:getNextPlug(3)
+			end)
+		end
+		mainFrame:addEventListener(api.KEY_Q , function()
+			quit = true
+		end)
 		-- read input
 		local key = api.Terminal:handleKey()
 		h , w = Terminal:getSize()

@@ -1,18 +1,71 @@
+#ifndef VIRTUALTERMINALRMP_C
+#define VIRTUALTERMINALRMP_C
+
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
 #include "luaconf.h"
 
-#define _XOPEN_SOURCE	   /* See feature_test_macros(7) */
+#ifdef _WIN32
+    #define PLATFORM_WINDOWS
+    #include <windows.h>
+    #include <io.h>
+    #include <fcntl.h>
+#elif defined(__unix__) || defined(__unix) || (defined(__APPLE__) && defined(__MACH__))
+    #define PLATFORM_UNIX
+    #define _XOPEN_SOURCE
+#endif
+
 #include <wchar.h>
 #include <locale.h>
-#include <uchar.h>   // optional for char32_t, not strictly required
 
-// wcwidth is not in standard C library, but is widely available on Unix-like systems
-// on Windows you may need to provide your own implementation or use a library
-// Here we just declare it; link with -lwcwidth if available, or provide your own
-// TODO: implement a simple wcwidth on Windows if needed
-int wcwidth(wchar_t);
+#ifndef PLATFORM_WINDOWS
+    #include <uchar.h>   // optional for char32_t, not strictly required on Unix
+#endif
+
+// Cross-platform wcwidth implementation
+// i added a simple wcwidth implementation for windows
+// on unix we can just use the system wcwidth
+// for more cross platform handling
+#ifdef PLATFORM_WINDOWS
+    static int wcwidth_impl(wchar_t wc) {
+        if (wc == 0) return 0;
+        if (wc < 32 || wc == 127) return 0; 
+        if (wc < 127) return 1; 
+        
+        if ((wc >= 0x1100 && wc <= 0x115F) ||  // Hangul Jamo
+            (wc >= 0x2E80 && wc <= 0x2EFF) ||  // CJK Radicals Supplement
+            (wc >= 0x2F00 && wc <= 0x2FDF) ||  // Kangxi Radicals
+            (wc >= 0x3000 && wc <= 0x303F) ||  // CJK Symbols and Punctuation
+            (wc >= 0x3040 && wc <= 0x309F) ||  // Hiragana
+            (wc >= 0x30A0 && wc <= 0x30FF) ||  // Katakana
+            (wc >= 0x3100 && wc <= 0x312F) ||  // Bopomofo
+            (wc >= 0x3130 && wc <= 0x318F) ||  // Hangul Compatibility Jamo
+            (wc >= 0x3190 && wc <= 0x319F) ||  // Kanbun
+            (wc >= 0x31A0 && wc <= 0x31BF) ||  // Bopomofo Extended
+            (wc >= 0x31C0 && wc <= 0x31EF) ||  // CJK Strokes
+            (wc >= 0x31F0 && wc <= 0x31FF) ||  // Katakana Phonetic Extensions
+            (wc >= 0x3200 && wc <= 0x32FF) ||  // Enclosed CJK Letters and Months
+            (wc >= 0x3300 && wc <= 0x33FF) ||  // CJK Compatibility
+            (wc >= 0x3400 && wc <= 0x4DBF) ||  // CJK Unified Ideographs Extension A
+            (wc >= 0x4E00 && wc <= 0x9FFF) ||  // CJK Unified Ideographs
+            (wc >= 0xA000 && wc <= 0xA48F) ||  // Yi Syllables
+            (wc >= 0xA490 && wc <= 0xA4CF) ||  // Yi Radicals
+            (wc >= 0xAC00 && wc <= 0xD7AF) ||  // Hangul Syllables
+            (wc >= 0xF900 && wc <= 0xFAFF) ||  // CJK Compatibility Ideographs
+            (wc >= 0xFE10 && wc <= 0xFE1F) ||  // Vertical Forms
+            (wc >= 0xFE30 && wc <= 0xFE4F) ||  // CJK Compatibility Forms
+            (wc >= 0xFE50 && wc <= 0xFE6F) ||  // Small Form Variants
+            (wc >= 0xFF00 && wc <= 0xFFEF)) {  // Halfwidth and Fullwidth Forms
+            return 2;
+        }
+        
+        return 1;
+    }
+    #define wcwidth wcwidth_impl
+#else
+    int wcwidth(wchar_t);
+#endif
 
 #include <stddef.h>
 #include <stdlib.h>
@@ -51,11 +104,24 @@ static Cell* get_cell(VirtualTerminal* vt, unsigned short x, unsigned short y) {
 }
 
 
+static void init_locale() {
+#ifdef PLATFORM_WINDOWS
+    setlocale(LC_CTYPE, ".UTF8");
+    if (setlocale(LC_CTYPE, NULL) == NULL) {
+        setlocale(LC_CTYPE, "");
+    }
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+#else
+    setlocale(LC_CTYPE, "");
+#endif
+}
+
 static int lua_init(lua_State* L) {
 	int width = luaL_optinteger(L , 1 , 150);
 	int height = luaL_optinteger(L , 2 , 1);
 
-	setlocale(LC_CTYPE, "");
+	init_locale();
 
 	size_t vt_size = sizeof(VirtualTerminal);
 	VirtualTerminal* vt = (VirtualTerminal*)lua_newuserdata(L , vt_size);
@@ -99,8 +165,12 @@ static int lua_clear(lua_State *L) {
 	return 0;
 }
 
-// returns pointer into str (same pointer), and outputs byte length (via *byte_len) and display width (via *disp_width)
-// returns pointer as before. sets *byte_len and *disp_width (display columns, 0/1/2)
+#ifdef PLATFORM_WINDOWS
+    #ifndef MB_CUR_MAX
+        #define MB_CUR_MAX 4
+    #endif
+#endif
+
 static const char* next_utf8_char_info(const char* str, int* byte_len, int* disp_width) {
 	if (!str || !*str) {
 		if (byte_len) *byte_len = 0;
@@ -108,13 +178,11 @@ static const char* next_utf8_char_info(const char* str, int* byte_len, int* disp
 		return str;
 	}
 
-	// Use mbrtowc to decode one multibyte character into a wide char
 	mbstate_t st;
 	memset(&st, 0, sizeof(st));
 	wchar_t wc;
 	size_t ret = mbrtowc(&wc, str, MB_CUR_MAX, &st);
 	if (ret == (size_t)-1 || ret == (size_t)-2) {
-		// invalid/partial sequence -> treat first byte as a single printable char
 		if (byte_len) *byte_len = 1;
 		if (disp_width) *disp_width = 1;
 		return str;
@@ -122,7 +190,7 @@ static const char* next_utf8_char_info(const char* str, int* byte_len, int* disp
 
 	if (byte_len) *byte_len = (int)ret;
 	int w = wcwidth(wc);
-	if (w < 0) w = 0; // control / combining char can be 0
+	if (w < 0) w = 0;
 	if (disp_width) *disp_width = w;
 	return str;
 }
@@ -151,14 +219,13 @@ static int lua_setchar(lua_State *L) {
 }
 
 
-// write up to max_cols display columns, return number of columns written
 static int lua_writetext_clipped(lua_State *L) {
     VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
     int x = luaL_checkinteger(L, 2);
     int y = luaL_checkinteger(L, 3);
     size_t text_len;
     const char* text = luaL_checklstring(L, 4, &text_len);
-    int max_cols = luaL_checkinteger(L, 5); // max display columns to write
+    int max_cols = luaL_checkinteger(L, 5);
     const char* fg = luaL_optstring(L, 6, "");
     const char* bg = luaL_optstring(L, 7, "");
     const char* style = luaL_optstring(L, 8, "");
@@ -168,14 +235,12 @@ static int lua_writetext_clipped(lua_State *L) {
     const char* ptr = text;
     const char* end = text + text_len;
 
-    // ensure locale has been set (call setlocale in lua_init)
     while (ptr < end && current_x <= vt->width && (current_x - start_x) < max_cols) {
         int byte_len = 0, disp_width = 0;
         next_utf8_char_info(ptr, &byte_len, &disp_width);
         if (byte_len <= 0) break;
         if (ptr + byte_len > end) byte_len = (int)(end - ptr);
 
-        // zero-width (combining/VS/ZWJ) -> append to previous base cell if it exists inside the clip
         if (disp_width == 0) {
             int base_x = current_x - 1;
             while (base_x >= start_x) {
@@ -194,15 +259,13 @@ static int lua_writetext_clipped(lua_State *L) {
                 if (style && style[0]) { strncpy(base->style, style, sizeof(base->style)-1); base->style[sizeof(base->style)-1] = '\0'; }
                 break;
             }
-            // if no base found, skip the zero-width as it can't be rendered alone in clip
             ptr += byte_len;
             continue;
         }
 
-        // check if glyph would fit fully inside max_cols
         int consumed = current_x - start_x;
         if (consumed + disp_width > max_cols) {
-            break; // don't draw partial glyph
+            break;
         }
 
         if (current_x > vt->width) break;
@@ -219,7 +282,7 @@ static int lua_writetext_clipped(lua_State *L) {
                 for (int k = 1; k < disp_width; ++k) {
                     Cell* cont = get_cell(vt, current_x + k, y);
                     if (!cont) break;
-                    cont->ch[0] = '\0'; // continuation marker
+                    cont->ch[0] = '\0';
                     strncpy(cont->fg, fg, sizeof(cont->fg)-1); cont->fg[sizeof(cont->fg)-1] = '\0';
                     strncpy(cont->bg, bg, sizeof(cont->bg)-1); cont->bg[sizeof(cont->bg)-1] = '\0';
                     strncpy(cont->style, style, sizeof(cont->style)-1); cont->style[sizeof(cont->style)-1] = '\0';
@@ -231,7 +294,6 @@ static int lua_writetext_clipped(lua_State *L) {
         ptr += byte_len;
     }
 
-    // clear remaining columns in the clipped region so leftover content doesn't show
     while ((current_x - start_x) < max_cols && current_x <= vt->width) {
         Cell* c = get_cell(vt, current_x, y);
         if (c) {
@@ -269,20 +331,15 @@ static int lua_writetext(lua_State *L) {
 		if (byte_len <= 0) break;
 		if (ptr + byte_len > end) byte_len = (int)(end - ptr);
 
-		// If the character has display width 0 (combining mark, VS, ZWJ...)
-		// append it to the previous base cell if possible.
 		if (disp_width == 0) {
 			int base_x = current_x - 1;
-			// find the last non-continuation cell to append to
 			while (base_x >= x) {
 				Cell* base = get_cell(vt, base_x, y);
 				if (!base) break;
-				// if base->ch is continuation marker ('\0') then step left
 				if (base->ch[0] == '\0' || (base->ch[0] == ' ' && base_x == x)) {
 					base_x--;
 					continue;
 				}
-				// append bytes to this base cell
 				size_t existing = strlen(base->ch);
 				int can_copy = (CH_UTF8_SIZE - 1) - (int)existing;
 				if (can_copy > 0) {
@@ -290,7 +347,6 @@ static int lua_writetext(lua_State *L) {
 					memcpy(base->ch + existing, ptr, to_copy);
 					base->ch[existing + to_copy] = '\0';
 				}
-				// also copy style/fg/bg if present (preserve existing)
 				if (fg && fg[0]) {
 					strncpy(base->fg, fg, sizeof(base->fg)-1);
 					base->fg[sizeof(base->fg)-1] = '\0';
@@ -305,7 +361,6 @@ static int lua_writetext(lua_State *L) {
 				}
 				break;
 			}
-			// if no base found, as a fallback write the bytes to current cell and treat as width 1
 			if (base_x < x) {
 				Cell* cell = get_cell(vt, current_x, y);
 				if (cell) {
@@ -325,7 +380,6 @@ static int lua_writetext(lua_State *L) {
 			continue;
 		}
 
-		// Normal printable char with display width >= 1
 		if (current_x > vt->width) break;
 		Cell* cell = get_cell(vt, current_x, y);
 		if (cell) {
@@ -338,13 +392,11 @@ static int lua_writetext(lua_State *L) {
 			cell->bg[sizeof(cell->bg)-1] = '\0';
 			strncpy(cell->style, style, sizeof(cell->style)-1);
 			cell->style[sizeof(cell->style)-1] = '\0';
-			// mark continuation columns if glyph occupies more than one column
 			if (disp_width > 1) {
 				for (int k = 1; k < disp_width; ++k) {
 					Cell* cont = get_cell(vt, current_x + k, y);
 					if (!cont) break;
-					cont->ch[0] = '\0'; // mark as continuation
-							    // copy style/fg/bg so render applies the same styling across columns
+					cont->ch[0] = '\0';
 					strncpy(cont->fg, fg, sizeof(cont->fg)-1);
 					cont->fg[sizeof(cont->fg)-1] = '\0';
 					strncpy(cont->bg, bg, sizeof(cont->bg)-1);
@@ -355,7 +407,6 @@ static int lua_writetext(lua_State *L) {
 			}
 		}
 
-		// advance by reported display width (at least 1)
 		current_x += (disp_width > 0) ? disp_width : 1;
 		ptr += byte_len;
 	}
@@ -418,9 +469,7 @@ static int lua_render(lua_State *L) {
 		for (int x = 1; x <= vt->width; x++) {
 			Cell* cell = get_cell(vt, x, y);
 
-			// skip continuation cells (they were marked by empty ch)
 			if (cell->ch[0] == '\0') {
-				// but still we must advance the terminal column by zero bytes (we rely on the wide glyph printed earlier to occupy the columns)
 				continue;
 			}
 
@@ -436,7 +485,6 @@ static int lua_render(lua_State *L) {
 				if (current_fg[0] != '\0') luaL_addstring(&B, current_fg);
 				if (current_bg[0] != '\0') luaL_addstring(&B, current_bg);
 			}
-			// if the cell contains a single space, that's fine; otherwise add the glyph bytes
 			luaL_addstring(&B, cell->ch);
 		}
 	}
@@ -444,7 +492,19 @@ static int lua_render(lua_State *L) {
 	luaL_addstring(&B, sequence_buf);
 	luaL_pushresult(&B);
 	const char* output = lua_tostring(L, -1);
-	fwrite(output, sizeof(char), lua_rawlen(L, -1), stdout);
+	size_t output_len = lua_rawlen(L, -1);
+	
+#ifdef PLATFORM_WINDOWS
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	if (hConsole != INVALID_HANDLE_VALUE) {
+		DWORD written;
+		WriteConsoleA(hConsole, output, (DWORD)output_len, &written, NULL);
+	} else {
+		fwrite(output, sizeof(char), output_len, stdout);
+	}
+#else
+	fwrite(output, sizeof(char), output_len, stdout);
+#endif
 	fflush(stdout);
 	vt->is_dirty = false;
 	return 0;
@@ -497,7 +557,6 @@ static int lua_resize(lua_State* L) {
 	return 0;
 }
 
-// cursor movement helpers
 static int lua_moveup(lua_State* L) {
 	VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
 	int steps = luaL_optinteger(L, 2, 1);
@@ -576,3 +635,5 @@ int luaopen_rmp_virtualterminalrmp(lua_State *L)
 	luaL_newlib(L, lib);
 	return 1;
 }
+
+#endif // VIRTUALTERMINALRMP_C

@@ -884,20 +884,35 @@ end
 RMP.Input = OOP.class("Input")
 do
 	function RMP.Input:constructor(label, x, y, width, defaultText, cancelKey)
-		self.label = label
-		self.x = x
-		self.y = y
-		self.width = width
-		self.text = defaultText or ""
+		self.label = label or ""
+		self.x = math.max(1, tonumber(x) or 1)
+		self.y = math.max(1, tonumber(y) or 1)
+		self.width = math.max(1, tonumber(width) or 10)
+		self.text = tostring(defaultText or "")
 		self.cursor_pos = #self.text + 1
-		self.cancelKey = cancelKey or api.KEY_ESCAPE
+		self.cancelKey = cancelKey or RMP.KEY_ESCAPE
 		self.vterm = RMP.VirtualTerminal.new()
 		self.active = false
 		self.submitted = false
+		self.scroll_offset = 0
+		self.max_visible_chars = self.width - #self.label - 3
 	end
 
 	function RMP.Input:setCancelKey(key)
 		self.cancelKey = key
+	end
+
+	function RMP.Input:adjustScroll()
+		local visible_width = self.max_visible_chars
+		if visible_width <= 0 then
+			return
+		end
+		
+		if self.cursor_pos - self.scroll_offset > visible_width then
+			self.scroll_offset = self.cursor_pos - visible_width
+		elseif self.cursor_pos <= self.scroll_offset then
+			self.scroll_offset = math.max(0, self.cursor_pos - 1)
+		end
 	end
 
 	function RMP.Input:keyToChar(key)
@@ -943,15 +958,42 @@ do
 			self.active = false
 		elseif key == self.cancelKey then
 			self.text = ""
+			self.cursor_pos = 1
+			self.scroll_offset = 0
 			self.active = false
 		elseif key == RMP.KEY_BACKSPACE then
-			if #self.text > 0 then
-				self.text = self.text:sub(1, -2)
+			if self.cursor_pos > 1 and #self.text > 0 then
+				self.text = self.text:sub(1, self.cursor_pos - 2) .. self.text:sub(self.cursor_pos)
+				self.cursor_pos = self.cursor_pos - 1
+				self:adjustScroll()
 			end
+		elseif key == RMP.KEY_DELETE then
+			if self.cursor_pos <= #self.text then
+				self.text = self.text:sub(1, self.cursor_pos - 1) .. self.text:sub(self.cursor_pos + 1)
+				self:adjustScroll()
+			end
+		elseif key == RMP.KEY_LEFT then
+			if self.cursor_pos > 1 then
+				self.cursor_pos = self.cursor_pos - 1
+				self:adjustScroll()
+			end
+		elseif key == RMP.KEY_RIGHT then
+			if self.cursor_pos <= #self.text then
+				self.cursor_pos = self.cursor_pos + 1
+				self:adjustScroll()
+			end
+		elseif key == RMP.KEY_HOME then
+			self.cursor_pos = 1
+			self.scroll_offset = 0
+		elseif key == RMP.KEY_END then
+			self.cursor_pos = #self.text + 1
+			self:adjustScroll()
 		else
 			local char = self:keyToChar(key)
-			if char and #self.text < self.width - #self.label - 2 then
-				self.text = self.text .. char
+			if char and #self.text < self.max_visible_chars then
+				self.text = self.text:sub(1, self.cursor_pos - 1) .. char .. self.text:sub(self.cursor_pos)
+				self.cursor_pos = self.cursor_pos + 1
+				self:adjustScroll()
 			end
 		end
 	end
@@ -959,45 +1001,47 @@ do
 	function RMP.Input:render()
 		self.vterm:clear()
 		self.vterm:writeText(self.x, self.y, self.label, RMP.FGColors.Brights.White, RMP.BGColors.NoBrights.Blue)
+		
+		local visible_width = self.max_visible_chars
 		local displayText = self.text
-		if self.active then
-			displayText = displayText .. "_"
+		if visible_width > 0 and #displayText > visible_width then
+			displayText = displayText:sub(self.scroll_offset + 1, self.scroll_offset + visible_width)
 		end
-
+		displayText = displayText .. string.rep(" ", math.max(0, visible_width - #displayText))
+		
 		self.vterm:writeText(self.x + #self.label, self.y, displayText, RMP.FGColors.Brights.White, RMP.BGColors.NoBrights.Blue)
+		if self.active then
+			local cursor_screen_pos = self.cursor_pos - self.scroll_offset
+			if cursor_screen_pos > 0 and cursor_screen_pos <= visible_width then
+				self.vterm:writeText(
+					self.x + #self.label + cursor_screen_pos - 1, self.y,
+					"_",
+					RMP.FGColors.Brights.Yellow,
+					RMP.BGColors.NoBrights.Blue
+				)
+			end
+		end
 	end
 
 	function RMP.Input:start()
 		self.active = true
 		self.submitted = false
+		self:render()
+	end
 
-		for i = RMP.KEY_A, RMP.KEY_Z do
-			self.vterm:addEventListener(i, function()
-				if self.active then
-					self:handleKey(i)
-					self:render()
-				end
-			end)
+	function RMP.Input:processKey(key)
+		if not self.active then
+			return false
 		end
-
-		for i = RMP.KEY_SHIFT_A, RMP.KEY_SHIFT_Z do
-			self.vterm:addEventListener(i, function()
-				if self.active then
-					self:handleKey(i)
-					self:render()
-				end
-			end)
+		
+		local should_handle = false
+		
+		if (key >= RMP.KEY_A and key <= RMP.KEY_Z) or
+		   (key >= RMP.KEY_SHIFT_A and key <= RMP.KEY_SHIFT_Z) or
+		   (key >= RMP.KEY_0 and key <= RMP.KEY_9) then
+			should_handle = true
 		end
-
-		for i = RMP.KEY_0, RMP.KEY_9 do
-			self.vterm:addEventListener(i, function()
-				if self.active then
-					self:handleKey(i)
-					self:render()
-				end
-			end)
-		end
-
+		
 		local specialKeys = {
 			RMP.KEY_SPACE, RMP.KEY_DOT, RMP.KEY_MINUS, RMP.KEY_UNDERS,
 			RMP.KEY_PLUS, RMP.KEY_STAR, RMP.KEY_SLASH, RMP.KEY_BACK_SLASH,
@@ -1006,46 +1050,36 @@ do
 			RMP.KEY_SINGLE_QOUTE, RMP.KEY_BACKTICK, RMP.KEY_HASHTAG,
 			RMP.KEY_DOLAR, RMP.KEY_PERSANT, RMP.KEY_AT, RMP.KEY_GT, RMP.KEY_LT
 		}
-
-		for _, key in ipairs(specialKeys) do
-			self.vterm:addEventListener(key, function()
-				if self.active then
-					self:handleKey(key)
-					self:render()
-				end
-			end)
+		
+		for _, special_key in ipairs(specialKeys) do
+			if key == special_key then
+				should_handle = true
+				break
+			end
 		end
-
-		self.vterm:addEventListener(RMP.KEY_BACKSPACE, function()
-			if self.active then
-				self:handleKey(RMP.KEY_BACKSPACE)
-				self:render()
-			end
-		end)
-
-		self.vterm:addEventListener(RMP.KEY_ENTER, function()
-			if self.active then
-				self:handleKey(RMP.KEY_ENTER)
-				self:render()
-			end
-		end)
-
-		self.vterm:addEventListener(self.cancelKey, function()
-			if self.active then
-				self:handleKey(self.cancelKey)
-				self:render()
-			end
-		end)
-
-		self:render()
+		
+		if key == RMP.KEY_BACKSPACE or key == RMP.KEY_DELETE or
+		   key == RMP.KEY_LEFT or key == RMP.KEY_RIGHT or
+		   key == RMP.KEY_HOME or key == RMP.KEY_END or
+		   key == RMP.KEY_ENTER or key == self.cancelKey then
+			should_handle = true
+		end
+		
+		if should_handle then
+			self:handleKey(key)
+			self:render()
+			return true
+		end
+		
+		return false
 	end
-
 	function RMP.Input:getVterm()
 		return self.vterm
 	end
 
 	function RMP.Input:clearText()
 		self.text = ""
+		self.event_listeners_registered = true
 		self:render()
 	end
 
@@ -1055,6 +1089,29 @@ do
 
 	function RMP.Input:setText(newText)
 		self.text = newText or ""
+		self.cursor_pos = #self.text + 1
+		self.scroll_offset = 0
+		self:adjustScroll()
+		self:render()
+	end
+
+	function RMP.Input:setCursorPos(pos)
+		pos = tonumber(pos) or 1
+		self.cursor_pos = math.max(1, math.min(#self.text + 1, pos))
+		self:adjustScroll()
+		self:render()
+	end
+
+	function RMP.Input:getCursorPos()
+		return self.cursor_pos
+	end
+
+	function RMP.Input:reset()
+		self.active = false
+		self.submitted = false
+		self.text = ""
+		self.cursor_pos = 1
+		self.scroll_offset = 0
 		self:render()
 	end
 
