@@ -18,7 +18,7 @@ return function(x, y, xx, yy)
 	local time = os.date("%H:%M:%S")
 	local timeWidth = #time
 
-	for i = 0, h do
+	for i = 0, h - 1 do
 		local intensity = math.floor(255 * (i / h))
 		vt:merge(api.Draw:rectangle(x, y + i, w, 1, api.BGColors.NoBrights.Black))
 	end
