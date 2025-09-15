@@ -150,7 +150,6 @@ local function render_ui(vterm, x, y, xx, yy)
 	end
 end
 
-
 return function(x, y, xx, yy)
 	
 	local safe_x = math.max(1, tonumber(x) or 1)
@@ -163,7 +162,6 @@ return function(x, y, xx, yy)
 	if not vterm then
 		error("Failed to create VirtualTerminal")
 	end
-
 	
 	if not plugin_state.input_instance then
 		local input_y = safe_yy - 2
@@ -177,7 +175,6 @@ return function(x, y, xx, yy)
 
 	local input = plugin_state.input_instance
 
-	
 	vterm:addEventListener(api.EventType.Keyboard, function(key) 
 		if key == api.KEY_TAB then
 			plugin_state.input_active = not plugin_state.input_active
@@ -226,7 +223,6 @@ return function(x, y, xx, yy)
 			end
 		end)
 	end
-
 	
 	if input and plugin_state.input_active then
 		local input_vterm = input:getVterm()

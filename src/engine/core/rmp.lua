@@ -1228,6 +1228,273 @@ do
 		return self.submitted
 	end
 end
+
+-- Simple High-Level Input API for RMP Framework
+-- simpleinput component - handles everything internally
+RMP.SimpleInput = OOP.class("SimpleInput")
+do
+	function RMP.SimpleInput:constructor(options)
+		options = options or {}
+
+		self.x = options.x or 1
+		self.y = options.y or 1
+		self.width = options.width or 20
+		self.label = options.label or ""
+		self.placeholder = options.placeholder or ""
+		self.value = options.value or ""
+		self.maxLength = options.maxLength or 100
+
+		-- function(text) -> bool, error_msg
+		self.validator = options.validator or nil 
+
+		self.cursor_pos = #self.value + 1
+		self.active = false
+		self.error_message = ""
+		self.show_error = false
+
+		self.fg_normal = options.fg_normal or RMP.FGColors.NoBrights.White
+		self.bg_normal = options.bg_normal or RMP.BGColors.NoBrights.Black
+		self.fg_active = options.fg_active or RMP.FGColors.Brights.Cyan
+		self.bg_active = options.bg_active or RMP.BGColors.NoBrights.Blue
+		self.fg_error = options.fg_error or RMP.FGColors.Brights.Red
+
+		return self
+	end
+
+	
+	function RMP.SimpleInput:render(vterm)
+		
+		if self.active then
+			vterm:addEventListener(RMP.EventType.Input, function(key)
+				self:_handleKey(key)
+			end)
+		end
+
+		
+		self:_renderField(vterm)
+
+		return self
+	end
+
+	
+	function RMP.SimpleInput:focus()
+		self.active = true
+		self.show_error = false
+		return self
+	end
+
+	
+	function RMP.SimpleInput:blur()
+		self.active = false
+		return self
+	end
+
+	function RMP.SimpleInput:getValue()
+		return self.value
+	end
+
+	function RMP.SimpleInput:setValue(value)
+		self.value = tostring(value or "")
+		self.cursor_pos = #self.value + 1
+		return self
+	end
+
+	function RMP.SimpleInput:clear()
+		self.value = ""
+		self.cursor_pos = 1
+		self.show_error = false
+		return self
+	end
+
+	function RMP.SimpleInput:isActive()
+		return self.active
+	end
+
+	function RMP.SimpleInput:hasError()
+		return self.show_error
+	end
+
+	function RMP.SimpleInput:getError()
+		return self.error_message
+	end
+
+	
+	function RMP.SimpleInput:_handleKey(key)
+		if key == RMP.KEY_ENTER then
+			self:_submit()
+		elseif key == RMP.KEY_ESCAPE then
+			self:blur()
+		elseif key == RMP.KEY_BACKSPACE then
+			self:_backspace()
+		elseif key == RMP.KEY_DELETE then
+			self:_delete()
+		elseif key == RMP.KEY_LEFT then
+			self:_moveCursorLeft()
+		elseif key == RMP.KEY_RIGHT then
+			self:_moveCursorRight()
+		elseif key == RMP.KEY_HOME then
+			self.cursor_pos = 1
+		elseif key == RMP.KEY_END then
+			self.cursor_pos = #self.value + 1
+		else
+			local char = self:_keyToChar(key)
+			if char and #self.value < self.maxLength then
+				self:_insertChar(char)
+			end
+		end
+	end
+
+	function RMP.SimpleInput:_submit()
+		if self.validator then
+			local valid, error_msg = self.validator(self.value)
+			if not valid then
+				self.error_message = error_msg or "Invalid input"
+				self.show_error = true
+				return false
+			end
+		end
+
+		self.show_error = false
+		self:blur()
+		return true
+	end
+
+	function RMP.SimpleInput:_insertChar(char)
+		self.value = self.value:sub(1, self.cursor_pos - 1) .. char .. self.value:sub(self.cursor_pos)
+		self.cursor_pos = self.cursor_pos + 1
+		self.show_error = false
+	end
+
+	function RMP.SimpleInput:_backspace()
+		if self.cursor_pos > 1 then
+			self.value = self.value:sub(1, self.cursor_pos - 2) .. self.value:sub(self.cursor_pos)
+			self.cursor_pos = self.cursor_pos - 1
+			self.show_error = false
+		end
+	end
+
+	function RMP.SimpleInput:_delete()
+		if self.cursor_pos <= #self.value then
+			self.value = self.value:sub(1, self.cursor_pos - 1) .. self.value:sub(self.cursor_pos + 1)
+			self.show_error = false
+		end
+	end
+
+	function RMP.SimpleInput:_moveCursorLeft()
+		if self.cursor_pos > 1 then
+			self.cursor_pos = self.cursor_pos - 1
+		end
+	end
+
+	function RMP.SimpleInput:_moveCursorRight()
+		if self.cursor_pos <= #self.value then
+			self.cursor_pos = self.cursor_pos + 1
+		end
+	end
+
+	function RMP.SimpleInput:_keyToChar(key)
+		
+		local keyMap = {
+			[RMP.KEY_A] = "a", [RMP.KEY_B] = "b", [RMP.KEY_C] = "c", [RMP.KEY_D] = "d",
+			[RMP.KEY_E] = "e", [RMP.KEY_F] = "f", [RMP.KEY_G] = "g", [RMP.KEY_H] = "h",
+			[RMP.KEY_I] = "i", [RMP.KEY_J] = "j", [RMP.KEY_K] = "k", [RMP.KEY_L] = "l",
+			[RMP.KEY_M] = "m", [RMP.KEY_N] = "n", [RMP.KEY_O] = "o", [RMP.KEY_P] = "p",
+			[RMP.KEY_Q] = "q", [RMP.KEY_R] = "r", [RMP.KEY_S] = "s", [RMP.KEY_T] = "t",
+			[RMP.KEY_U] = "u", [RMP.KEY_V] = "v", [RMP.KEY_W] = "w", [RMP.KEY_X] = "x",
+			[RMP.KEY_Y] = "y", [RMP.KEY_Z] = "z",
+			[RMP.KEY_0] = "0", [RMP.KEY_1] = "1", [RMP.KEY_2] = "2", [RMP.KEY_3] = "3",
+			[RMP.KEY_4] = "4", [RMP.KEY_5] = "5", [RMP.KEY_6] = "6", [RMP.KEY_7] = "7",
+			[RMP.KEY_8] = "8", [RMP.KEY_9] = "9",
+			[RMP.KEY_SPACE] = " ", [RMP.KEY_DOT] = ".", [RMP.KEY_MINUS] = "-"
+		}
+
+		local shiftMap = {
+			[RMP.KEY_SHIFT_A] = "A", [RMP.KEY_SHIFT_B] = "B", [RMP.KEY_SHIFT_C] = "C",
+			[RMP.KEY_SHIFT_D] = "D", [RMP.KEY_SHIFT_E] = "E", [RMP.KEY_SHIFT_F] = "F",
+			[RMP.KEY_SHIFT_G] = "G", [RMP.KEY_SHIFT_H] = "H", [RMP.KEY_SHIFT_I] = "I",
+			[RMP.KEY_SHIFT_J] = "J", [RMP.KEY_SHIFT_K] = "K", [RMP.KEY_SHIFT_L] = "L",
+			[RMP.KEY_SHIFT_M] = "M", [RMP.KEY_SHIFT_N] = "N", [RMP.KEY_SHIFT_O] = "O",
+			[RMP.KEY_SHIFT_P] = "P", [RMP.KEY_SHIFT_Q] = "Q", [RMP.KEY_SHIFT_R] = "R",
+			[RMP.KEY_SHIFT_S] = "S", [RMP.KEY_SHIFT_T] = "T", [RMP.KEY_SHIFT_U] = "U",
+			[RMP.KEY_SHIFT_V] = "V", [RMP.KEY_SHIFT_W] = "W", [RMP.KEY_SHIFT_X] = "X",
+			[RMP.KEY_SHIFT_Y] = "Y", [RMP.KEY_SHIFT_Z] = "Z"
+		}
+
+		return shiftMap[key] or keyMap[key]
+	end
+
+	function RMP.SimpleInput:_renderField(vterm)
+		
+		if self.label ~= "" then
+			vterm:writeText(self.x, self.y, self.label, self.fg_normal, self.bg_normal)
+		end
+
+		
+		local fg = self.active and self.fg_active or self.fg_normal
+		local bg = self.active and self.bg_active or self.bg_normal
+
+		if self.show_error then
+			fg = self.fg_error
+		end
+
+		
+		local display_value = self.value
+		if display_value == "" and not self.active and self.placeholder ~= "" then
+			display_value = self.placeholder
+			fg = RMP.FGColors.NoBrights.White  
+		end
+
+		
+		local field_content = display_value .. string.rep(" ", math.max(0, self.width - #display_value))
+		local field_x = self.x + #self.label
+
+		vterm:writeText(field_x, self.y, field_content, fg, bg)
+
+		
+		if self.active then
+			local cursor_x = field_x + self.cursor_pos - 1
+			vterm:writeText(cursor_x, self.y, "_", RMP.FGColors.Brights.Yellow, bg)
+		end
+
+		
+		if self.show_error and self.error_message ~= "" then
+			vterm:writeText(self.x, self.y + 1, self.error_message, self.fg_error, self.bg_normal)
+		end
+	end
+end
+
+-- Simple Dialog API for RMP Framework
+RMP.Dialog = {}
+
+function RMP.Dialog.input(options)
+	options = options or {}
+	local title = options.title or "Input"
+	local message = options.message or "Enter value:"
+	local default = options.default or ""
+	local validator = options.validator
+
+	-- This would be implemented as a blocking dialog
+	-- For now, return a simple input component
+	return RMP.SimpleInput.new({
+		label = message,
+		value = default,
+		validator = validator,
+		width = options.width or 30
+	})
+end
+
+-- simpleconfirmation dialog
+function RMP.Dialog.confirm(message, title)
+	-- Returns true/false
+	-- Implementation would show a dialog with Yes/No buttons
+end
+
+-- simplealert dialog
+function RMP.Dialog.alert(message, title)
+	-- Shows message and waits for OK
+	-- Implementation would show a dialog with OK button
+end
+
 -- TODO: handle Tables 
 -- TODO: handle Animation  [loading bar , spinner , progress bar ]
 RMP.Options = OOP.class("Options")

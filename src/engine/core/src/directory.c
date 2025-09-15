@@ -209,65 +209,65 @@ static int lua_rmdir(lua_State* L){
 
 #ifdef 	_WIN32
 	if(!_rmdir(dir_path) != 0){
-	       lua_pushboolean(L , 0);
-	       switch (errno) {
-		       case EACCES: 
-			       lua_pushstring(L, "Directory is not empty or access denied");
-			       break;
-		       case ENOENT: 
-			       lua_pushstring(L, "Directory does not exist or path is invalid");
-			       break;
-		       case ENOTEMPTY: 
-			       lua_pushstring(L, "Directory is not empty");
-			       break;
-		       case EINVAL: 
-			       lua_pushstring(L, "Invalid path name");
-			       break;
-		       default: 
-			       lua_pushstring(L, "Unknown error occurred");
-			       break;
-	       }
-	       return 2;
+		lua_pushboolean(L , 0);
+		switch (errno) {
+			case EACCES: 
+				lua_pushstring(L, "Directory is not empty or access denied");
+				break;
+			case ENOENT: 
+				lua_pushstring(L, "Directory does not exist or path is invalid");
+				break;
+			case ENOTEMPTY: 
+				lua_pushstring(L, "Directory is not empty");
+				break;
+			case EINVAL: 
+				lua_pushstring(L, "Invalid path name");
+				break;
+			default: 
+				lua_pushstring(L, "Unknown error occurred");
+				break;
+		}
+		return 2;
 
 	}
 	lua_pushboolean(L , 1);
 #else
-       if(rmdir(dir_path) != 0){
-	       lua_pushboolean(L , 0);
-	       switch(errno){
-		       // get it from man page
-		       // man 2 rmdir
-		       case EACCES : lua_pushstring(L , " Write  access  to the directory containing pathname was not allowed, or one of the directories in the path prefix of pathname did not allow search permission.  (See also path_resolution(7).)"); break;
-		       case EBUSY : lua_pushstring(L , "  pathname is currently in use by the system or some process that prevents its removal.  On Linux, this means pathname is currently used as a mount point or is the root directory of the calling process."); break;
-		       case EFAULT : lua_pushstring(L , " pathname points outside your accessible address space."); break;
-		       case EINVAL : lua_pushstring(L , " pathname has .  as last component."); break;
-		       case ELOOP : lua_pushstring(L , "  Too many symbolic links were encountered in resolving pathname."); break;
-		       case ENAMETOOLONG : lua_pushstring(L , " pathname was too long."); break;
-		       case ENOENT : lua_pushstring(L , " A directory component in pathname does not exist or is a dangling symbolic link."); break;
-		       case ENOMEM : lua_pushstring(L , " Insufficient kernel memory was available."); break;
-		       case ENOTDIR : lua_pushstring(L , " pathname, or a component used as a directory in pathname, is not, in fact, a directory."); break;
-		       case ENOTEMPTY : lua_pushstring(L , " pathname contains  entries  other than . and .. ; or, pathname has ..  as its final component.  POSIX.1 also allows EEXIST for this condition."); break;
-		       case EPERM : lua_pushstring(L , "  The directory containing pathname has the sticky bit (S_ISVTX) set and the process's effective user ID is neither the user ID of	the  file to be deleted nor that of the directory containing it, and the process is not privileged (Linux: does not have the CAP_FOWNER capability)."); break;
-		       case EROFS : lua_pushstring(L , "  pathname refers to a directory on a read-only filesystem."); break;
-	       }
-	       return 2;
-       }
-       lua_pushboolean(L , 1);
+	if(rmdir(dir_path) != 0){
+		lua_pushboolean(L , 0);
+		switch(errno){
+			// get it from man page
+			// man 2 rmdir
+			case EACCES : lua_pushstring(L , " Write  access  to the directory containing pathname was not allowed, or one of the directories in the path prefix of pathname did not allow search permission.  (See also path_resolution(7).)"); break;
+			case EBUSY : lua_pushstring(L , "  pathname is currently in use by the system or some process that prevents its removal.  On Linux, this means pathname is currently used as a mount point or is the root directory of the calling process."); break;
+			case EFAULT : lua_pushstring(L , " pathname points outside your accessible address space."); break;
+			case EINVAL : lua_pushstring(L , " pathname has .  as last component."); break;
+			case ELOOP : lua_pushstring(L , "  Too many symbolic links were encountered in resolving pathname."); break;
+			case ENAMETOOLONG : lua_pushstring(L , " pathname was too long."); break;
+			case ENOENT : lua_pushstring(L , " A directory component in pathname does not exist or is a dangling symbolic link."); break;
+			case ENOMEM : lua_pushstring(L , " Insufficient kernel memory was available."); break;
+			case ENOTDIR : lua_pushstring(L , " pathname, or a component used as a directory in pathname, is not, in fact, a directory."); break;
+			case ENOTEMPTY : lua_pushstring(L , " pathname contains  entries  other than . and .. ; or, pathname has ..  as its final component.  POSIX.1 also allows EEXIST for this condition."); break;
+			case EPERM : lua_pushstring(L , "  The directory containing pathname has the sticky bit (S_ISVTX) set and the process's effective user ID is neither the user ID of	the  file to be deleted nor that of the directory containing it, and the process is not privileged (Linux: does not have the CAP_FOWNER capability)."); break;
+			case EROFS : lua_pushstring(L , "  pathname refers to a directory on a read-only filesystem."); break;
+		}
+		return 2;
+	}
+	lua_pushboolean(L , 1);
 #endif
 	return 1;
 }
 
 static const luaL_Reg lib[] = {
-    {"get_current_path", lua_get_current_path},
-    {"home_path", lua_home_path},
-    {"list_dir", lua_list_dir},
-    {"mkdir", lua_mkdir},
-    {"rmdir", lua_rmdir},
-    {NULL, NULL}
+	{"get_current_path", lua_get_current_path},
+	{"home_path", lua_home_path},
+	{"list_dir", lua_list_dir},
+	{"mkdir", lua_mkdir},
+	{"rmdir", lua_rmdir},
+	{NULL, NULL}
 };
 
 int luaopen_rmp_directory(lua_State *L)
 {
-    luaL_newlib(L, lib);
-    return 1;
+	luaL_newlib(L, lib);
+	return 1;
 }
