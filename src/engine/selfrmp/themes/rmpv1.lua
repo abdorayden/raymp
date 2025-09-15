@@ -73,23 +73,29 @@ return function (plugs)
 
 	while not quit do
 		-- handle configurations keymap
+		-- read input
+		local key = api.Terminal:handleKey()
+		h , w = Terminal:getSize()
 		if changeKeySecondeWindow then
-			mainFrame:addEventListener(changeKeySecondeWindow , function() 
-				currentPlugSecondWindow = plugs:getNextPlug(2)
+			mainFrame:addEventListener( api.EventType.Keyboard , function(key) 
+				if key == changeKeySecondeWindow then
+					currentPlugSecondWindow = plugs:getNextPlug(2)
+				end
 			end)
 		end
 
 		if changeKeyStatusWindow then
-			mainFrame:addEventListener(changeKeyStatusWindow , function() 
-				currentPlugStatusWindow = plugs:getNextPlug(3)
+			mainFrame:addEventListener(api.EventType.Keyboard , function(key) 
+				if key == changeKeyStatusWindow then
+					currentPlugStatusWindow = plugs:getNextPlug(3)
+				end
 			end)
 		end
-		mainFrame:addEventListener(api.KEY_Q , function()
-			quit = true
+		mainFrame:addEventListener(api.EventType.Keyboard , function(key)
+			if key == api.KEY_Q then
+				quit = true
+			end
 		end)
-		-- read input
-		local key = api.Terminal:handleKey()
-		h , w = Terminal:getSize()
 
 		-- init component
 		local window = Window.new(1):createWindow(nil, w , h , 1 , 2 , nil , nil , api.BoxDrawing.HeavyBorder , function(x,y,xx,yy)
@@ -150,7 +156,7 @@ return function (plugs)
 		mainFrame:add(window)
 
 		-- render
-		mainFrame:run(key)
+		mainFrame:run(key , nil)
 	end
 
 	-- clean

@@ -128,6 +128,7 @@ local Promise = require("rmp.promises")
 local Util = require("rmp.util")
 
 local HashMap = Util.HashMap
+local Queue = Util.Queue
 
 -- handle enumuration in lua using coroutine yield
 local global_count_enum = -1
@@ -607,30 +608,111 @@ do 	-- creating window
 	end
 end
 
-RMP.EventListener = OOP.class("EventListener")
+-- TODO: create Mouse class
+-- TODO: create Menu class
+-- TODO: create MenuItems class
+
+RMP.EventType = {
+	Keyboard = RMP.enum(true), 	-- this Keyboard event's for actions
+
+	-- Input Event lazem tkon kayn condition to add the Event each time we called a plugin wich means ida makanch kayen had event 
+	-- nkmlo fl events lokhrin and that't it
+	-- also this Input Event should used it in Input class Only so when we initialize the Input and start read from user we add this event to the EventListener
+	Input = RMP.enum(),		-- Input event disbale listinnig other Events because the user is writing something
+	Mouse = RMP.enum()		-- mouse event
+}
+
+-- TODO: make Event interface
+
+local Event = OOP.interface("Event" , 
+		-- @param key : RMP.EventType value
+		-- @callback : function to call when the event is triggered
+		-- @return : self
+		"addEventListener"
+)
+
+-- TODO: create KeyboardEvent class 
+-- TODO: create MouseEvent class
+-- TODO: make Input class handle it's own event
+-- TODO: make EventListener abstract class
+
+RMP.EventListener = OOP.class("EventListener" , nil , Event)
 do
 	function RMP.EventListener:constructor()
 		self.events = HashMap.new()
+		self.events:put(RMP.EventType.Keyboard , Queue.new())
+		self.events:put(RMP.EventType.Mouse , Queue.new())
+		self.events:put(RMP.EventType.Input , Queue.new())
+
 		return self
 	end
 
-	function RMP.EventListener:addEventListener(key , callback)
-		self.events:put(key , callback)
-		return self
-	end
+	-- Override method
+	-- @param key : RMP.EventType value
+	-- @callback : function to call when the event is triggered
+	-- @return : self
+	function RMP.EventListener:addEventListener(event , callback)
+		if event == nil then
+			return nil
+		end
 
-	function RMP.EventListener:handleCurrentKey(key)
-		if not key then return end
-		local foundCallback = self.events:get(key)
-
-		if foundCallback and type(foundCallback) == 'function' then
-			foundCallback()
+		local thatQueue = self.events:get(event)
+		if thatQueue ~= nil then
+			thatQueue:push(callback)
+			self.events:put(event , thatQueue)
 		end
 
 		return self
 	end
 
-	function RMP.EventListener:getEventQueue()
+	-- @param key : RMP.EventType value
+	-- @return : self
+	-- rename it to handleEvent
+	-- FIXME: rayden was here
+	function RMP.EventListener:handleEvent(key , mouse)
+		if key then
+			if not self.events:get(RMP.EventType.Input):isEmpty() then
+				local lqueue = Queue.new()
+				while not self.events:get(RMP.EventType.Input):isEmpty() do
+					local callback = self.events:get(RMP.EventType.Input):pop()
+					if callback and type(callback) == 'function' then
+						callback(key)
+						lqueue:push(callback)
+					end
+				end
+				self.events:put(RMP.EventType.Input , lqueue)
+			else
+				local lqueue = Queue.new()
+				while not self.events:get(RMP.EventType.Keyboard):isEmpty() do
+					local callback = self.events:get(RMP.EventType.Keyboard):pop()
+					if callback and type(callback) == 'function' then
+						callback(key)
+						lqueue:push(callback)
+					end
+				end
+				self.events:put(RMP.EventType.Keyboard, lqueue)
+			end
+			return self
+		end
+
+		if mouse then
+			local lqueue = Queue.new()
+			while not self.events:get(RMP.EventType.Mouse):isEmpty() do
+				local callback = self.events:get(RMP.EventType.Mouse):pop()
+				if callback and type(callback) == 'function' then
+					callback(mouse)
+					lqueue:push(callback)
+				end
+			end
+			self.events:put(RMP.EventType.Mouse, lqueue)
+			return self
+		end
+
+		return nil
+
+	end
+
+	function RMP.EventListener:getEvent()
 		return self.events
 	end
 end
@@ -653,6 +735,7 @@ do	-- VirtualTerminal
 
 
 	function RMP.VirtualTerminal:clear()
+		-- self.events:clear()
 		vt_rmp.clear(self.native_vt_rmp)
 	end
 
@@ -789,9 +872,24 @@ do	-- VirtualTerminal
 	function RMP.VirtualTerminal:merge(thatTerm, offsetX, offsetY)
 		if thatTerm and thatTerm:instanceOf(RMP.VirtualTerminal) then
 			vt_rmp.merge(self.native_vt_rmp , thatTerm:getVT() , offsetX or 0, offsetY or 0)
-			local eventQueue = thatTerm:getEventQueue()
-			if eventQueue:instanceOf(HashMap) then
-				self:getEventQueue():putAll(eventQueue)
+
+			-- FIXME: fix this later
+			local event = thatTerm:getEvent()
+			if event:instanceOf(HashMap) then
+
+				local myevent = self:getEvent()
+
+				while not event:get(RMP.EventType.Input):isEmpty() do
+					myevent:get(RMP.EventType.Input):push(event:get(RMP.EventType.Input):pop())
+				end
+
+				while not event:get(RMP.EventType.Keyboard):isEmpty() do
+					myevent:get(RMP.EventType.Keyboard):push(event:get(RMP.EventType.Keyboard):pop())
+				end
+
+				while not event:get(RMP.EventType.Mouse):isEmpty() do
+					myevent:get(RMP.EventType.Mouse):push(event:get(RMP.EventType.Mouse):pop())
+				end
 			end
 		end
 	end
@@ -1029,6 +1127,12 @@ do
 		self:render()
 	end
 
+	function RMP.Input:stop()
+		self.active = false
+		self.submitted = false
+		self:render()
+	end
+
 	function RMP.Input:processKey(key)
 		if not self.active then
 			return false
@@ -1079,7 +1183,8 @@ do
 
 	function RMP.Input:clearText()
 		self.text = ""
-		self.event_listeners_registered = true
+		self.cursor_pos = 1
+		self.scroll_offset = 0
 		self:render()
 	end
 
@@ -2241,10 +2346,36 @@ do
 		self:super("addEventListener" , key , callback)
 	end
 
-	function RMP.Frame:run(key)
-		self:super("handleCurrentKey" , key)
+	function RMP.Frame:run(key , mouse)
+		self:super("handleEvent" , key , mouse)
 		self:super("render")
 		self:super("clear")
+		local event = self:super("getEvent")
+
+
+		-- local log = io.open("rmp.log" , "w")
+		-- log:write("\nappending" .. tostring(event) .. "\n")
+
+		-- log:write("\n\t\tKeyboard : ")
+		local k = event:get(RMP.EventType.Keyboard)
+		while k:isEmpty() == false do
+			local key = k:pop()
+			-- log:write("\n\t\t\t" .. tostring(key) .. " ")
+		end
+
+		local i = event:get(RMP.EventType.Input)
+		while i:isEmpty() == false do
+			local key = i:pop()
+			-- log:write("\t" .. tostring(key) .. " ")
+		end
+
+		local m = event:get(RMP.EventType.Mouse)
+		while m:isEmpty() == false do
+			local key = m:pop()
+			-- log:write("\t" .. tostring(key) .. " ")
+		end
+
+
 		RMP.sleep(math.floor(RMP.Duration.new(self:getDeltaTime()):fromSec()))
 	end
 end

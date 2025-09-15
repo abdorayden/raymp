@@ -21,11 +21,10 @@ return function(x,y,xx,yy)
 	do
 		x = lx + x
 		y = ly + y
-		-- vt:addEventListener(api.KEY_L , function()
-		-- 	lx = lx + 1
-		-- end)
-		-- vt:addEventListener(api.KEY_J , function()
-		-- 	ly = ly + 1
+		-- vt:addEventListener(api.EventType.Keyboard , function(key)
+		-- 	if key == api.KEY_J or key == api.KEY_DOWN then
+		-- 		ly = ly + 1
+		-- 	end
 		-- end)
 		-- vt:addEventListener(api.KEY_K , function()
 		-- 	ly = ly - 1
