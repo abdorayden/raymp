@@ -19,6 +19,8 @@ local browser_state = {
 	status_time = 0
 }
 
+local shared = nil
+
 local colors = {
 	header = api.FGColors.Brights.Green,
 	dir = api.FGColors.Brights.Yellow,
@@ -227,6 +229,7 @@ local function enter_selection()
 		set_status("Entered directory: " .. selected.name)
 	else
 		set_status("Selected file: " .. selected.name)
+		shared = selected.name
 	end
 end
 
@@ -268,6 +271,10 @@ return function(x, y, xx, yy)
 	local available_height = (yy - y) - 4
 
 	clear_status_if_old()
+
+	vterm:addEventListener(api.EventType.TransformDataPut, function()
+		return shared
+	end)
 
 	vterm:addEventListener(api.EventType.Keyboard, function(key)
 		if browser_state.search_active then

@@ -10,8 +10,7 @@ local bgcolors = {
 	api.BGColors.Brights.Blue,
 }
 
-local lx = 0
-local ly = 0
+local label = "center text"
 
 -- tested plug function wrapper for plugins
 -- you don't have to think about yield or another loop
@@ -19,20 +18,13 @@ local ly = 0
 return function(x,y,xx,yy)
 	local vt = Frame.new()
 	do
-		x = lx + x
-		y = ly + y
-		-- vt:addEventListener(api.EventType.Keyboard , function(key)
-		-- 	if key == api.KEY_J or key == api.KEY_DOWN then
-		-- 		ly = ly + 1
-		-- 	end
-		-- end)
-		-- vt:addEventListener(api.KEY_K , function()
-		-- 	ly = ly - 1
-		-- end)
-		-- vt:addEventListener(api.KEY_H , function()
-		-- 	lx = lx - 1
-		-- end)
-		vt:writeText((xx-x)/2 + x - 2 , (yy-y)/2 + y , "test" , nil , bgcolors[math.random(1 , #bgcolors)] , api.TextStyle.Bold)
+		vt:addEventListener(api.EventType.TransformDataGet, function(data)
+			if data and type(data) == "string" then
+				label = data
+			end
+		end)
+
+		vt:writeText((xx-x)/2 + x - 2 , (yy-y)/2 + y , label , nil , bgcolors[math.random(1 , #bgcolors)] , api.TextStyle.Bold)
 	end
 	return vt
 end

@@ -1,10 +1,12 @@
 TODO:
 -[X]: fix utf-8 unicode in my terminal virtualterminalrmp in C
 -[X]: create simple plugin to test and debug Options and Scroller classes
--[ ]: complete file browser plugin and fix the issues
--[ ]: introduce Input feature in rmp framework
+-[X]: complete file browser plugin and fix the issues
+-[X]: introduce Input feature in rmp framework
+-[X]: fix text editor plugin and add more features
+-[X]: add transform data event to share data between plugins
+-[X]: create readme and licence
 -[ ]: edit relations between components and classes inside rmp framework
--[ ]: create readme and licence
 -[ ]: introduce Focuse and fix event to work with them
 -[ ]: fix Sound and add support to access the low level api using lua
 -[ ]: write waves music animation with works sound frames

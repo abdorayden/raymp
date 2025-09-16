@@ -127,7 +127,6 @@ then
 		-I ../src/engine \
 		$INCLUDE_PATH	\
 		../src/engine/runner.c\
-		../flags.c\
 		$LIB_PATH
 
 elif [[ "$1" == "install" ]]
