@@ -226,7 +226,7 @@ local function key_to_char(key)
 		[api.KEY_SINGLE_QOUTE] = "'", [api.KEY_OPEN_BRAKET] = "[", [api.KEY_CLOSED_BRAKET] = "]",
 		[api.KEY_OPCURB] = "{", [api.KEY_CLCURB] = "}", [api.KEY_BAR] = "|",
 		[api.KEY_GT] = ">", [api.KEY_LT] = "<", [api.KEY_HASHTAG] = "#",
-		[api.KEY_AT] = "@", [api.KEY_PERSANT] = "%", [api.KEY_DOLAR] = "$"
+		[api.KEY_AT] = "@", [api.KEY_PERSANT] = "%", [api.KEY_DOLAR] = "$" -- no support for ^ and !
 	}
 
 	local shiftMap = {

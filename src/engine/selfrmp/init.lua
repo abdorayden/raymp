@@ -7,6 +7,13 @@ local api = require("rmp.rmp")
 
 return {
 	-- the default configuration of the sound
+	settings = {
+		fps = 60,
+		volume = 50, -- 0 to 100
+		speed = 1.0, -- 0.25 to 4.0
+		repeat_mode = false, -- true or false
+		random_mode = false, -- true or false
+	},
 	soundMap = {
 		pause_sound = api.KEY_SPACE,
 		resume_sound = api.KEY_SPACE,
@@ -20,7 +27,11 @@ return {
 		speed_down = api.KEY_DOWN,
 	},
 	-- theme = api.Theme.new("theme.lua" , 1 , api.Plugin.new())
-	theme = "rmpv1" ,
+	-- template = "template_rmpv1" ,
+	-- template = "3_simple" ,
+	-- template = "cyberpunk_neon",
+	-- template = "music_player_template",
+	template = "4_windows_ui",
 	-- plugins
 	plugins = {	-- this is global plugins you may run in background or in window globaly
 			{
@@ -48,6 +59,13 @@ return {
 				-- switchPluginKey = api.KEY_I,
 				names = {
 					"center_text"
+				}
+			},
+			{
+				isActivated = false,
+				activate = api.KEY_O,
+				names = {
+					"other plugins"
 				}
 			}
 	}

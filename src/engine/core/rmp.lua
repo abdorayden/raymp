@@ -2517,7 +2517,7 @@ do 	-- Config
 	end
 
 	function RMP.Config:isValidConfig()
-		return self.isValidFile and self.cfgObj ~= nil
+		return self.isValidFile
 	end
 
 	function RMP.Config:getInitFileAsObject()
@@ -2528,8 +2528,8 @@ do 	-- Config
 	end
 
 	function RMP.Config:getThemesAsObject()
-		if self.cfgObj and self.cfgObj.theme and type(self.cfgObj.theme) == "string" then
-			return self.cfgObj.theme
+		if self.cfgObj and self.cfgObj.template and type(self.cfgObj.theme) == "string" then
+			return self.cfgObj.template
 		end
 		return nil
 	end

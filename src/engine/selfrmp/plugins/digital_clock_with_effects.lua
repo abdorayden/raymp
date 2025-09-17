@@ -10,7 +10,7 @@ local bgc = {
 }
 
 return function(x, y, xx, yy)
-	local h, w = (yy - y), (xx - x)
+	local h, w = (yy - y - 1), (xx - x - 1)
 	local centerX, centerY = x + w/2, y + h/2
 
 
