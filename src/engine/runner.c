@@ -13,7 +13,7 @@ RMPRunner RMPRunnerInit(const char* filename)
 		error = (error == NULL) ? strdup("filename is NULL") : error;
 		goto forret;
 	}
-	if(luaL_loadfile(luafile , filename) != LUA_OK){
+	if(luaL_loadfilex(luafile , filename , NULL) != LUA_OK){
 		__rmp__is__error  = RMP_ERROR_LOAD_LUA_FILE;
 		printf("ERROR : %s\n",lua_tostring(luafile , -1));
 		error = (error == NULL) ? strdup(lua_tostring(luafile , -1)) : error;

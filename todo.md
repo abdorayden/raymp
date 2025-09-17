@@ -6,7 +6,8 @@ TODO:
 -[X]: fix text editor plugin and add more features
 -[X]: add transform data event to share data between plugins
 -[X]: create readme and licence
--[ ] change theme to templates and create an engine
+-[X] change theme to templates and create an engine
+-[ ] make it compileable for windows and add more testes
 -[ ]: edit relations between components and classes inside rmp framework
 -[ ]: introduce Focuse and fix event to work with them
 -[ ]: fix Sound and add support to access the low level api using lua

@@ -42,7 +42,7 @@ static int lua_home_path(lua_State* L){
 		char* home_drive = getenv("HOMEDRIVE");
 		char* home_path_suffix = getenv("HOMEPATH");
 		if (home_drive != NULL && home_path_suffix != NULL) {
-			home_path = malloc(strlenn(home_drive) + strlen(home_path_suffix) + 1);
+			home_path = malloc(strlen(home_drive) + strlen(home_path_suffix) + 1);
 			strcpy(home_path, home_drive);
 			strcat(home_path, home_path_suffix);
 			lua_pushstring(L , home_path);

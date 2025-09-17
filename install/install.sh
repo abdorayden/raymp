@@ -2,9 +2,15 @@
 
 INIT_PATH="$HOME/.rmp/.init.lua"
 INCLUDE_PATH="-I../src/engine/lua/include"
+
 LIB_PATH="-L../src/engine/lua/lib -l:liblua.a -lm"
-FLAGS="-shared  -fPIC -Wall -Wextra"
 CC="gcc"
+
+# windows version using mingw
+# LIB_PATH="-L../src/engine/lua/lib -l:lua54.dll -lm"
+# CC="x86_64-w64-mingw32-gcc"
+
+FLAGS="-shared  -fPIC -Wall -Wextra"
 
 help(){
 	echo "HELP:"

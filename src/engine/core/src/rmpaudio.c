@@ -1,15 +1,9 @@
 #define MINIAUDIO_IMPLEMENTATION
 #include "../../../third_party/miniaudio.h"
 
-#ifndef _WIN32
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
-#else
-#include "./lua/include/lua.h"
-// #include "./lua/include/lauxlib.h"
-#include "./lua/include/lualib.h"
-#endif
 
 ma_context context;
 ma_device device;

@@ -26,12 +26,11 @@ return {
 		speed_up = api.KEY_UP,
 		speed_down = api.KEY_DOWN,
 	},
-	-- theme = api.Theme.new("theme.lua" , 1 , api.Plugin.new())
 	-- template = "template_rmpv1" ,
-	-- template = "3_simple" ,
+	template = "3_simple" ,
 	-- template = "cyberpunk_neon",
 	-- template = "music_player_template",
-	template = "4_windows_ui",
+	-- template = "4_windows_ui",
 	-- plugins
 	plugins = {	-- this is global plugins you may run in background or in window globaly
 			{

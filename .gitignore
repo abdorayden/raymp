@@ -1,3 +1,9 @@
 .main.c.swp
 main
 src/engine/.README.md.swp
+v1/
+rmp
+rmp.exe
+src/engine/core/lib/*
+arch
+otherArch
