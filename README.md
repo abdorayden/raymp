@@ -50,11 +50,8 @@
 - **Frame management** - Smooth animations and updates
 - **Collision detection** - Built-in game utilities
 
-## Quick Demo
-
-### 3d-Cube plugin
-
-https://github.com/abdorayden/raymp/assets/demo1_3dcube.mp4
+## Demo
+### check asstets file
 
 ## 📦 Installation
 
