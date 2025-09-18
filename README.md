@@ -16,7 +16,7 @@
 
 ## ✨ What is RMP?
 
-**RMP (Ray Media Platform)** is more than just a music player—it's a comprehensive Lua framework for creating stunning terminal user interfaces. Born from the need for a beautiful, extensible music player, RMP has evolved into a powerful platform that enables developers to create:
+**RMP (Ray Music Player)** is more than just a music player—it's a comprehensive Lua framework for creating stunning terminal user interfaces. Born from the need for a beautiful, extensible music player, RMP has evolved into a powerful platform that enables developers to create:
 
 - 🎵 **Custom Music Players** with beautiful themes
 - 📱 **TUI Applications** with rich interfaces  
@@ -49,6 +49,12 @@
 - **Input handling** - Keyboard and mouse support
 - **Frame management** - Smooth animations and updates
 - **Collision detection** - Built-in game utilities
+
+## Quick Demo
+
+### 3d-Cube plugin
+
+https://github.com/abdorayden/raymp/assets/demo1_3dcube.mp4
 
 ## 📦 Installation
 
