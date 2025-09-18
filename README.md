@@ -57,6 +57,8 @@
 
 ### Prerequisites
 ```bash
+# all u need is gcc if u are compiling and installing from cloned repo
+
 # Debian/Ubuntu
 sudo apt-get install gcc lua5.4 liblua5.4-dev
 
@@ -64,7 +66,7 @@ sudo apt-get install gcc lua5.4 liblua5.4-dev
 brew install gcc lua
 
 # Windows (with MSYS2)
-pacman -S gcc lua lua-devel
+# install mingw from google
 ```
 
 ### Build from Source
@@ -73,7 +75,7 @@ git clone https://github.com/abdorayden/raymp.git
 cd raymp
 cd install/
 # if posix 
-./install.sh compile -v && ./install.sh install -v
+./install.sh compile -v && sudo ./install.sh install -v
 cd ..
 ./rmp
 ```
@@ -293,7 +295,7 @@ RMP works seamlessly across platforms:
 
 ## 🤝 Contributing
 
-We welcome contributions! Check out our [Contributing Guide](CONTRIBUTING.md).
+We welcome contributions! Check out our [Contributing Guide](CONTRIBUTIONS.md).
 
 ### Development Setup
 ```bash
@@ -309,8 +311,6 @@ read LICENCE file.
 
 - **Miniaudio** - Audio library
 - **Lua** - Scripting language
-- **Community contributors** - Making RMP better
-
 ---
 
 <p align="center">
