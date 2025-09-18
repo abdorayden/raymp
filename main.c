@@ -55,7 +55,7 @@ int main(int argc , char** argv)
 		}
 	}
 
-	char* command = shift_args(argc - 1 , program);
+	char* command = shift_args(argc - 1 , argv);
 	if(command != NULL) {
 		if(strcmp(command , "help") == 0) {
 			print_help(argv[0]);

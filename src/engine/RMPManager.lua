@@ -5,6 +5,7 @@
 --
 -- complete rmp engine with error handling , plugin management , template parsing and layout engine
 -- enhanced version of rmpv1 with better structure and modularity
+-- TODO: rewrote all engine to C for better performance and lower memory usage
 
 local api = require("rmp.rmp")
 local utils = require("rmp.util")
@@ -106,6 +107,8 @@ do
 		}
 	end
 
+	--TODO: add more usefull callbacks to a text and window parser later
+	-- dynamic and condition is really useful , so im gonna looking for more usefull callbacks
 	function TemplateParser:parseText(textConfig, context)
 		if not textConfig or textConfig.type ~= "Text" then
 			return nil
@@ -115,8 +118,18 @@ do
 
 		if textConfig.dynamic and type(textConfig.dynamic) == "function" then
 			local dynamicValue = textConfig.dynamic(context)
-			if dynamicValue then
+			if type(dynamicValue) == 'string' then
 				value = dynamicValue
+			elseif type(dynamicValue) == 'table' then
+				if dynamicValue.value then
+					value = tostring(dynamicValue.value)
+				elseif dynamicValue.style then
+					textConfig.style = dynamicValue.style
+				elseif dynamicValue.foregroundColor then
+					textConfig.foregroundColor = dynamicValue.foregroundColor
+				elseif dynamicValue.backgroundColor then
+					textConfig.backgroundColor = dynamicValue.backgroundColor
+				end
 			end
 		end
 
@@ -348,23 +361,94 @@ local function runRMPApplication(plugManager, template, settings , otherPlugs)
 	api.Terminal:closeKey()
 end
 
+local function logerror(err)
+	io.write(api.BGColors.Brights.Red .. api.FGColors.Brights.Yellow .. "RMP Error:"  .. api.Default .. " " ..  tostring(err) .. "\n")
+end
+
+local function lognote(note)
+	io.write(api.BGColors.Brights.Blue .. api.FGColors.Brights.White .. "RMP Note:"  .. api.Default .. " " ..  tostring(note) .. "\n")
+end
+
+local function logwarn(warn)
+	io.write(api.BGColors.Brights.Yellow .. api.FGColors.Brights.Black .. "RMP Warning:"  .. api.Default .. " " ..  tostring(warn) .. "\n")
+end
+
+local function coloredKeywordInString(str, keyword, color)
+	local pattern = "%f[%w_]" .. keyword .. "%f[%W]"
+	return str:gsub(pattern, color .. keyword .. api.Default)
+end
+
+local function coloredLuaCode(str)
+	if type(str) ~= "string" then
+		return str
+	end
+
+	local keywords = {
+		"and", "break", "do", "else", "elseif", "end", "false", "for", "function",
+		"if", "in", "local", "nil", "not", "or", "repeat", "return", "then",
+		"true", "until", "while"
+	}
+
+	for _, keyword in ipairs(keywords) do
+		str = coloredKeywordInString(str, keyword, api.FGColors.Brights.Green)
+	end
+
+	return str
+end
+
 local function loadConfiguration()
 	local config = api.Config.new()
 
 	if config:isValidConfig() then
 		local ok, err = config:load()
 		if not ok then
-			io.write("Error loading user configuration: " .. err .. "\n")
-			return nil
+			logerror("loading user configuration: " .. err)
+			return nil , nil , nil
 		end
 
 		local cfgObj = config:getInitFileAsObject()
 		local themeName = cfgObj.template-- config:getThemesAsObject() or "default"
 
+		if not themeName or type(themeName) ~= "string" then
+			logerror("Invalid theme name in configuration.")
+			logerror("template should be required on the configuration.")
+			lognote("Example template:")
+			lognote(coloredLuaCode("	return {"))
+			lognote(coloredLuaCode("	    ..."))
+			lognote(coloredLuaCode("	    template = 'your_theme_name',"))
+			lognote(coloredLuaCode("	    ..."))
+			lognote(coloredLuaCode("	}"))
+			return nil , nil , nil
+		end
+
 		local templateOk, template = pcall(dofile , config.homePath:getPath() .. "/.rmp/themes/" .. themeName .. ".lua")
 		if not templateOk then
-			io.write("Error loading user template: " .. template .. "\n")
-			return nil
+			logerror("loading user template: Not found or " .. template)
+			logerror("template should be a lua file that returns a table.")
+			lognote("Example template:")
+			lognote(coloredLuaCode("	return {"))
+			lognote(coloredLuaCode("	    {"))
+			lognote(coloredLuaCode("	        type = 'Window',"))
+			lognote(coloredLuaCode("	        id = 'main',"))
+			lognote(coloredLuaCode("	        width = 'w',"))
+			lognote(coloredLuaCode("	        height = 'h',"))
+			lognote(coloredLuaCode("	        x = 0,"))
+			lognote(coloredLuaCode("	        y = 0,"))
+			lognote(coloredLuaCode("	        border = true,"))
+			lognote(coloredLuaCode("	        title = {"))
+			lognote(coloredLuaCode("	            type = 'Text',"))
+			lognote(coloredLuaCode("	            value = 'My RMP Theme',"))
+			lognote(coloredLuaCode("	            style = 'bold',"))
+			lognote(coloredLuaCode("	            foregroundColor = 'yellow',"))
+			lognote(coloredLuaCode("	            backgroundColor = 'blue',"))
+			lognote(coloredLuaCode("	        },"))
+			lognote(coloredLuaCode("	        children = {"))
+			lognote(coloredLuaCode("	            ..."))
+			lognote(coloredLuaCode("	        },"))
+			lognote(coloredLuaCode("	    },"))
+			lognote(coloredLuaCode("	    ..."))
+			lognote(coloredLuaCode("	}"))
+			return nil , nil , nil
 		end
 
 		return cfgObj, template , true -- true means user config
@@ -373,7 +457,7 @@ local function loadConfiguration()
 		local templateOk, template = pcall(require, "rmp.selfrmp.themes." .. defaultConfig.template)
 
 		if not templateOk then
-			io.write("Error loading default template: " .. template .. "\n")
+			logerror("Error loading default template: " .. template)
 			return nil
 		end
 
@@ -383,9 +467,33 @@ end
 
 local function setupPlugins(configObj , is_userconfig)
 	local plugs = HashMap.new()
-	local plugins = configObj.plugins or {}
+	local plugins = configObj.plugins
 	local otherPlugs = Queue.new() -- this is for global plugins not attached to any window
 	local currentPath = api.Path.new():getHomePath()
+
+
+	if not plugins or type(plugins) ~= "table" then
+		logerror("Invalid plugins configuration.")
+		lognote("plugins should be a table of plugin configurations.")
+		lognote("Example plugins configuration:")
+		lognote(coloredLuaCode("return {"))
+		lognote(coloredLuaCode("    	..."))
+		lognote(coloredLuaCode("	plugins = {"))
+		lognote(coloredLuaCode("	    {"))
+		lognote(coloredLuaCode("	        themeWindowId = 'main',"))
+		lognote(coloredLuaCode("	        switchPluginKey = api.KEY_TAB,"))
+		lognote(coloredLuaCode("	        names = {'plugin1', 'plugin2'},"))
+		lognote(coloredLuaCode("	        isActivated = true,"))
+		lognote(coloredLuaCode("	    },"))
+		lognote(coloredLuaCode("	    {"))
+		lognote(coloredLuaCode("	        names = {'globalPlugin'},"))
+		lognote(coloredLuaCode("	        isActivated = true,"))
+		lognote(coloredLuaCode("	    },"))
+		lognote(coloredLuaCode("	}"))	
+		lognote(coloredLuaCode("}"))	
+		return nil , nil
+	end
+
 
 	for _, plug in ipairs(plugins) do
 		if plug.themeWindowId and plug.isActivated and plug.names then
@@ -406,7 +514,8 @@ local function setupPlugins(configObj , is_userconfig)
 				if pluginOk and pluginModule then
 					pq:push(pluginModule)
 				else
-					io.write("Warning: Could not load plugin '" .. name .. "': " .. tostring(pluginModule) .. "\n")
+					logwarn("Could not load plugin '" .. name .. "' make sure that default plugin are installed: " .. tostring(pluginModule) .. "\n")
+					os.exit(1)
 				end
 			end
 
@@ -427,7 +536,8 @@ local function setupPlugins(configObj , is_userconfig)
 				if pluginOk and pluginModule then
 					otherPlugs:push(pluginModule)
 				else
-					io.write("Warning: Could not load global plugin '" .. name .. "': " .. tostring(pluginModule) .. "\n")
+					logwarn("Could not load global plugin '" .. name .. "': " .. tostring(pluginModule) .. "\n")
+					os.exit(1)
 				end
 			end
 
@@ -442,28 +552,35 @@ local function main()
 	-- Load configuration
 	local configObj, template , is_userconfig = loadConfiguration()
 	if not configObj or not template then
-		io.write("Failed to load configuration. Exiting.\n")
+		logerror("Failed to load configuration. Exiting.")
+		-- TODO: assuming default path windows and linux
+		lognote("check your configuration file or try to reset it by deleting ~/.rmp/config.lua") 
+		lognote("see the errors above for more details.")
 		os.exit(1)
 	end
 
-	-- Setup plugins
 	local plugManager , otherPlugs  = setupPlugins(configObj , is_userconfig)
 
-	-- Validate template
+	if not plugManager and not otherPlugs then
+		logerror("Failed to setup plugins. Exiting.")
+		lognote("check your plugins configuration.")
+		lognote("see the errors above for more details.")
+		os.exit(1)
+	end
+
 	local parser = TemplateParser.new(template, plugManager)
 	-- You could add template validation here if needed
 
-	-- Run application
 	runRMPApplication(plugManager, template, configObj.settings , otherPlugs)
 end
 
--- Error handling wrapper
 local function safeMain()
 	local ok, err = pcall(main)
 	if not ok then
 		api.Terminal:showCursor()
 		api.Terminal:rawMode(false)
-		io.write("RMP Error: " .. tostring(err) .. "\n")
+		logerror(tostring(err))
+		lognote("check the error above for more details.")
 		os.exit(1)
 	end
 end

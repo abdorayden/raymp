@@ -609,6 +609,7 @@ end
 -- TODO: create MenuItems class
 
 RMP.EventType = {
+	-- TODO: add event special for audio engine , for better controle
 	Keyboard = RMP.enum(true), 	-- this Keyboard event's for actions
 
 	-- Input Event lazem tkon kayn condition to add the Event each time we called a plugin wich means ida makanch kayen had event 
@@ -617,11 +618,14 @@ RMP.EventType = {
 	Input = RMP.enum(),		-- Input event disbale listinnig other Events because the user is writing something
 	Mouse = RMP.enum(),		-- mouse event
 	-- transform data event is the way to handle data transformation between two plugins
+	-- TODO: factor Get and Put 
+	-- Transform = {
+	--	Get = RMP.enum(),
+	--	Put = RMP.enum()
+	-- }
 	TransformDataGet = RMP.enum(),		-- Get data event is used to get data from another plugin
 	TransformDataPut = RMP.enum()		-- Put data event is used to put data to another plugin
 }
-
--- TODO: make Event interface
 
 local Event = OOP.interface("Event" , 
 		-- @param key : RMP.EventType value
