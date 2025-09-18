@@ -127,58 +127,86 @@ end
 ### Creating a Custom Theme
 ```lua
 -- themes/my_theme.lua
+--
+--	simple 3-window rmp template
+--	clean and functional starter layout
+--
+
 local api = require("rmp.rmp")
 
-return function(pluginManager)
-    local frame = api.Frame.new()
-    frame:setFps(60)
-    
-    -- Create your layout
-    local mainWindow = api.Window.new(1):createWindow(
-        "🎵 My Music Player",
-        80, 24, 1, 1,
-        nil, nil, api.BoxDrawing.DoubleBorder,
-        function(x, y, w, h)
-            -- Your theme logic
-            return createMusicInterface(x, y, w, h)
-        end
-    )
-    
-    -- Handle events
-    frame:addEventListener(api.KEY_SPACE, function()
-        -- Toggle play/pause
-        -- api.Audio:toggle()
-    end)
-    
-    -- Main loop
-    while true do
-        local key = api.Terminal:handleKey()
-        if key == api.KEY_Q then break end
-        frame:run(key)
-    end
-end
-```
-
-### Theme Configuration
-```lua
--- .rmp/init.lua
 return {
-    theme = "my_theme.lua",
-    soundMap = {
-        pause_sound = api.KEY_SPACE,
-        next_sound = api.KEY_N,
-        prev_sound = api.KEY_P,
-        vol_up = api.KEY_PLUS,
-        vol_down = api.KEY_MINUS,
-    },
-    plugins = {
-        {
-            themeWindowId = 1,
-            isActivated = true,
-            activate = api.KEY_E,
-            name = "file_explorer",
-        }
-    }
+	{
+		id = 1,
+		type = "Window",
+		title = nil,
+		width = "w",
+		height = "h",
+		x = 1,
+		y = 1,
+		border = api.BoxDrawing.LightBorder,
+		backgroundColor = api.BGColors.NoBrights.Black,
+		children = {
+			-- Header Window
+			{
+				id = 3,
+				type = "Window",
+				title = {
+					type = "Text",
+					value = "RMP TERMINAL",
+					foregroundColor = api.FGColors.Brights.Cyan,
+					backgroundColor = api.BGColors.NoBrights.Black,
+					style = api.TextStyle.Bold
+				},
+				width = "w - 2",
+				height = 3,
+				x = 2,
+				y = 2,
+				border = api.BoxDrawing.NoBorder,
+				backgroundColor = api.BGColors.NoBrights.Blue
+			},
+
+			-- Main Content Window
+			{
+				id = 2,
+				type = "Window",
+				title = {
+					type = "Text",
+					value = "MAIN PANEL",
+					foregroundColor = api.FGColors.Brights.Green,
+					backgroundColor = api.BGColors.NoBrights.Black,
+					style = api.TextStyle.Bold
+				},
+				width = "w - 4",
+				height = "h - 10",
+				x = 2,
+				y = 6,
+				border = api.BoxDrawing.LightBorder,
+				backgroundColor = api.BGColors.NoBrights.Black
+			},
+
+			-- Status Bar Window
+			{
+				id = 4,
+				type = "Window",
+				title = {
+					type = "Text",
+					value = "READY",
+					foregroundColor = api.FGColors.Brights.White,
+					backgroundColor = api.BGColors.NoBrights.Green,
+					style = api.TextStyle.Bold,
+					dynamic = function(context)
+						return "STATUS: ONLINE"
+					end
+				},
+				width = "w - 2",
+				height = 3,
+				x = 2,
+				y = "h - 3",
+				border = api.BoxDrawing.NoBorder,
+				backgroundColor = api.BGColors.NoBrights.Black
+			}
+		}
+	}
 }
 ```
 
@@ -189,7 +217,9 @@ return {
 -- plugins/my_plugin.lua
 local api = require("rmp.rmp")
 
-return function(x, y, w, h)
+return function(x, y, xx, yy)
+    local w = xx - x - 1
+    local y = yy - y - 1
     local vterm = api.VirtualTerminal.new()
     local content = {}
     
