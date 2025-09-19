@@ -284,7 +284,7 @@ return function(x, y, xx, yy)
 
 	elseif editor_state.mode == "insert" then
 		-- Insert mode: Handle text input with Input events
-		vterm:addEventListener(api.EventType.Input, function(key)
+		vterm:addEventListener(api.EventType.Focuse, function(key)
 			if key == api.KEY_ESCAPE then
 				editor_state.mode = "normal"
 				set_status("")

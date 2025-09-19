@@ -11,8 +11,12 @@ return {
 		fps = 60,
 		volume = 50, -- 0 to 100
 		speed = 1.0, -- 0.25 to 4.0
-		repeat_mode = false, -- true or false
-		random_mode = false, -- true or false
+		mode = api.Sound.PlayBack.ONES, -- modes
+
+		-- inc or dec
+		inc_speed = 0.1,
+		inc_volume = 10,
+		inc_seek = 5
 	},
 	soundMap = {
 		pause_sound = api.KEY_SPACE,

@@ -8,10 +8,10 @@ TODO:
 -[X]: create readme and licence
 -[X]: change theme to templates and create an engine
 -[X]: make it compileable for windows and add more testes
--[ ]: create repos for build-in plugins
--[ ]: fix Sound and add support to access the low level api using lua
--[ ]: add events for sound engine and engine it self to make hotreload and ...
+-[L]: fix Sound and add support to access the low level api using lua
 -[ ]: make sure that all plugins are stable
+-[ ]: add events for sound engine and engine it self to make hotreload and ...
+-[ ]: create repos for build-in plugins
 -[ ]: edit relations between components and classes inside rmp framework
 -[ ]: introduce Focuse and fix event to work with them
 -[ ]: write waves music animation with works sound frames
@@ -23,3 +23,5 @@ TODO:
 -[ ]: prepare the default interface for new users or who they doesn't have configurations (simple animations , help)
 -[ ]: move all plugins to external repos and implement PlugManager as plugin to manage others
 -[ ]: create docuumentation and link it to my port folio implemented using js only (challenge) , and the potentiel error or problem as documentation
+
+-[ ]: create simple help with beautiful animations to displayed and create repo for plugin manager to download and install plugins and themes

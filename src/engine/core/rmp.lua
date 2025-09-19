@@ -608,6 +608,8 @@ end
 -- TODO: create Menu class
 -- TODO: create MenuItems class
 
+
+
 RMP.EventType = {
 	-- TODO: add event special for audio engine , for better controle
 	Keyboard = RMP.enum(true), 	-- this Keyboard event's for actions
@@ -615,7 +617,7 @@ RMP.EventType = {
 	-- Input Event lazem tkon kayn condition to add the Event each time we called a plugin wich means ida makanch kayen had event 
 	-- nkmlo fl events lokhrin and that't it
 	-- also this Input Event should used it in Input class Only so when we initialize the Input and start read from user we add this event to the EventListener
-	Input = RMP.enum(),		-- Input event disbale listinnig other Events because the user is writing something
+	Focuse = RMP.enum(),		-- Input event disbale listinnig other Events because the user is writing something
 	Mouse = RMP.enum(),		-- mouse event
 	-- transform data event is the way to handle data transformation between two plugins
 	-- TODO: factor Get and Put 
@@ -626,8 +628,10 @@ RMP.EventType = {
 	TransformDataGet = RMP.enum(),		-- Get data event is used to get data from another plugin
 	TransformDataPut = RMP.enum(),		-- Put data event is used to put data to another plugin
 	-- sound
-	Sound = RMP.enum()	-- plugins can add event for sound 
+	Sound = RMP.enum(),	-- plugins can add event for sound 
 	-- the callback function accept sound object so they can add or get informations like freqs , so they can create visualization
+	Engine = RMP.enum(),	-- Engine Event to apply a commands on the engine
+	Configuration = RMP.enum() -- get access to the configurations also save a new configuration
 }
 
 local Event = OOP.interface("Event" , 
@@ -643,10 +647,12 @@ do
 		self.events = HashMap.new()
 		self.events:put(RMP.EventType.Keyboard , Queue.new())
 		self.events:put(RMP.EventType.Mouse , Queue.new())
-		self.events:put(RMP.EventType.Input , Queue.new())
+		self.events:put(RMP.EventType.Focuse , Queue.new())
 
 		self.events:put(RMP.EventType.TransformDataGet , Queue.new())
 		self.events:put(RMP.EventType.TransformDataPut  , Queue.new())
+
+		self.events:put(RMP.EventType.Sound  , Queue.new())
 
 		return self
 	end
@@ -690,10 +696,19 @@ do
 			end
 		end
 
+		local sound_queue = self.events:get(RMP.EventType.Sound)
+		while not sound_queue:isEmpty() do
+			local tha_callback = sound_queue:pop()
+			if tha_callback and type(tha_callback) == 'function' then
+				-- TODO: make sure that the object execute his methods
+				tha_callback(sound)
+			end
+		end
+
 		if key then
-			if not self.events:get(RMP.EventType.Input):isEmpty() then
-				while not self.events:get(RMP.EventType.Input):isEmpty() do
-					local callback = self.events:get(RMP.EventType.Input):pop()
+			if not self.events:get(RMP.EventType.Focuse):isEmpty() then
+				while not self.events:get(RMP.EventType.Focuse):isEmpty() do
+					local callback = self.events:get(RMP.EventType.Focuse):pop()
 					if callback and type(callback) == 'function' then
 						callback(key)
 					end
@@ -891,8 +906,8 @@ do	-- VirtualTerminal
 
 				local myevent = self:getEvent()
 
-				while not event:get(RMP.EventType.Input):isEmpty() do
-					myevent:get(RMP.EventType.Input):push(event:get(RMP.EventType.Input):pop())
+				while not event:get(RMP.EventType.Focuse):isEmpty() do
+					myevent:get(RMP.EventType.Focuse):push(event:get(RMP.EventType.Focuse):pop())
 				end
 
 				while not event:get(RMP.EventType.Keyboard):isEmpty() do
@@ -909,6 +924,10 @@ do	-- VirtualTerminal
 
 				while not event:get(RMP.EventType.TransformDataGet):isEmpty() do
 					myevent:get(RMP.EventType.TransformDataGet):push(event:get(RMP.EventType.TransformDataGet):pop())
+				end
+
+				while not event:get(RMP.EventType.Sound):isEmpty() do
+					myevent:get(RMP.EventType.Sound):push(event:get(RMP.EventType.Sound):pop())
 				end
 			end
 		end
@@ -1285,7 +1304,7 @@ do
 	function RMP.SimpleInput:render(vterm)
 		
 		if self.active then
-			vterm:addEventListener(RMP.EventType.Input, function(key)
+			vterm:addEventListener(RMP.EventType.Focuse, function(key)
 				self:_handleKey(key)
 			end)
 		end
@@ -2227,6 +2246,10 @@ do
 		return self
 	end
 
+	function RMP.Sound:getState()
+		return self.state
+	end
+
 	--------------------------------------------------------------------
 	-- Playlist management
 	--------------------------------------------------------------------
@@ -2448,6 +2471,10 @@ do
 			return self.volume
 		end
 		return vol or self.volume
+	end
+
+	function RMP.Sound:getSpeed()
+		return self.speed
 	end
 
 	function RMP.Sound:setSpeed(s)

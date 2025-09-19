@@ -282,23 +282,70 @@ do
 	end
 end
 
-local function runRMPApplication(plugManager, template, settings , otherPlugs)
+local function runRMPApplication(plugManager, template, settings , otherPlugs , soundCfg)
 	local h, w = api.Terminal:getSize()
 	local mainFrame = api.Frame.new()
+
+	-- check the settings first and then the keymap
+	local sound = api.Sound.new()	-- empty playlist
+
+	local inc_speed = nil
+	local inc_volume = nil
+	local inc_seek = nil
 
 	if settings then
 		if settings.fps and type(settings.fps) == "number" and settings.fps > 0 and settings.fps <= 120 then
 			mainFrame:setFps(settings.fps)
 		end
+
+		if settings.volume and type(settings.volume) == "number" and settings.volume >= 0 and settings.volume <= 100 then
+			sound:setVolume(settings.volume)
+		else
+			sound:setVolume(0.5)
+		end
+
+		if settings.speed and type(settings.speed) == "number" and settings.speed > 0.0 and settings.speed <= 3.0 then
+			sound:setSpeed(settings.speed)
+		else
+			sound:setSpeed(1.0)
+		end
+
+		if settings.mode and type(settings.mode) == "number" and settings.mode >= 0 and settings.mode <= 3 then
+			sound:setPlayBackMode(settings.mode)
+		else
+			sound:setPlayBackMode(api.Sound.PlaybackMode.ONES)
+		end
+
+		if settings.inc_speed and type(settings.inc_speed) == "number" and settings.inc_speed > 0 and settings.inc_speed <= 50 then
+			inc_speed = settings.inc_speed
+		else
+			inc_speed = 0.1
+		end
+
+		if settings.inc_seek and type(settings.inc_seek) == "number" and settings.inc_seek > 0 and settings.inc_seek <= 30 then
+			inc_seek = settings.inc_seek
+		else
+			inc_seek = 5
+		end
+
+		if settings.inc_volume and type(settings.inc_volume) == "number" and settings.inc_volume > 0 and settings.inc_volume <= 50 then
+			inc_volume = settings.inc_volume
+		else
+			inc_volume = 10
+		end
+	else
+		inc_speed = 0.1
+		inc_volume = 0.1
+		inc_seek = 5
 	end
 
 	api.Terminal:hideCursor()
-
 
 	local parser = TemplateParser.new(template, plugManager)
 	local switchKeys = parser:getPluginSwitchKeys()
 	local quit = false
 	local oq = otherPlugs
+	-- sound:play()
 
 	while not quit do
 		local key = api.Terminal:handleKey()
@@ -322,16 +369,119 @@ local function runRMPApplication(plugManager, template, settings , otherPlugs)
 			end
 		end)
 
-		-- sound controls (if settings provided)
-		if settings and settings.soundMap then
-			local soundMap = settings.soundMap
-			mainFrame:addEventListener(api.EventType.Keyboard, function(inputKey)
-				-- this would integrate with your rmp.sound class
-				-- add event listeners for sound controls , play , pause , stop , next , previous
-				-- it's like internal plugin inside engine to manage the sound
-				-- find a better way to handle this
-			end)
-		end
+		mainFrame:addEventListener(api.EventType.Keyboard, function(inputKey)
+			if inputKey == soundCfg.pause_sound then
+				if sound:isPlaying() then
+					sound:pause()
+				end
+				-- local currState = sound:getState()
+				-- if currState ~= api.Sound.State.ERROR and #sound:getPlaylist() > 0 then
+				-- 	if currState == api.Sound.State.PLAYING then
+				-- 		sound:pause()
+				-- 	end
+				-- end
+			end
+			if inputKey == soundCfg.resume_sound then
+				if not sound:isPlaying() then
+					sound:play()
+					sound:resume()
+				end
+				-- local currState = sound:getState()
+				-- if currState ~= api.Sound.State.ERROR and #sound:getPlaylist() > 0 then
+				-- 	if currState == api.Sound.State.STOPPED then
+				-- 		sound:play()
+				-- 	elseif currState == api.Sound.State.PAUSED then
+				-- 		sound:resume()
+				-- 	end
+				-- end
+			end
+			if inputKey == soundCfg.next_sound then
+				local ok , err = sound:nextTrack()
+				if not ok then
+					-- log the error with popup
+				end
+			end
+			if inputKey == soundCfg.prev_sound then
+				local ok , err = sound:prevTrack()
+				if not ok then
+					-- log the error with popup
+				end
+			end
+			if inputKey == soundCfg.vol_up then
+				local currVol = sound:getVolume()
+				if currVol < 1 then
+					if currVol + inc_volume >= 1 then
+						sound:setVolume(1)
+					else
+						sound:setVolume(currVol + inc_volume)
+					end
+				end
+			end
+			if inputKey == soundCfg.vol_down then
+				local currVol = sound:getVolume()
+				if currVol > 0 then
+					if currVol - inc_volume <= 0 then
+						sound:setVolume(0)
+					else
+						sound:setVolume(currVol - inc_volume)
+					end
+				end
+			end
+			if inputKey == soundCfg.seek_left then
+				if sound:isPlaying() then
+					local currPos = math.floor(sound:getPosition())
+					if currPos > 0 then
+						if currPos - inc_seek <= 0 then
+							sound:seek(0)
+						else
+							sound:seek(currPos - inc_seek)
+						end
+					end
+				end
+			end
+			if inputKey == soundCfg.seek_right then
+				if sound:isPlaying() then
+					local currPos = math.floor(sound:getPosition())
+					local len = math.floor(sound:getLength())
+					if currPos < len then
+						if currPos + inc_seek >= len then
+							sound:seek(len - 1) -- i know i know don't ask any quesion
+						else
+							sound:seek(currPos + inc_seek)
+						end
+					end
+				end
+			end
+			if inputKey == soundCfg.speed_up then
+				local currSpeed = sound:getSpeed() + inc_speed
+				if currSpeed < 3.0 then
+					sound:setSpeed(currSpeed)
+				else
+					sound:setSpeed(3.0)
+				end
+			end
+			if inputKey == soundCfg.speed_down then
+				local currSpeed = sound:getSpeed() - inc_speed
+				if currSpeed > 0.0 then
+					sound:setSpeed(currSpeed)
+				else
+					sound:setSpeed(0.1)
+				end
+			end
+		end)
+
+		-- -- sound controls (if settings provided)
+		-- if settings and settings.soundMap then
+		-- 	local soundMap = settings.soundMap
+		-- 	mainFrame:addEventListener(api.EventType.Keyboard, function(inputKey)
+		-- 		-- this would integrate with your rmp.sound class
+		-- 		-- add event listeners for sound controls , play , pause , stop , next , previous
+		-- 		-- it's like internal plugin inside engine to manage the sound
+		-- 		-- find a better way to handle this
+		-- 	end)
+		-- end
+
+		sound:update()
 
 		local windows, context = parser:parseTemplate()
 
@@ -352,9 +502,12 @@ local function runRMPApplication(plugManager, template, settings , otherPlugs)
 
 		mainFrame:run(
 			key, 
-			nil -- add mouse support later
+			nil, -- add mouse support later
+			sound
 		)
 	end
+
+	sound:cleanup()
 
 	api.Terminal:showCursor()
 	api.Terminal:rawMode(false)
@@ -559,6 +712,54 @@ local function main()
 		os.exit(1)
 	end
 
+	local soundCfg = configObj.soundMap
+
+	if soundCfg == nil then	--- use the default
+		soundCfg = {
+			pause_sound = api.KEY_SPACE,
+			resume_sound = api.KEY_SPACE,
+			next_sound = api.KEY_N,
+			prev_sound = api.KEY_P,
+			vol_up = api.KEY_PLUS,
+			vol_down = api.KEY_MINUS,
+			seek_left = api.KEY_LEFT,
+			seek_right = api.KEY_RIGHT,
+			speed_up = api.KEY_UP,
+			speed_down = api.KEY_DOWN,
+		}
+	elseif #soundCfg < 10 then	--- check for every key if it's not exists set the default key
+		if soundCfg.pause_sound == nil or type(soundCfg.pause_sound) ~= "number" then
+			soundCfg.pause_sound = api.KEY_SPACE
+		end
+		if soundCfg.resume_sound == nil or type(soundCfg.resume_sound) ~= "number" then
+			soundCfg.resume_sound = api.KEY_SPACE
+		end
+		if soundCfg.next_sound == nil or type(soundCfg.next_sound) ~= "number" then
+			soundCfg.next_sound = api.KEY_N
+		end
+		if soundCfg.prev_sound == nil or type(soundCfg.prev_sound) ~= "number" then
+			soundCfg.prev_sound = api.KEY_P
+		end
+		if soundCfg.vol_up == nil or type(soundCfg.vol_up) ~= "number" then
+			soundCfg.vol_up = api.KEY_PLUS
+		end
+		if soundCfg.vol_down == nil or type(soundCfg.vol_down) ~= "number" then
+			soundCfg.vol_down = api.KEY_MINUS
+		end
+		if soundCfg.seek_left == nil or type(soundCfg.seek_left) ~= "number" then
+			soundCfg.seek_left = api.KEY_LEFT
+		end
+		if soundCfg.seek_right == nil or type(soundCfg.seek_right) ~= "number" then
+			soundCfg.seek_right = api.KEY_RIGHT
+		end
+		if soundCfg.speed_up == nil or type(soundCfg.speed_up) ~= "number" then
+			soundCfg.speed_up = api.KEY_UP
+		end
+		if soundCfg.speed_down == nil or type(soundCfg.speed_down) ~= "number" then
+			soundCfg.speed_down = api.KEY_DOWN
+		end
+	end
+
 	local plugManager , otherPlugs  = setupPlugins(configObj , is_userconfig)
 
 	if not plugManager and not otherPlugs then
@@ -571,7 +772,7 @@ local function main()
 	local parser = TemplateParser.new(template, plugManager)
 	-- You could add template validation here if needed
 
-	runRMPApplication(plugManager, template, configObj.settings , otherPlugs)
+	runRMPApplication(plugManager, template, configObj.settings , otherPlugs , soundCfg)
 end
 
 local function safeMain()

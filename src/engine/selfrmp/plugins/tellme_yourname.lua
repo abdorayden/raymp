@@ -189,7 +189,7 @@ return function(x, y, xx, yy)
 
 	
 	if plugin_state.input_active then
-		vterm:addEventListener(api.EventType.Input, function(key)
+		vterm:addEventListener(api.EventType.Focuse, function(key)
 			if input and input:isActive() then
 				
 				local handled = input:processKey(key)
