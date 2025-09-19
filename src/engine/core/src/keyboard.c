@@ -4,10 +4,13 @@
  * 	Supports Windows, Linux, and macOS with non-blocking input
  */
 
+#include <stdbool.h>
+
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
-#include <stdbool.h>
+
+#include "simply.h"
 
 // Key enumeration (complete version)
 typedef enum {
@@ -359,13 +362,13 @@ static Keys handle_keys() {
 #endif
 
 // Lua interface
-static int lua_get_key(lua_State *L) {
+ALWAYS_INT lua_get_key(STATE) {
 	Keys key = handle_keys();
 	lua_pushinteger(L, (int)key);
 	return 1;
 }
 
-static int lua_kclose(lua_State *L) {
+ALWAYS_INT lua_kclose(STATE) {
 	(void)L;
 #if defined(_WIN32)
 	restore_console();
@@ -381,7 +384,7 @@ static const luaL_Reg keyboard_lib[] = {
 	{NULL, NULL}
 };
 
-int luaopen_rmp_keyboard(lua_State *L) {
+int luaopen_rmp_keyboard(STATE) {
 	luaL_newlib(L, keyboard_lib);
 	return 1;
 }

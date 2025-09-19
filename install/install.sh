@@ -1,7 +1,7 @@
 #!/bin/bash
 
 INIT_PATH="$HOME/.rmp/.init.lua"
-INCLUDE_PATH="-I../src/engine/lua/include"
+INCLUDE_PATH="-I../src/engine/lua/include -I../src/third_party -O3"
 
 LIB_PATH="-L../src/engine/lua/lib -l:liblua.a -lm"
 CC="gcc"

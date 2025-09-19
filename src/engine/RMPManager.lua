@@ -503,7 +503,7 @@ local function setupPlugins(configObj , is_userconfig)
 				local pluginOk, pluginModule
 
 				if is_userconfig then
-					pluginOk, pluginModule = pcall(dofile , configObj.homePath:getPath() .. "/.rmp/plugins/" .. name .. ".lua") -- try to load single file first
+					pluginOk, pluginModule = pcall(dofile , api.Path.new():getHomePath() .. "/.rmp/plugins/" .. name .. ".lua") -- try to load single file first
 					if not pluginOk then
 						pluginOk, pluginModule = pcall(dofile , currentPath .. "/.rmp/plugins/" .. name .. "/init.lua") -- try to load init.lua in folder
 					end

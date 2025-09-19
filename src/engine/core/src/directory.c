@@ -6,6 +6,8 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+#include "simply.h"
+
 #ifndef _WIN32
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -21,7 +23,7 @@
 #define mkdir(path , mode) _mkdir(path)
 #endif
 
-static int lua_get_current_path(lua_State* L){
+ALWAYS_INT lua_get_current_path(STATE){
 #define SIZE	1024
 	char current_path[SIZE];
 	if(rmp_api_cwd(current_path , SIZE) == NULL){
@@ -33,7 +35,7 @@ static int lua_get_current_path(lua_State* L){
 	return 1;
 }
 
-static int lua_home_path(lua_State* L){
+ALWAYS_INT lua_home_path(STATE){
 #ifdef 	_WIN32
 	char* home_path = getenv("USERPROFILE");
 	if(home_path != NULL){
@@ -70,7 +72,7 @@ static int lua_home_path(lua_State* L){
 	return 1;
 }
 
-static int lua_list_dir(lua_State* L){
+ALWAYS_INT lua_list_dir(STATE){
 
 	const char* const dir_path = luaL_checkstring(L , 1);
 
@@ -162,7 +164,7 @@ static int lua_list_dir(lua_State* L){
 	return 1;
 }
 
-static int lua_mkdir(lua_State* L){
+ALWAYS_INT lua_mkdir(STATE){
 
 	const char* const dir_path = luaL_checkstring(L , 1);
 
@@ -204,7 +206,7 @@ static int lua_mkdir(lua_State* L){
 	}
 }
 
-static int lua_rmdir(lua_State* L){
+ALWAYS_INT lua_rmdir(STATE){
 	const char* const dir_path = luaL_checkstring(L , 1);
 
 #ifdef 	_WIN32

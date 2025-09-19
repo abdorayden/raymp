@@ -6,11 +6,14 @@ TODO:
 -[X]: fix text editor plugin and add more features
 -[X]: add transform data event to share data between plugins
 -[X]: create readme and licence
--[X] change theme to templates and create an engine
--[ ] make it compileable for windows and add more testes
+-[X]: change theme to templates and create an engine
+-[X]: make it compileable for windows and add more testes
+-[ ]: create repos for build-in plugins
+-[ ]: fix Sound and add support to access the low level api using lua
+-[ ]: add events for sound engine and engine it self to make hotreload and ...
+-[ ]: make sure that all plugins are stable
 -[ ]: edit relations between components and classes inside rmp framework
 -[ ]: introduce Focuse and fix event to work with them
--[ ]: fix Sound and add support to access the low level api using lua
 -[ ]: write waves music animation with works sound frames
 -[ ]: introduce Table and Bar , SearchAnimations , TextField , TextArea , as a hight level components and fix Text class bugs
 -[ ]: socket support with TCP,UDP implementations (optional maybe we use external libs) with asyncio support

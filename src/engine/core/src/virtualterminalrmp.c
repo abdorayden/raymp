@@ -6,6 +6,8 @@
 #include "lualib.h"
 #include "luaconf.h"
 
+#include "simply.h"
+
 #ifdef _WIN32
     #define PLATFORM_WINDOWS
     #include <windows.h>
@@ -28,7 +30,7 @@
 // on unix we can just use the system wcwidth
 // for more cross platform handling
 #ifdef PLATFORM_WINDOWS
-    static int wcwidth_impl(wchar_t wc) {
+    ALWAYS_INT wcwidth_impl(wchar_t wc) {
         if (wc == 0) return 0;
         if (wc < 32 || wc == 127) return 0; 
         if (wc < 127) return 1; 
@@ -117,7 +119,7 @@ static void init_locale() {
 #endif
 }
 
-static int lua_init(lua_State* L) {
+ALWAYS_INT lua_init(STATE) {
 	int width = luaL_optinteger(L , 1 , 150);
 	int height = luaL_optinteger(L , 2 , 1);
 
@@ -146,14 +148,14 @@ static int lua_init(lua_State* L) {
 	return 1;
 }
 
-static int vt_lua_gc(lua_State *L) {
+ALWAYS_INT vt_lua_gc(STATE) {
 	VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
 	free(vt->buffer);
 	vt->buffer = NULL;
 	return 0;
 }
 
-static int lua_clear(lua_State *L) {
+ALWAYS_INT lua_clear(STATE) {
 	VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
 	for (int i = 0; i < vt->width * vt->height; i++) {
 		strcpy(vt->buffer[i].ch, " ");
@@ -195,7 +197,7 @@ static const char* next_utf8_char_info(const char* str, int* byte_len, int* disp
 	return str;
 }
 
-static int lua_setchar(lua_State *L) {
+ALWAYS_INT lua_setchar(STATE) {
 	VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
 	int x = luaL_checkinteger(L, 2);
 	int y = luaL_checkinteger(L, 3);
@@ -219,7 +221,7 @@ static int lua_setchar(lua_State *L) {
 }
 
 
-static int lua_writetext_clipped(lua_State *L) {
+ALWAYS_INT lua_writetext_clipped(STATE) {
     VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
     int x = luaL_checkinteger(L, 2);
     int y = luaL_checkinteger(L, 3);
@@ -311,7 +313,7 @@ static int lua_writetext_clipped(lua_State *L) {
     return 1;
 }
 
-static int lua_writetext(lua_State *L) {
+ALWAYS_INT lua_writetext(STATE) {
 	VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
 	int x = luaL_checkinteger(L, 2);
 	int y = luaL_checkinteger(L, 3);
@@ -415,7 +417,7 @@ static int lua_writetext(lua_State *L) {
 	return 0;
 }
 
-static int lua_merge(lua_State *L) {
+ALWAYS_INT lua_merge(STATE) {
 	VirtualTerminal* dest_vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
 	VirtualTerminal* src_vt = (VirtualTerminal*)luaL_checkudata(L, 2, VT_MT);
 	int offset_x = luaL_optinteger(L, 3, 0);
@@ -446,7 +448,7 @@ static int lua_merge(lua_State *L) {
 	return 0;
 }
 
-static int lua_render(lua_State *L) {
+ALWAYS_INT lua_render(STATE) {
 	VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
 	if (!vt->is_dirty) {
 		return 0;
@@ -510,7 +512,7 @@ static int lua_render(lua_State *L) {
 	return 0;
 }
 
-static int lua_movecursor(lua_State* L){
+ALWAYS_INT lua_movecursor(STATE){
 	VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
 	int x = luaL_checkinteger(L, 2);
 	int y = luaL_checkinteger(L, 3);
@@ -519,14 +521,14 @@ static int lua_movecursor(lua_State* L){
 	return 0;
 }
 
-static int lua_getsize(lua_State* L) {
+ALWAYS_INT lua_getsize(STATE) {
 	VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
 	lua_pushinteger(L, vt->width);
 	lua_pushinteger(L, vt->height);
 	return 2;
 }
 
-static int lua_resize(lua_State* L) {
+ALWAYS_INT lua_resize(STATE) {
 	VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
 	int new_width = luaL_checkinteger(L, 2);
 	int new_height = luaL_checkinteger(L, 3);
@@ -557,35 +559,35 @@ static int lua_resize(lua_State* L) {
 	return 0;
 }
 
-static int lua_moveup(lua_State* L) {
+ALWAYS_INT lua_moveup(STATE) {
 	VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
 	int steps = luaL_optinteger(L, 2, 1);
 	vt->cursor_y = (vt->cursor_y - steps < 1) ? 1 : vt->cursor_y - steps;
 	return 0;
 }
 
-static int lua_movedown(lua_State* L) {
+ALWAYS_INT lua_movedown(STATE) {
 	VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
 	int steps = luaL_optinteger(L, 2, 1);
 	vt->cursor_y = (vt->cursor_y + steps > vt->height) ? vt->height : vt->cursor_y + steps;
 	return 0;
 }
 
-static int lua_moveleft(lua_State* L) {
+ALWAYS_INT lua_moveleft(STATE) {
 	VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
 	int steps = luaL_optinteger(L, 2, 1);
 	vt->cursor_x = (vt->cursor_x - steps < 1) ? 1 : vt->cursor_x - steps;
 	return 0;
 }
 
-static int lua_moveright(lua_State* L) {
+ALWAYS_INT lua_moveright(STATE) {
 	VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
 	int steps = luaL_optinteger(L, 2, 1);
 	vt->cursor_x = (vt->cursor_x + steps > vt->width) ? vt->width : vt->cursor_x + steps;
 	return 0;
 }
 
-static int vt_lua_copy(lua_State* L) {
+ALWAYS_INT vt_lua_copy(STATE) {
 	VirtualTerminal* src_vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
 	VirtualTerminal* dest_vt = (VirtualTerminal*)lua_newuserdata(L, sizeof(VirtualTerminal));
 	dest_vt->width = src_vt->width;
@@ -626,7 +628,7 @@ static const struct luaL_Reg vt_metamethods [] = {
 	{NULL, NULL}
 };
 
-int luaopen_rmp_virtualterminalrmp(lua_State *L)
+int luaopen_rmp_virtualterminalrmp(STATE)
 {
 	luaL_newmetatable(L, VT_MT);
 	lua_pushvalue(L, -1);

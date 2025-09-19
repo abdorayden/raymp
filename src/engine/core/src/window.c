@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdbool.h>
 
+#include "simply.h"
+
 // lua
 #include "lua.h"
 #include "lauxlib.h"
@@ -16,9 +18,9 @@
 #include <termios.h>   // for struct winsize on some platforms
 
 static struct termios orig_termios;
-static int raw_mode_enabled = 0;
+ALWAYS_INT raw_mode_enabled = 0;
 
-static int lua_raw_mode(lua_State *L) {
+ALWAYS_INT lua_raw_mode(STATE) {
 	int enable = lua_toboolean(L, 1);
 
 	if (enable && !raw_mode_enabled) {
@@ -53,7 +55,7 @@ static int lua_raw_mode(lua_State *L) {
 	return 1;
 }
 
-static int lua_get_size(lua_State* L) {
+ALWAYS_INT lua_get_size(STATE) {
 	struct winsize w;
 	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == -1) {
 		lua_pushnil(L);
@@ -71,9 +73,9 @@ static int lua_get_size(lua_State* L) {
 
 static CONSOLE_SCREEN_BUFFER_INFO orig_csbi;
 static DWORD orig_mode;
-static int raw_mode_enabled = 0;
+ALWAYS_INT raw_mode_enabled = 0;
 
-static int lua_raw_mode(lua_State *L) {
+ALWAYS_INT lua_raw_mode(STATE) {
 	int enable = lua_toboolean(L, 1);
 	HANDLE hIn = GetStdHandle(STD_INPUT_HANDLE);
 	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -99,7 +101,7 @@ static int lua_raw_mode(lua_State *L) {
 }
 
 
-static int lua_get_size(lua_State* L) {
+ALWAYS_INT lua_get_size(STATE) {
 	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
 	if (hOut == INVALID_HANDLE_VALUE || hOut == NULL) {
 		lua_pushnil(L);
@@ -131,7 +133,7 @@ static const luaL_Reg lib[] = {
 };
 
 // Module entry point: require("window")
-int luaopen_rmp_window(lua_State *L) {
+int luaopen_rmp_window(STATE) {
 	luaL_newlib(L, lib);
 	return 1;
 }

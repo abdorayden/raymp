@@ -624,7 +624,10 @@ RMP.EventType = {
 	--	Put = RMP.enum()
 	-- }
 	TransformDataGet = RMP.enum(),		-- Get data event is used to get data from another plugin
-	TransformDataPut = RMP.enum()		-- Put data event is used to put data to another plugin
+	TransformDataPut = RMP.enum(),		-- Put data event is used to put data to another plugin
+	-- sound
+	Sound = RMP.enum()	-- plugins can add event for sound 
+	-- the callback function accept sound object so they can add or get informations like freqs , so they can create visualization
 }
 
 local Event = OOP.interface("Event" , 
@@ -669,7 +672,8 @@ do
 	-- @param key : RMP.EventType value
 	-- @return : self
 	-- rename it to handleEvent
-	function RMP.EventListener:handleEvent(key , mouse)
+	-- TODO: add sound
+	function RMP.EventListener:handleEvent(key , mouse , sound)
 
 		-- TODO: make sure that processTransformDataEvents is working fine with complicated cases
 		local put_queue = self.events:get(RMP.EventType.TransformDataPut)
@@ -881,6 +885,7 @@ do	-- VirtualTerminal
 			vt_rmp.merge(self.native_vt_rmp , thatTerm:getVT() , offsetX or 0, offsetY or 0)
 
 			-- FIXME: fix this later
+			-- TODO: add sound
 			local event = thatTerm:getEvent()
 			if event:instanceOf(HashMap) then
 
@@ -2163,181 +2168,528 @@ do
 	end
 end
 
--- TODO: fix bindings for audio
-
-RMP.PLAYLIST_LOOP 	= RMP.enum(true)
-RMP.SINGLE_LOOP 	= RMP.enum()
-RMP.ONES 		= RMP.enum()
-
 RMP.Sound = OOP.class("Sound")
-do 	-- Sound
-	function RMP.Sound:constructor(array_sounds)
-		self.sound_name = array_sounds or nil
-		if type(array_sounds) == "table" then
-			self.sound_name = array_sounds
-		elseif type(array_sounds) == "string" then
-			self.sound_name = {array_sounds}
-		else
-			self.sound_name = nil
-		end
-		self.curr = 1
-		self.vol = 50
-		self.is_played_before = false
-		self.is_loaded = false
-		self.status = RMP.ONES
-		rmpaudio.Init()
-		if self.sound_name ~= nil then
-			local ok , err = pcall(rmpaudio.Load , self.sound_name[self.curr])
-			if not ok then
-				RMP.Popup:error("cannot load the sound " .. err)
-				return self
-			end
-			self.is_loaded = true
-		end
-		return self
-	end
+do
+	RMP.Sound.PlaybackMode = {
+		ONCE 		= RMP.enum(true),
+		LOOP_SINGLE 	= RMP.enum(),
+		LOOP_PLAYLIST 	= RMP.enum(),
+		SHUFFLE 	= RMP.enum()
+	}
 
-	function RMP.Sound:add(sounds)
-		if type(sounds) == "string" then
-			if self.sound_name == nil then
-				self.sound_name = {}
-			end
-			table.insert(self.sound_name,sounds)
-		else 
-			RMP.Popup:error("cannot add this sound the type is not string")
+	RMP.Sound.State = {
+		STOPPED = RMP.enum(true),
+		PLAYING = RMP.enum(),
+		PAUSED  = RMP.enum(),
+		LOADING = RMP.enum(),
+		ERROR   = RMP.enum()
+	}
+
+	function RMP.Sound:constructor(files)
+		self.playlist      = {}
+		self.current_index = 1
+		self.playback_mode = RMP.Sound.PlaybackMode.ONCE
+
+		self.state         = RMP.Sound.State.STOPPED
+		self.volume        = 0.75
+		self.speed         = 1.0
+		self.is_initialized= false
+		self.last_error    = nil
+
+		self.visualization_enabled  = false
+		self.visualization_callback = nil
+		self.freq_bins     = 64
+		self.freq_data     = {}
+		self.metadata_cache= {}
+
+		-- init audio system (Init returns boolean, maybe error; handle both)
+		local ok, a, b = pcall(rmpaudio.Init)
+		if not ok then
+			self.last_error = "rmpaudio initialization error: " .. tostring(a)
+			self.state = RMP.Sound.State.ERROR
+			return self
+		end
+		if a == false then
+			self.last_error = "rmpaudio initialization failed: " .. tostring(b or "unknown")
+			self.state = RMP.Sound.State.ERROR
 			return self
 		end
 
-		return self
-	end
+		self.is_initialized = true
 
-	function RMP.Sound:setStatus(status)
-		if type(status) == "number" and status <= RMP.ONES or status >= RMP.PLAYLIST_LOOP then
-			self.status = status
+		if files then
+			self:setPlaylist(files)
 		end
+
+		-- seed random for shuffle
+		math.randomseed(os.time() % 2^31)
+
 		return self
 	end
 
-	function RMP.Sound:getStatus()
-		return self.status
-	end
-
-	-- function RMP.Sound:loadSoundDirectly(sounds_file)
-	-- 	rmpaudio.Load(sounds_file)
-	-- 	return self
-	-- end
-
-	-- function RMP.Sound:load()
-	-- 	rmpaudio.Load(self.sound_name[self.curr])
-	-- 	return self
-	-- end
-
-	function RMP.Sound:play()
-		if not self.is_played_before then
-			local ok , err = pcall(rmpaudio.Play)
-			if not ok then
-				RMP.Popup:error(err)
-				return self
+	--------------------------------------------------------------------
+	-- Playlist management
+	--------------------------------------------------------------------
+	function RMP.Sound:setPlaylist(files)
+		self.playlist, self.metadata_cache = {}, {}
+		if type(files) == "string" then
+			table.insert(self.playlist, files)
+		elseif type(files) == "table" then
+			for _, f in ipairs(files) do
+				if type(f) == "string" then table.insert(self.playlist, f) end
 			end
-			self.is_played_before = true
+		end
+		if #self.playlist > 0 then
+			self.current_index = 1
+			local ok, err = self:_loadCurrentTrack()
+			if not ok then
+				self.last_error = err
+				self.state = RMP.Sound.State.ERROR
+			end
 		end
 		return self
 	end
 
-	function RMP.Sound:next()
-		if self.curr < #self.sound_name  then
-			self.curr = self.curr + 1
+	function RMP.Sound:getLastError()
+		if self.state == RMP.Sound.State.ERROR and self.last_error ~= nil then
+			return self.last_error
+		end
+		return nil
+	end
+
+	function RMP.Sound:addTrack(file)
+		if type(file) == "string" then table.insert(self.playlist, file) end
+		return self
+	end
+
+	function RMP.Sound:removeTrack(index)
+		if index > 0 and index <= #self.playlist then
+			table.remove(self.playlist, index)
+			if self.current_index > index then
+				self.current_index = self.current_index - 1
+			elseif self.current_index == index then
+				if self.current_index > #self.playlist then
+					self.current_index = #self.playlist
+				end
+				if #self.playlist > 0 then
+					local ok, err = self:_loadCurrentTrack()
+					if not ok then self.last_error = err end
+				end
+			end
+		end
+		return self
+	end
+
+	function RMP.Sound:getPlaylist()      return self.playlist end
+	function RMP.Sound:getCurrentIndex()  return self.current_index end
+	function RMP.Sound:getCurrentTrack()
+		if self.current_index > 0 and self.current_index <= #self.playlist then
+			return self.playlist[self.current_index]
+		end
+		return nil
+	end
+
+	function RMP.Sound:setPlayBackMode(mode)
+		self.playback_mode = mode
+	end
+
+	--------------------------------------------------------------------
+	-- Internal loader
+	--------------------------------------------------------------------
+	function RMP.Sound:_loadCurrentTrack()
+		if not self.is_initialized then return false, "Audio not initialized" end
+		local track = self:getCurrentTrack()
+		if not track then return false, "No track to load" end
+
+		-- rmpaudio.load returns (true) or (false, err)
+		local pcall_ok, first, second = pcall(rmpaudio.Load, track)
+		if not pcall_ok then
+			return false, "Load pcall failed: " .. tostring(first)
+		end
+		if first == false then
+			return false, tostring(second or "load failed")
+		end
+
+		pcall(rmpaudio.SetVolume, self.volume)
+		pcall(rmpaudio.SetSpeed, self.speed)
+
+		if self.playback_mode == RMP.Sound.PlaybackMode.LOOP_SINGLE then
+			pcall(rmpaudio.SetLoop, true)
 		else
-			self.curr = 1
+			pcall(rmpaudio.SetLoop, false)
 		end
-		return self
-	end
 
-	function RMP.Sound:prev()
-		if self.curr > 1  then
-			self.curr = self.curr - 1
-		else
-			self.curr = #self.sound_name
+		local ok_meta, meta = pcall(rmpaudio.GetMetadata)
+		if ok_meta and type(meta) == "table" then
+			self.metadata_cache[self.current_index] = meta
 		end
-		return self
+
+		self.state = RMP.Sound.State.STOPPED
+		return true
 	end
 
-	-- NOTE: this method is broken
-	function RMP.Sound:playForEver()
-		return rmpaudio.PlayUntilFinished()
-	end
+	--------------------------------------------------------------------
+	-- Playback control (each handles both pcall errors and boolean+error returns)
+	--------------------------------------------------------------------
+	function RMP.Sound:play()
+		if not self.is_initialized then
+			self.last_error = "Audio not initialized"
+			return false, self.last_error
+		end
+		if #self.playlist == 0 then
+			self.last_error = "No tracks in playlist"
+			return false, self.last_error
+		end
 
-	function RMP.Sound:isValid()
-		return rmpaudio.IsValid()
-	end
+		local pcall_ok, returned, err = pcall(rmpaudio.Play)
+		if not pcall_ok then
+			self.last_error = "Play pcall error: " .. tostring(returned)
+			self.state = RMP.Sound.State.ERROR
+			return false, self.last_error
+		end
+		if returned == false then
+			self.last_error = tostring(err or "play failed")
+			self.state = RMP.Sound.State.ERROR
+			return false, self.last_error
+		end
 
-	function RMP.Sound:getAudioDeviceInformation()
-		return rmpaudio.GetAudioDeviceInformation()
-	end
-
-	function RMP.Sound:setSpeed(speed)
-		rmpaudio.SetSpeed(speed)
-		return self
+		self.state = RMP.Sound.State.PLAYING
+		return true
 	end
 
 	function RMP.Sound:pause()
-		rmpaudio.Pause()
-		return self
+		if not self.is_initialized then return false, "Audio not initialized" end
+		local ok, ret = pcall(rmpaudio.Pause)
+		if not ok then
+			self.last_error = "Pause pcall error: " .. tostring(ret)
+			return false, self.last_error
+		end
+		if ret == false then
+			self.last_error = "Pause failed"
+			return false, self.last_error
+		end
+		self.state = RMP.Sound.State.PAUSED
+		return true
 	end
 
 	function RMP.Sound:resume()
-		rmpaudio.Resume()
-		return self
+		if not self.is_initialized then return false, "Audio not initialized" end
+		local ok, ret = pcall(rmpaudio.Resume)
+		if not ok then
+			self.last_error = "Resume pcall error: " .. tostring(ret)
+			return false, self.last_error
+		end
+		if ret == false then
+			self.last_error = "Resume failed"
+			return false, self.last_error
+		end
+		self.state = RMP.Sound.State.PLAYING
+		return true
 	end
 
 	function RMP.Sound:stop()
-		rmpaudio.Stop()
-		return self
-	end
-
-	-- in persent
-	function RMP.Sound:setVolume(volume)
-		if volume > 100 then
-			rmpaudio.SetVolume(1)
-		elseif volume < 0 then
-			rmpaudio.SetVolume(0.5)
-		else
-			rmpaudio.SetVolume(volume / 100)
+		if not self.is_initialized then return false, "Audio not initialized" end
+		local ok, ret = pcall(rmpaudio.Stop)
+		if not ok then
+			self.last_error = "Stop pcall error: " .. tostring(ret)
+			return false, self.last_error
 		end
-		return self
+		if ret == false then
+			self.last_error = "Stop failed"
+			return false, self.last_error
+		end
+		self.state = RMP.Sound.State.STOPPED
+		return true
 	end
 
-	-- in minute
-	function RMP.Sound:seek(pos)
-		rmpaudio.Seek(pos)
-		return self
+	function RMP.Sound:seek(seconds)
+		if not self.is_initialized then
+			return false, "Audio not initialized"
+		end
+
+		local sec = tonumber(seconds) or 0
+		if sec < 0 then sec = 0 end
+
+		local duration = self:getLength()
+		if sec > duration then 
+			sec = duration
+		end
+
+		local ok, ret, err = pcall(rmpaudio.Seek, sec)
+		if not ok then
+			self.last_error = "Seek pcall error: " .. tostring(ret)
+			return false, self.last_error
+		end
+		if ret == false then
+			self.last_error = tostring(err or "Seek failed")
+			return false, self.last_error
+		end
+
+		return true
 	end
 
-	function RMP.Sound:getPosition()
-		return rmpaudio.GetPosition()
+	--------------------------------------------------------------------
+	-- Volume / speed
+	--------------------------------------------------------------------
+	function RMP.Sound:setVolume(v)
+		v = math.max(0, math.min(1, tonumber(v) or 0))
+		local ok, ret = pcall(rmpaudio.SetVolume, v)
+		if not ok or ret == false then
+			self.last_error = "SetVolume failed: " .. tostring(ret)
+			return false, self.last_error
+		end
+		self.volume = v
+		return true
 	end
 
-	function RMP.Sound:isPlaying()
-		return rmpaudio.IsPlaying()
-	end
-
-	function RMP.Sound:getDuration()
-		return rmpaudio.GetDuration()
-	end
-
-	function RMP.Sound:getMetaData()
-		return rmpaudio.GetMetaData()
-	end
-
-	-- in persent
 	function RMP.Sound:getVolume()
-		return rmpaudio.GetVolume()*100
+		local ok, vol = pcall(rmpaudio.GetVolume)
+		if not ok then
+			return self.volume
+		end
+		return vol or self.volume
 	end
 
-	function RMP.Sound:cleanUp()
-		rmpaudio.Clean()
+	function RMP.Sound:setSpeed(s)
+		s = tonumber(s) or 1.0
+		local ok, ret = pcall(rmpaudio.SetSpeed, s)
+		if not ok or ret == false then
+			self.last_error = "SetSpeed failed: " .. tostring(ret)
+			return false, self.last_error
+		end
+		self.speed = s
+		return true
 	end
 
+	--------------------------------------------------------------------
+	-- Position / length (now properly in seconds)
+	--------------------------------------------------------------------
+	function RMP.Sound:getPosition()
+		local ok, pos = pcall(rmpaudio.GetPosition)
+		if not ok then
+			self.last_error = "GetPosition pcall error: " .. tostring(pos)
+			return 0
+		end
+		return tonumber(pos) or 0
+	end
+
+	function RMP.Sound:getLength()
+		local ok, len = pcall(rmpaudio.GetDuration)
+		if not ok then
+			self.last_error = "GetDuration pcall error: " .. tostring(len)
+			return 0
+		end
+		return tonumber(len) or 0
+	end
+
+	--------------------------------------------------------------------
+	-- Loop flag (file-level loop)
+	--------------------------------------------------------------------
+	function RMP.Sound:setLoop(flag)
+		local ok, ret = pcall(rmpaudio.SetLoop, flag and true or false)
+		if not ok or ret == false then
+			self.last_error = "SetLoop failed"
+			return false, self.last_error
+		end
+		return true
+	end
+
+	function RMP.Sound:getLoop()
+		local ok, ret = pcall(rmpaudio.GetLoop)
+		if not ok then return false end
+		return not not ret
+	end
+
+	--------------------------------------------------------------------
+	-- FIXME: Visualization functions didn't works
+	--------------------------------------------------------------------
+	function RMP.Sound:setVisualizationCallback(fn)
+		if type(fn) ~= "function" then
+			return false, "callback must be function"
+		end
+		local ok, a, b = pcall(rmpaudio.SetVisualizationCallback, fn)
+		if not ok then
+			self.last_error = "SetVisualizationCallback pcall error: " .. tostring(a)
+			return false, self.last_error
+		end
+		if a == false then
+			self.last_error = tostring(b or "SetVisualizationCallback failed")
+			return false, self.last_error
+		end
+		self.visualization_callback = fn
+		return true
+	end
+
+	function RMP.Sound:enableVisualization(bins)
+		bins = tonumber(bins) or self.freq_bins
+		local ok, a, b = pcall(rmpaudio.EnableVisualization, bins)
+		if not ok then
+			self.last_error = "EnableVisualization pcall error: " .. tostring(a)
+			return false, self.last_error
+		end
+		if a == false then
+			self.last_error = tostring(b or "EnableVisualization failed")
+			return false, self.last_error
+		end
+		self.visualization_enabled = true
+		self.freq_bins = bins
+		return true
+	end
+
+	function RMP.Sound:disableVisualization()
+		local ok, a = pcall(rmpaudio.DisableVisualization)
+		if not ok or a == false then
+			self.last_error = "DisableVisualization failed"
+			return false, self.last_error
+		end
+		self.visualization_enabled = false
+		self.visualization_callback = nil
+		return true
+	end
+
+	function RMP.Sound:getFrequencyData()
+		local ok, data = pcall(rmpaudio.GetFrequencyData)
+		if not ok then
+			return nil
+		end
+		return data
+	end
+
+	--------------------------------------------------------------------
+	-- Info / helper
+	--------------------------------------------------------------------
+	function RMP.Sound:isPlaying()
+		local ok, v = pcall(rmpaudio.IsPlaying)
+		if not ok then return false end
+		return not not v
+	end
+
+	function RMP.Sound:isFinished()
+		local ok, v = pcall(rmpaudio.IsFinished)
+		if not ok then return false end
+		return not not v
+	end
+
+	function RMP.Sound:getMetadata()
+		local ok, meta = pcall(rmpaudio.GetMetadata)
+		if not ok then return nil end
+		return meta
+	end
+
+	--------------------------------------------------------------------
+	-- Track navigation: prev/next, plus an 'update' to auto-advance
+	--------------------------------------------------------------------
+	function RMP.Sound:nextTrack()
+		if #self.playlist == 0 then return false, "empty playlist" end
+		if self.playback_mode == RMP.Sound.PlaybackMode.SHUFFLE and #self.playlist > 1 then
+			local nextidx = math.random(1, #self.playlist)
+			while nextidx == self.current_index do nextidx = math.random(1, #self.playlist) end
+			self.current_index = nextidx
+		else
+			self.current_index = self.current_index + 1
+			if self.current_index > #self.playlist then
+				self.current_index = 1
+			end
+		end
+		local ok, err = self:_loadCurrentTrack()
+		if not ok then return false, err end
+		return self:play()
+	end
+
+	function RMP.Sound:prevTrack()
+		if #self.playlist == 0 then return false, "empty playlist" end
+		self.current_index = self.current_index - 1
+		if self.current_index < 1 then self.current_index = #self.playlist end
+		local ok, err = self:_loadCurrentTrack()
+		if not ok then return false, err end
+		return self:play()
+	end
+
+	-- event loop required
+	function RMP.Sound:update()
+		if not self.is_initialized then return end
+
+		if self.visualization_enabled and type(self.visualization_callback) == "function" then
+			local freq = self:getFrequencyData()
+			if type(freq) == "table" then
+				pcall(self.visualization_callback, freq)
+			end
+		end
+
+		local finished = self:isFinished()
+		if finished then
+			if self.playback_mode == RMP.Sound.PlaybackMode.LOOP_SINGLE then
+				self:seek(0)
+				self:play()
+			elseif self.playback_mode == RMP.Sound.PlaybackMode.LOOP_PLAYLIST then
+				self.current_index = self.current_index + 1
+				if self.current_index > #self.playlist then self.current_index = 1 end
+				local ok, err = self:_loadCurrentTrack()
+				if not ok then
+					self.last_error = err
+					self.state = RMP.Sound.State.ERROR
+					return
+				end
+				self:play()
+			elseif self.playback_mode == RMP.Sound.PlaybackMode.SHUFFLE then
+				if #self.playlist > 1 then
+					local nextidx = math.random(1, #self.playlist)
+					while nextidx == self.current_index do nextidx = math.random(1, #self.playlist) end
+					self.current_index = nextidx
+				end
+				local ok, err = self:_loadCurrentTrack()
+				if not ok then
+					self.last_error = err
+					self.state = RMP.Sound.State.ERROR
+					return
+				end
+				self:play()
+			else
+				self.state = RMP.Sound.State.STOPPED
+			end
+		end
+	end
+
+	function RMP.Sound:getProgress()
+		local pos = self:getPosition()
+		local dur = self:getLength()
+		if dur > 0 then
+			return pos / dur
+		end
+		return 0
+	end
+
+	function RMP.Sound:getTimeRemaining()
+		return self:getLength() - self:getPosition()
+	end
+
+	function RMP.Sound:formatTime(seconds)
+		seconds = math.floor(seconds or 0)
+		local mins = math.floor(seconds / 60)
+		local secs = seconds % 60
+		return string.format("%02d:%02d", mins, secs)
+	end
+
+	function RMP.Sound:getFormattedPosition()
+		return self:formatTime(self:getPosition())
+	end
+
+	function RMP.Sound:getFormattedDuration()
+		return self:formatTime(self:getLength())
+	end
+
+	function RMP.Sound:getFormattedTimeRemaining()
+		return self:formatTime(self:getTimeRemaining())
+	end
+
+	function RMP.Sound:cleanup()
+		if self.visualization_enabled then
+			self:disableVisualization()
+		end
+		local ok, ret = pcall(rmpaudio.Cleanup)
+		self.is_initialized = false
+		return ok and ret
+	end
 end
 
 RMP.Path = OOP.class("Path")
@@ -2628,8 +2980,8 @@ do
 		self:super("addEventListener" , key , callback)
 	end
 
-	function RMP.Frame:run(key , mouse)
-		self:super("handleEvent" , key , mouse)
+	function RMP.Frame:run(key , mouse , sound)
+		self:super("handleEvent" , key , mouse , sound)
 		self:super("render")
 		self:super("clear")
 		RMP.sleep(math.floor(RMP.Duration.new(self:getDeltaTime()):fromSec()))

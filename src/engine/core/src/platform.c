@@ -2,6 +2,8 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+#include "simply.h"
+
 enum {
 	LINUX,
 	WINDOWS,
@@ -9,7 +11,7 @@ enum {
 	UNKOWN
 };
 
-static int lua_platform(lua_State* L){
+ALWAYS_INT lua_platform(STATE){
 #ifdef 	_WIN32
 	lua_pushinteger(L, WINDOWS);
 #elif	__linux__
@@ -27,7 +29,7 @@ static const luaL_Reg lib[] = {
     {NULL, NULL}
 };
 
-int luaopen_rmp_platform(lua_State *L)
+int luaopen_rmp_platform(STATE)
 {
     luaL_newlib(L, lib);
     return 1;

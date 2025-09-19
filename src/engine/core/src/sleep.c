@@ -2,6 +2,8 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+#include "simply.h"
+
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -17,7 +19,7 @@ static void platform_sleep(int milliseconds)
     #endif
 }
 
-static int lua_sleep(lua_State *L)
+ALWAYS_INT lua_sleep(STATE)
 {
     int milliseconds = luaL_checkinteger(L, 1);
     platform_sleep(milliseconds);
@@ -29,7 +31,7 @@ static const luaL_Reg lib[] = {
     {NULL, NULL}
 };
 
-int luaopen_rmp_sleep(lua_State *L)
+int luaopen_rmp_sleep(STATE)
 {
     luaL_newlib(L, lib);
     return 1;
