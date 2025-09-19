@@ -292,10 +292,15 @@ local function runRMPApplication(plugManager, template, settings , otherPlugs , 
 	local inc_speed = nil
 	local inc_volume = nil
 	local inc_seek = nil
+	local valid_restart = false
 
 	if settings then
 		if settings.fps and type(settings.fps) == "number" and settings.fps > 0 and settings.fps <= 120 then
 			mainFrame:setFps(settings.fps)
+		end
+
+		if settings.restart_engine and type(settings.restart_engine) == "number" then
+			valid_restart = true
 		end
 
 		if settings.volume and type(settings.volume) == "number" and settings.volume >= 0 and settings.volume <= 100 then
@@ -345,7 +350,7 @@ local function runRMPApplication(plugManager, template, settings , otherPlugs , 
 	local switchKeys = parser:getPluginSwitchKeys()
 	local quit = false
 	local oq = otherPlugs
-	-- sound:play()
+	local restart = false
 
 	while not quit do
 		local key = api.Terminal:handleKey()
@@ -369,31 +374,25 @@ local function runRMPApplication(plugManager, template, settings , otherPlugs , 
 			end
 		end)
 
+		mainFrame:addEventListener(api.EventType.Keyboard , function(key)
+			if valid_restart then
+				if key == settings.restart_engine then
+					restart = true
+				end
+			end
+		end)
+
 		mainFrame:addEventListener(api.EventType.Keyboard, function(inputKey)
 			if inputKey == soundCfg.pause_sound then
 				if sound:isPlaying() then
 					sound:pause()
 				end
-				-- local currState = sound:getState()
-				-- if currState ~= api.Sound.State.ERROR and #sound:getPlaylist() > 0 then
-				-- 	if currState == api.Sound.State.PLAYING then
-				-- 		sound:pause()
-				-- 	end
-				-- end
 			end
 			if inputKey == soundCfg.resume_sound then
 				if not sound:isPlaying() then
 					sound:play()
 					sound:resume()
 				end
-				-- local currState = sound:getState()
-				-- if currState ~= api.Sound.State.ERROR and #sound:getPlaylist() > 0 then
-				-- 	if currState == api.Sound.State.STOPPED then
-				-- 		sound:play()
-				-- 	elseif currState == api.Sound.State.PAUSED then
-				-- 		sound:resume()
-				-- 	end
-				-- end
 			end
 			if inputKey == soundCfg.next_sound then
 				local ok , err = sound:nextTrack()
@@ -505,6 +504,10 @@ local function runRMPApplication(plugManager, template, settings , otherPlugs , 
 			nil, -- add mouse support later
 			sound
 		)
+
+		if restart then
+			break
+		end
 	end
 
 	sound:cleanup()
@@ -512,6 +515,7 @@ local function runRMPApplication(plugManager, template, settings , otherPlugs , 
 	api.Terminal:showCursor()
 	api.Terminal:rawMode(false)
 	api.Terminal:closeKey()
+	return restart
 end
 
 local function logerror(err)
@@ -703,6 +707,9 @@ end
 -- Main Entry Point
 local function main()
 	-- Load configuration
+
+	::here::
+
 	local configObj, template , is_userconfig = loadConfiguration()
 	if not configObj or not template then
 		logerror("Failed to load configuration. Exiting.")
@@ -772,7 +779,9 @@ local function main()
 	local parser = TemplateParser.new(template, plugManager)
 	-- You could add template validation here if needed
 
-	runRMPApplication(plugManager, template, configObj.settings , otherPlugs , soundCfg)
+	if runRMPApplication(plugManager, template, configObj.settings , otherPlugs , soundCfg) then
+		goto here
+	end
 end
 
 local function safeMain()
@@ -784,6 +793,7 @@ local function safeMain()
 		lognote("check the error above for more details.")
 		os.exit(1)
 	end
+
 end
 
 -- Start the application

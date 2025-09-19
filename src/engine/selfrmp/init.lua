@@ -12,6 +12,7 @@ return {
 		volume = 50, -- 0 to 100
 		speed = 1.0, -- 0.25 to 4.0
 		mode = api.Sound.PlayBack.ONES, -- modes
+		restart_engine = api.KEY_CTRL_R,
 
 		-- inc or dec
 		inc_speed = 0.1,
