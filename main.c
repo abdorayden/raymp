@@ -50,6 +50,39 @@ static const char *const engine =
 "local HashMap = utils.HashMap\n"
 "local Queue = utils.Queue\n"
 "\n"
+"local function detectPathSeparator()\n"
+"	local currentPath = require(\"rmp.directory\").get_current_path()\n"
+"	if currentPath and currentPath:find(\"\\\\\") then\n"
+"		return \"\\\\\"\n"
+"	else\n"
+"		return \"/\"\n"
+"	end\n"
+"end\n"
+"\n"
+"local PATH_SEP = detectPathSeparator()\n"
+"\n"
+"local function joinPath(...)\n"
+"	local parts = {...}\n"
+"	if #parts == 0 then return \"\" end\n"
+"\n"
+"	local result = tostring(parts[1] or \"\")\n"
+"	for i = 2, #parts do\n"
+"		local part = tostring(parts[i] or \"\")\n"
+"		if part ~= \"\" then\n"
+"			-- Remove leading separator from part\n"
+"			if part:sub(1, 1) == \"/\" or part:sub(1, 1) == \"\\\\\" then\n"
+"				part = part:sub(2)\n"
+"			end\n"
+"			-- Add separator if needed\n"
+"			if result:sub(-1) ~= PATH_SEP and result ~= \"\" then\n"
+"				result = result .. PATH_SEP\n"
+"			end\n"
+"			result = result .. part\n"
+"		end\n"
+"	end\n"
+"	return result\n"
+"end\n"
+"\n"
 "local PlugManager = OOP.class(\"PlugManager\")\n"
 "do\n"
 "	function PlugManager:constructor(cfgObj)\n"
@@ -117,7 +150,7 @@ static const char *const engine =
 "		end\n"
 "\n"
 "		evaluated = evaluated:gsub(\"math%%.floor\", \"math.floor\")\n"
-"		evaluated = evaluated:gsub(\"math%%.ceil\",  \"math.ceil\")\n"
+"		evaluated = evaluated:gsub(\"math%%.ceil\", \"math.ceil\")\n"
 "\n"
 "		local func = load(\"return \" .. evaluated)\n"
 "		if func then\n"
@@ -632,7 +665,7 @@ static const char *const engine =
 "			return nil , nil , nil\n"
 "		end\n"
 "\n"
-"		local templateOk, template = pcall(dofile , config.homePath:getPath() .. \"/.rmp/themes/\" .. themeName .. \".lua\")\n"
+"		local templateOk, template = pcall(dofile , joinPath(config.homePath:getPath(), \".rmp\", \"themes\", themeName .. \".lua\"))\n"
 "		if not templateOk then\n"
 "			logerror(\"loading user template: Not found or \" .. template)\n"
 "			logerror(\"template should be a lua file that returns a table.\")\n"
@@ -714,9 +747,13 @@ static const char *const engine =
 "				local pluginOk, pluginModule\n"
 "\n"
 "				if is_userconfig then\n"
-"					pluginOk, pluginModule = pcall(dofile , api.Path.new():getHomePath() .. \"/.rmp/plugins/\" .. name .. \".lua\") -- try to load single file first\n"
+"					local homePath = api.Path.new():getHomePath()\n"
+"					local singleFile = joinPath(homePath, \".rmp\", \"plugins\", name .. \".lua\")\n"
+"					local folderInit = joinPath(homePath, \".rmp\", \"plugins\", name, \"init.lua\")\n"
+"\n"
+"					pluginOk, pluginModule = pcall(dofile, singleFile)\n"
 "					if not pluginOk then\n"
-"						pluginOk, pluginModule = pcall(dofile , currentPath .. \"/.rmp/plugins/\" .. name .. \"/init.lua\") -- try to load init.lua in folder\n"
+"						pluginOk, pluginModule = pcall(dofile, folderInit)\n"
 "					end\n"
 "				else\n"
 "					pluginOk, pluginModule = pcall(require, \"rmp.selfrmp.plugins.\" .. name) -- try to load from default selfrmp plugins\n"
@@ -737,9 +774,13 @@ static const char *const engine =
 "			for _, name in ipairs(plug.names) do\n"
 "				local pluginOk, pluginModule\n"
 "				if is_userconfig then\n"
-"					pluginOk, pluginModule = pcall(dofile , currentPath .. \"/.rmp/plugins/\" .. name .. \".lua\") -- try to load single file first\n"
+"					local homePath = api.Path.new():getHomePath()\n"
+"					local singleFile = joinPath(homePath, \".rmp\", \"plugins\", name .. \".lua\")\n"
+"					local folderInit = joinPath(homePath, \".rmp\", \"plugins\", name, \"init.lua\")\n"
+"\n"
+"					pluginOk, pluginModule = pcall(dofile, singleFile)\n"
 "					if not pluginOk then\n"
-"						pluginOk, pluginModule = pcall(dofile , api.Path.new():getHomePath() .. \"/.rmp/plugins/\" .. name .. \"/init.lua\") -- try to load init.lua in folder\n"
+"						pluginOk, pluginModule = pcall(dofile, folderInit)\n"
 "					end\n"
 "				else\n"
 "					pluginOk, pluginModule = pcall(require, \"rmp.selfrmp.plugins.\" .. name) -- try to load from default selfrmp plugins\n"
@@ -857,6 +898,7 @@ static const char *const engine =
 "\n"
 "-- Start the application\n"
 "safeMain()\n";
+
 #endif
 
 // TODO: rewrite RMPManger engine in C
@@ -901,14 +943,14 @@ int main(int argc , char** argv)
 #ifdef ONE_FILE
 	lua_State *L = luaL_newstate();
 	if (L == NULL) {
-		fprintf(stderr, "Error creating Lua state.\n");
+		fprintf(stderr, "[RMP] failed creating Engine Lua state.\n");
 		return 1;
 	}
 
 	luaL_openlibs(L);
 
 	if (luaL_dostring(L , engine) != LUA_OK){
-		fprintf(stderr, "Error executing Lua code: %s\n", lua_tostring(L, -1));
+		fprintf(stderr, "[RMP] cannot execute Engine Lua code: %s\n", lua_tostring(L, -1));
 		lua_pop(L, 1);
 	}
 

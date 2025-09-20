@@ -17,6 +17,39 @@ local os = require("os")
 local HashMap = utils.HashMap
 local Queue = utils.Queue
 
+local function detectPathSeparator()
+	local currentPath = require("rmp.directory").get_current_path()
+	if currentPath and currentPath:find("\\") then
+		return "\\"
+	else
+		return "/"
+	end
+end
+
+local PATH_SEP = detectPathSeparator()
+
+local function joinPath(...)
+	local parts = {...}
+	if #parts == 0 then return "" end
+
+	local result = tostring(parts[1] or "")
+	for i = 2, #parts do
+		local part = tostring(parts[i] or "")
+		if part ~= "" then
+			-- Remove leading separator from part
+			if part:sub(1, 1) == "/" or part:sub(1, 1) == "\\" then
+				part = part:sub(2)
+			end
+			-- Add separator if needed
+			if result:sub(-1) ~= PATH_SEP and result ~= "" then
+				result = result .. PATH_SEP
+			end
+			result = result .. part
+		end
+	end
+	return result
+end
+
 local PlugManager = OOP.class("PlugManager")
 do
 	function PlugManager:constructor(cfgObj)
@@ -599,7 +632,7 @@ local function loadConfiguration()
 			return nil , nil , nil
 		end
 
-		local templateOk, template = pcall(dofile , config.homePath:getPath() .. "/.rmp/themes/" .. themeName .. ".lua")
+		local templateOk, template = pcall(dofile , joinPath(config.homePath:getPath(), ".rmp", "themes", themeName .. ".lua"))
 		if not templateOk then
 			logerror("loading user template: Not found or " .. template)
 			logerror("template should be a lua file that returns a table.")
@@ -681,9 +714,13 @@ local function setupPlugins(configObj , is_userconfig)
 				local pluginOk, pluginModule
 
 				if is_userconfig then
-					pluginOk, pluginModule = pcall(dofile , api.Path.new():getHomePath() .. "/.rmp/plugins/" .. name .. ".lua") -- try to load single file first
+					local homePath = api.Path.new():getHomePath()
+					local singleFile = joinPath(homePath, ".rmp", "plugins", name .. ".lua")
+					local folderInit = joinPath(homePath, ".rmp", "plugins", name, "init.lua")
+
+					pluginOk, pluginModule = pcall(dofile, singleFile)
 					if not pluginOk then
-						pluginOk, pluginModule = pcall(dofile , currentPath .. "/.rmp/plugins/" .. name .. "/init.lua") -- try to load init.lua in folder
+						pluginOk, pluginModule = pcall(dofile, folderInit)
 					end
 				else
 					pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name) -- try to load from default selfrmp plugins
@@ -704,9 +741,13 @@ local function setupPlugins(configObj , is_userconfig)
 			for _, name in ipairs(plug.names) do
 				local pluginOk, pluginModule
 				if is_userconfig then
-					pluginOk, pluginModule = pcall(dofile , currentPath .. "/.rmp/plugins/" .. name .. ".lua") -- try to load single file first
+					local homePath = api.Path.new():getHomePath()
+					local singleFile = joinPath(homePath, ".rmp", "plugins", name .. ".lua")
+					local folderInit = joinPath(homePath, ".rmp", "plugins", name, "init.lua")
+
+					pluginOk, pluginModule = pcall(dofile, singleFile)
 					if not pluginOk then
-						pluginOk, pluginModule = pcall(dofile , api.Path.new():getHomePath() .. "/.rmp/plugins/" .. name .. "/init.lua") -- try to load init.lua in folder
+						pluginOk, pluginModule = pcall(dofile, folderInit)
 					end
 				else
 					pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name) -- try to load from default selfrmp plugins

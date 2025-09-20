@@ -2,26 +2,11 @@
 setlocal enabledelayedexpansion
 
 set INIT_PATH=%USERPROFILE%\.rmp\.init.lua
-set INCLUDE_PATH=-I..\src\engine\lua\include
-set LIB_PATH=..\src\engine\lua\lib\lua54.lib
-set CC=cl.exe
+set INCLUDE_PATH=-I../src/engine/lua/include
+set LIB_PATH=../src/engine/lua/lib/liblua54.a
+set CC=gcc.exe
 
-set FLAGS=/LD /nologo /Wall
-
-:help
-echo HELP:
-echo Usage: %0 [command]
-echo.
-echo Commands:
-echo   clean    : remove all installed DLLs and lua files from system directories
-echo   compile  : compile .c files to DLLs
-echo   install  : install DLLs and .lua files to system directories
-echo   -v       : verbose flag (for install and clean)
-echo.
-echo NOTE:
-echo   install and clean commands may require administrator privileges
-echo.
-goto :eof
+set FLAGS=-shared -s -Wall
 
 :: Check if no command was provided or if help is requested
 if "%~1"=="" goto help
@@ -77,15 +62,15 @@ if "%~1"=="compile" (
 	echo [+] Compiling...
 	if "%~2"=="-v" echo on
 
-	%CC% %FLAGS% /Fe:..\src\engine\core\lib\rmpaudio.dll ..\src\engine\core\src\rmpaudio.c %INCLUDE_PATH% %LIB_PATH%
-	%CC% %FLAGS% /Fe:..\src\engine\core\lib\virtualterminalrmp.dll ..\src\engine\core\src\virtualterminalrmp.c %INCLUDE_PATH% %LIB_PATH%
-	%CC% %FLAGS% /Fe:..\src\engine\core\lib\keyboard.dll ..\src\engine\core\src\keyboard.c %INCLUDE_PATH% %LIB_PATH%
-	%CC% %FLAGS% /Fe:..\src\engine\core\lib\sleep.dll ..\src\engine\core\src\sleep.c %INCLUDE_PATH% %LIB_PATH%
-	%CC% %FLAGS% /Fe:..\src\engine\core\lib\platform.dll ..\src\engine\core\src\platform.c %INCLUDE_PATH% %LIB_PATH%
-	%CC% %FLAGS% /Fe:..\src\engine\core\lib\directory.dll ..\src\engine\core\src\directory.c %INCLUDE_PATH% %LIB_PATH%
-	%CC% %FLAGS% /Fe:..\src\engine\core\lib\window.dll ..\src\engine\core\src\window.c %INCLUDE_PATH% %LIB_PATH%
+	%CC% %FLAGS% -o ../src/engine/core/lib/rmpaudio.dll ../src/engine/core/src/rmpaudio.c %INCLUDE_PATH% %LIB_PATH% -lwinmm
+	%CC% %FLAGS% -o ../src/engine/core/lib/virtualterminalrmp.dll ../src/engine/core/src/virtualterminalrmp.c %INCLUDE_PATH% %LIB_PATH%
+	%CC% %FLAGS% -o ../src/engine/core/lib/keyboard.dll ../src/engine/core/src/keyboard.c %INCLUDE_PATH% %LIB_PATH% -luser32
+	%CC% %FLAGS% -o ../src/engine/core/lib/sleep.dll ../src/engine/core/src/sleep.c %INCLUDE_PATH% %LIB_PATH%
+	%CC% %FLAGS% -o ../src/engine/core/lib/platform.dll ../src/engine/core/src/platform.c %INCLUDE_PATH% %LIB_PATH%
+	%CC% %FLAGS% -o ../src/engine/core/lib/directory.dll ../src/engine/core/src/directory.c %INCLUDE_PATH% %LIB_PATH%
+	%CC% %FLAGS% -o ../src/engine/core/lib/window.dll ../src/engine/core/src/window.c %INCLUDE_PATH% %LIB_PATH% -lgdi32 -luser32
 
-	%CC% /nologo /Wall /Fe:..\rmp.exe ..\main.c ..\src\engine\runner.c %INCLUDE_PATH% -I..\src\engine %LIB_PATH%
+	%CC% -s -Wall -o ../rmp.exe ../main.c ../src/engine/runner.c %INCLUDE_PATH% -I../src/engine %LIB_PATH%
 
 	echo Compile completed.
 	goto :eof
@@ -141,6 +126,21 @@ if "%~1"=="install" (
 	echo Install completed.
 	goto :eof
 )
+
+:help
+echo HELP:
+echo Usage: %0 [command]
+echo.
+echo Commands:
+echo   clean    : remove all installed DLLs and lua files from system directories
+echo   compile  : compile .c files to DLLs
+echo   install  : install DLLs and .lua files to system directories
+echo   -v       : verbose flag (for install and clean)
+echo.
+echo NOTE:
+echo   install and clean commands may require administrator privileges
+echo.
+goto :eof
 
 echo [-] Unknown command: %~1
 goto help

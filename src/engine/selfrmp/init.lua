@@ -17,7 +17,7 @@ return {
 
 		-- inc or dec
 		inc_speed = 0.1,
-		inc_volume = 10,
+		inc_volume = 0.1,
 		inc_seek = 5
 	},
 	soundMap = {
