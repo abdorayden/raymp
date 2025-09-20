@@ -317,14 +317,14 @@ local function runRMPApplication(plugManager, template, settings , otherPlugs , 
 			sound:setSpeed(1.0)
 		end
 
-		if settings.mode and type(settings.mode) == "number" then
-			sound:setPlayBackMode(settings.mode)
-		end
+		-- if settings.mode and type(settings.mode) == "number" then
+		-- 	sound:setPlayBackMode(settings.mode)
+		-- end
 
 		if settings.mode and type(settings.mode) == "number" and settings.mode >= 0 and settings.mode <= 3 then
 			sound:setPlayBackMode(settings.mode)
 		else
-			sound:setPlayBackMode(api.Sound.PlaybackMode.ONES)
+			sound:setPlayBackMode(0)
 		end
 
 		if settings.inc_speed and type(settings.inc_speed) == "number" and settings.inc_speed > 0 and settings.inc_speed <= 50 then
@@ -497,7 +497,7 @@ local function runRMPApplication(plugManager, template, settings , otherPlugs , 
 			end
 
 			if inputKey == soundCfg.change_playback_mode then
-				sound:setPlayBackMode((sound:getPlayBackMode() + 1) % #api.Sound.PlaybackMode)
+				sound:setPlayBackMode((sound:getPlayBackMode() + 1) % 4) -- hard code the length of mode whatever
 			end
 		end)
 
