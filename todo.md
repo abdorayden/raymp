@@ -9,9 +9,12 @@ TODO:
 -[X]: change theme to templates and create an engine
 -[X]: make it compileable for windows and add more testes
 -[L]: fix Sound and add support to access the low level api using lua
+-[X]: add events for sound engine and engine it self to make it restarted and ...
+-[L]: create repos for build-in plugins
+-[ ]: start creating the default page and introduce the first version of raymp after add engine to C
+
+
 -[ ]: make sure that all plugins are stable
--[ ]: add events for sound engine and engine it self to make hotreload and ...
--[ ]: create repos for build-in plugins
 -[ ]: edit relations between components and classes inside rmp framework
 -[ ]: introduce Focuse and fix event to work with them
 -[ ]: write waves music animation with works sound frames
