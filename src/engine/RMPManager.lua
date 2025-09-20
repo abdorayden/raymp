@@ -293,7 +293,9 @@ local function runRMPApplication(plugManager, template, settings , otherPlugs , 
 	local inc_volume = nil
 	local inc_seek = nil
 	local valid_restart = false
+	local exit = nil
 
+	-- TODO: handle the mode playback from configuration
 	if settings then
 		if settings.fps and type(settings.fps) == "number" and settings.fps > 0 and settings.fps <= 120 then
 			mainFrame:setFps(settings.fps)
@@ -313,6 +315,10 @@ local function runRMPApplication(plugManager, template, settings , otherPlugs , 
 			sound:setSpeed(settings.speed)
 		else
 			sound:setSpeed(1.0)
+		end
+
+		if settings.mode and type(settings.mode) == "number" then
+			sound:setPlayBackMode(settings.mode)
 		end
 
 		if settings.mode and type(settings.mode) == "number" and settings.mode >= 0 and settings.mode <= 3 then
@@ -338,10 +344,18 @@ local function runRMPApplication(plugManager, template, settings , otherPlugs , 
 		else
 			inc_volume = 10
 		end
+
+		if settings.exit and type(settings.exit) == "number" then
+			exit = settings.exit
+		else
+			exit = api.KEY_Q
+		end
+
 	else
 		inc_speed = 0.1
 		inc_volume = 0.1
 		inc_seek = 5
+		exit = api.KEY_Q
 	end
 
 	api.Terminal:hideCursor()
@@ -368,8 +382,9 @@ local function runRMPApplication(plugManager, template, settings , otherPlugs , 
 			end)
 		end
 
+		-- TODO: handle the exit key from configuration
 		mainFrame:addEventListener(api.EventType.Keyboard, function(inputKey)
-			if inputKey == api.KEY_Q or inputKey == api.KEY_CTRL_C then
+			if inputKey == exit then
 				quit = true
 			end
 		end)
@@ -383,15 +398,28 @@ local function runRMPApplication(plugManager, template, settings , otherPlugs , 
 		end)
 
 		mainFrame:addEventListener(api.EventType.Keyboard, function(inputKey)
-			if inputKey == soundCfg.pause_sound then
-				if sound:isPlaying() then
-					sound:pause()
+
+			-- in case u configured pause and resume with same key
+			if soundCfg.pause_sound ~= soundCfg.resume_sound then
+				if inputKey == soundCfg.pause_sound then
+					if sound:isPlaying() then
+						sound:pause()
+					end
 				end
-			end
-			if inputKey == soundCfg.resume_sound then
-				if not sound:isPlaying() then
-					sound:play()
-					sound:resume()
+				if inputKey == soundCfg.resume_sound then
+					if not sound:isPlaying() then
+						sound:play()
+						sound:resume()
+					end
+				end
+			else
+				if inputKey == soundCfg.resume_sound then
+					if not sound:isPlaying() then
+						sound:play()
+						sound:resume()
+					else
+						sound:pause()
+					end
 				end
 			end
 			if inputKey == soundCfg.next_sound then
@@ -467,18 +495,11 @@ local function runRMPApplication(plugManager, template, settings , otherPlugs , 
 					sound:setSpeed(0.1)
 				end
 			end
-		end)
 
-		-- -- sound controls (if settings provided)
-		-- if settings and settings.soundMap then
-		-- 	local soundMap = settings.soundMap
-		-- 	mainFrame:addEventListener(api.EventType.Keyboard, function(inputKey)
-		-- 		-- this would integrate with your rmp.sound class
-		-- 		-- add event listeners for sound controls , play , pause , stop , next , previous
-		-- 		-- it's like internal plugin inside engine to manage the sound
-		-- 		-- find a better way to handle this
-		-- 	end)
-		-- end
+			if inputKey == soundCfg.change_playback_mode then
+				sound:setPlayBackMode((sound:getPlayBackMode() + 1) % #api.Sound.PlaybackMode)
+			end
+		end)
 
 		sound:update()
 
@@ -685,7 +706,7 @@ local function setupPlugins(configObj , is_userconfig)
 				if is_userconfig then
 					pluginOk, pluginModule = pcall(dofile , currentPath .. "/.rmp/plugins/" .. name .. ".lua") -- try to load single file first
 					if not pluginOk then
-						pluginOk, pluginModule = pcall(dofile , configObj.homePath:getPath() .. "/.rmp/plugins/" .. name .. "/init.lua") -- try to load init.lua in folder
+						pluginOk, pluginModule = pcall(dofile , api.Path.new():getHomePath() .. "/.rmp/plugins/" .. name .. "/init.lua") -- try to load init.lua in folder
 					end
 				else
 					pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name) -- try to load from default selfrmp plugins
@@ -733,10 +754,14 @@ local function main()
 			seek_right = api.KEY_RIGHT,
 			speed_up = api.KEY_UP,
 			speed_down = api.KEY_DOWN,
+			change_playback_mode = api.KEY_TAB
 		}
 	elseif #soundCfg < 10 then	--- check for every key if it's not exists set the default key
 		if soundCfg.pause_sound == nil or type(soundCfg.pause_sound) ~= "number" then
 			soundCfg.pause_sound = api.KEY_SPACE
+		end
+		if soundCfg.change_playback_mode == nil or type(soundCfg.change_playback_mode) ~= "number" then
+			soundCfg.pause_sound = api.KEY_TAB
 		end
 		if soundCfg.resume_sound == nil or type(soundCfg.resume_sound) ~= "number" then
 			soundCfg.resume_sound = api.KEY_SPACE
@@ -765,6 +790,7 @@ local function main()
 		if soundCfg.speed_down == nil or type(soundCfg.speed_down) ~= "number" then
 			soundCfg.speed_down = api.KEY_DOWN
 		end
+		
 	end
 
 	local plugManager , otherPlugs  = setupPlugins(configObj , is_userconfig)

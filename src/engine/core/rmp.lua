@@ -2316,6 +2316,10 @@ do
 		self.playback_mode = mode
 	end
 
+	function RMP.Sound:getPlayBackMode()
+		return self.playback_mode
+	end
+
 	--------------------------------------------------------------------
 	-- Internal loader
 	--------------------------------------------------------------------
