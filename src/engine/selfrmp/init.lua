@@ -11,7 +11,7 @@ return {
 		fps = 60,
 		volume = 0.5, -- 0 to 1
 		speed = 1.0, -- 0.25 to 4.0
-		mode = api.Sound.PlayBack.ONES, -- playback modes
+		mode = api.PlayBack.ONES, -- playback modes
 		restart_engine = api.KEY_CTRL_R,
 		exit = api.KEY_Q,
 

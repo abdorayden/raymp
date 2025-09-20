@@ -2187,29 +2187,30 @@ do
 	end
 end
 
+RMP.PlaybackMode = {
+	ONCE 		= RMP.enum(true),
+	LOOP_SINGLE 	= RMP.enum(),
+	LOOP_PLAYLIST 	= RMP.enum(),
+	SHUFFLE 	= RMP.enum()
+}
+
+RMP.State = {
+	STOPPED = RMP.enum(true),
+	PLAYING = RMP.enum(),
+	PAUSED  = RMP.enum(),
+	LOADING = RMP.enum(),
+	ERROR   = RMP.enum()
+}
+
 RMP.Sound = OOP.class("Sound")
 do
-	RMP.Sound.PlaybackMode = {
-		ONCE 		= RMP.enum(true),
-		LOOP_SINGLE 	= RMP.enum(),
-		LOOP_PLAYLIST 	= RMP.enum(),
-		SHUFFLE 	= RMP.enum()
-	}
-
-	RMP.Sound.State = {
-		STOPPED = RMP.enum(true),
-		PLAYING = RMP.enum(),
-		PAUSED  = RMP.enum(),
-		LOADING = RMP.enum(),
-		ERROR   = RMP.enum()
-	}
 
 	function RMP.Sound:constructor(files)
 		self.playlist      = {}
 		self.current_index = 1
-		self.playback_mode = RMP.Sound.PlaybackMode.ONCE
+		self.playback_mode = RMP.PlaybackMode.ONCE
 
-		self.state         = RMP.Sound.State.STOPPED
+		self.state         = RMP.State.STOPPED
 		self.volume        = 0.75
 		self.speed         = 1.0
 		self.is_initialized= false
@@ -2225,12 +2226,12 @@ do
 		local ok, a, b = pcall(rmpaudio.Init)
 		if not ok then
 			self.last_error = "rmpaudio initialization error: " .. tostring(a)
-			self.state = RMP.Sound.State.ERROR
+			self.state = RMP.State.ERROR
 			return self
 		end
 		if a == false then
 			self.last_error = "rmpaudio initialization failed: " .. tostring(b or "unknown")
-			self.state = RMP.Sound.State.ERROR
+			self.state = RMP.State.ERROR
 			return self
 		end
 
@@ -2267,14 +2268,14 @@ do
 			local ok, err = self:_loadCurrentTrack()
 			if not ok then
 				self.last_error = err
-				self.state = RMP.Sound.State.ERROR
+				self.state = RMP.State.ERROR
 			end
 		end
 		return self
 	end
 
 	function RMP.Sound:getLastError()
-		if self.state == RMP.Sound.State.ERROR and self.last_error ~= nil then
+		if self.state == RMP.State.ERROR and self.last_error ~= nil then
 			return self.last_error
 		end
 		return nil
@@ -2340,7 +2341,7 @@ do
 		pcall(rmpaudio.SetVolume, self.volume)
 		pcall(rmpaudio.SetSpeed, self.speed)
 
-		if self.playback_mode == RMP.Sound.PlaybackMode.LOOP_SINGLE then
+		if self.playback_mode == RMP.PlaybackMode.LOOP_SINGLE then
 			pcall(rmpaudio.SetLoop, true)
 		else
 			pcall(rmpaudio.SetLoop, false)
@@ -2351,7 +2352,7 @@ do
 			self.metadata_cache[self.current_index] = meta
 		end
 
-		self.state = RMP.Sound.State.STOPPED
+		self.state = RMP.State.STOPPED
 		return true
 	end
 
@@ -2371,16 +2372,16 @@ do
 		local pcall_ok, returned, err = pcall(rmpaudio.Play)
 		if not pcall_ok then
 			self.last_error = "Play pcall error: " .. tostring(returned)
-			self.state = RMP.Sound.State.ERROR
+			self.state = RMP.State.ERROR
 			return false, self.last_error
 		end
 		if returned == false then
 			self.last_error = tostring(err or "play failed")
-			self.state = RMP.Sound.State.ERROR
+			self.state = RMP.State.ERROR
 			return false, self.last_error
 		end
 
-		self.state = RMP.Sound.State.PLAYING
+		self.state = RMP.State.PLAYING
 		return true
 	end
 
@@ -2395,7 +2396,7 @@ do
 			self.last_error = "Pause failed"
 			return false, self.last_error
 		end
-		self.state = RMP.Sound.State.PAUSED
+		self.state = RMP.State.PAUSED
 		return true
 	end
 
@@ -2410,7 +2411,7 @@ do
 			self.last_error = "Resume failed"
 			return false, self.last_error
 		end
-		self.state = RMP.Sound.State.PLAYING
+		self.state = RMP.State.PLAYING
 		return true
 	end
 
@@ -2425,7 +2426,7 @@ do
 			self.last_error = "Stop failed"
 			return false, self.last_error
 		end
-		self.state = RMP.Sound.State.STOPPED
+		self.state = RMP.State.STOPPED
 		return true
 	end
 
@@ -2612,7 +2613,7 @@ do
 	--------------------------------------------------------------------
 	function RMP.Sound:nextTrack()
 		if #self.playlist == 0 then return false, "empty playlist" end
-		if self.playback_mode == RMP.Sound.PlaybackMode.SHUFFLE and #self.playlist > 1 then
+		if self.playback_mode == RMP.PlaybackMode.SHUFFLE and #self.playlist > 1 then
 			local nextidx = math.random(1, #self.playlist)
 			while nextidx == self.current_index do nextidx = math.random(1, #self.playlist) end
 			self.current_index = nextidx
@@ -2649,20 +2650,20 @@ do
 
 		local finished = self:isFinished()
 		if finished then
-			if self.playback_mode == RMP.Sound.PlaybackMode.LOOP_SINGLE then
+			if self.playback_mode == RMP.PlaybackMode.LOOP_SINGLE then
 				self:seek(0)
 				self:play()
-			elseif self.playback_mode == RMP.Sound.PlaybackMode.LOOP_PLAYLIST then
+			elseif self.playback_mode == RMP.PlaybackMode.LOOP_PLAYLIST then
 				self.current_index = self.current_index + 1
 				if self.current_index > #self.playlist then self.current_index = 1 end
 				local ok, err = self:_loadCurrentTrack()
 				if not ok then
 					self.last_error = err
-					self.state = RMP.Sound.State.ERROR
+					self.state = RMP.State.ERROR
 					return
 				end
 				self:play()
-			elseif self.playback_mode == RMP.Sound.PlaybackMode.SHUFFLE then
+			elseif self.playback_mode == RMP.PlaybackMode.SHUFFLE then
 				if #self.playlist > 1 then
 					local nextidx = math.random(1, #self.playlist)
 					while nextidx == self.current_index do nextidx = math.random(1, #self.playlist) end
@@ -2671,12 +2672,12 @@ do
 				local ok, err = self:_loadCurrentTrack()
 				if not ok then
 					self.last_error = err
-					self.state = RMP.Sound.State.ERROR
+					self.state = RMP.State.ERROR
 					return
 				end
 				self:play()
 			else
-				self.state = RMP.Sound.State.STOPPED
+				self.state = RMP.State.STOPPED
 			end
 		end
 	end
