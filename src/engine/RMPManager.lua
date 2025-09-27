@@ -26,6 +26,8 @@
 -- enhanced version of rmpv1 with better structure and modularity
 -- TODO: rewrote all engine to C for better performance and lower memory usage
 
+-- TODO: add script property in template returned table to run lua code in the context of the template
+
 local api = require("rmp.rmp")
 local utils = require("rmp.util")
 local OOP = require("rmp.oop")

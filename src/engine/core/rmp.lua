@@ -296,6 +296,41 @@ RMP.IMessage 	= "💬"
 RMP.IInfo 	= "ℹ️"
 
 -- TODO: create table class to create tables
+RMP.Table = OOP.class("Table")
+do 
+    -- advanced table class
+    function RMP.Table:constructor(data)
+        self.data = data or {}
+        return self
+    end
+
+    function RMP.Table:addRow(row)
+        table.insert(self.data , row)
+        return self
+    end
+
+    function RMP.Table:getRow(index)
+        return self.data[index]
+    end
+
+    function RMP.Table:getData()
+        return self.data
+    end
+
+    function RMP.Table:removeRow(index)
+        table.remove(self.data , index)
+        return self
+    end
+
+    function RMP.Table:clear()
+        self.data = {}
+        return self
+    end
+
+    function RMP.Table:size()
+        return #self.data
+    end
+end
 
 -- TODO: handle this border table later to let plugin developers change the border
 
@@ -605,11 +640,121 @@ do 	-- creating window
 end
 
 -- TODO: create Mouse class
+
+RMP.Mouse = OOP.class("Mouse")
+do 
+    function RMP.Mouse:constructor(x , y , button , action)
+        self.x = x or 0
+        self.y = y or 0
+        self.button = button or nil
+        self.action = action or nil
+        return self
+    end
+
+    function RMP.Mouse:getX()
+        return self.x
+    end
+
+    function RMP.Mouse:getY()
+        return self.y
+    end
+
+    function RMP.Mouse:getButton()
+        return self.button
+    end
+
+    function RMP.Mouse:getAction()
+        return self.action
+    end
+end
+
+
 -- TODO: create Menu class
+
+RMP.Menu = OOP.class("Menu")
+do 
+    function RMP.Menu:constructor(title , options)
+        self.title = title or "Menu"
+        self.options = options or {}
+        self.selected_index = 1
+        return self
+    end
+
+    function RMP.Menu:addOption(option)
+        table.insert(self.options , option)
+        return self
+    end
+
+    function RMP.Menu:removeOption(index)
+        table.remove(self.options , index)
+        return self
+    end
+
+    function RMP.Menu:getOptions()
+        return self.options
+    end
+
+    function RMP.Menu:getTitle()
+        return self.title
+    end
+
+    function RMP.Menu:setSelectedIndex(index)
+        if index >= 1 and index <= #self.options then
+            self.selected_index = index
+        end
+        return self
+    end
+
+    function RMP.Menu:getSelectedIndex()
+        return self.selected_index
+    end
+
+    function RMP.Menu:getSelectedOption()
+        return self.options[self.selected_index]
+    end
+end
+
 -- TODO: create MenuItems class
 
+RMP.MenuItem = OOP.class("MenuItem")
+do 
+    function RMP.MenuItem:constructor(label , action)
+        self.label = label or "Item"
+        self.action = action or function() end
+        return self
+    end
 
+    function RMP.MenuItem:getLabel()
+        return self.label
+    end
 
+    function RMP.MenuItem:setLabel(label)
+        self.label = label
+        return self
+    end
+
+    function RMP.MenuItem:getAction()
+        return self.action
+    end
+
+    function RMP.MenuItem:setAction(action)
+        if type(action) == "function" then
+            self.action = action
+        end
+        return self
+    end
+
+    function RMP.MenuItem:execute()
+        if type(self.action) == "function" then
+            self.action()
+        end
+        return self
+    end
+end
+
+-- EventType used to define the type of event
+-- each plugin can add event listener for a specific event type
+-- and when the event is triggered the callback function is called
 RMP.EventType = {
 	-- TODO: add event special for audio engine , for better controle
 	Keyboard = RMP.enum(true), 	-- this Keyboard event's for actions
@@ -641,6 +786,11 @@ local Event = OOP.interface("Event" ,
 		"addEventListener"
 )
 
+-- EventListener class used to handle events
+-- each plugin should have his own EventListener object
+-- so when the plugin is initialized it create his own EventListener object
+-- and add event listener for the events he want to listen to
+-- when the event is triggered the callback function is called
 RMP.EventListener = OOP.class("EventListener" , nil , Event)
 do
 	function RMP.EventListener:constructor()
@@ -674,6 +824,22 @@ do
 
 		return self
 	end
+
+    function RMP.EventListener:onSound(callback)
+        return self:addEventListener(RMP.EventType.Sound , callback)
+    end
+
+    function RMP.EventListener:onKeyboard(callback)
+        return self:addEventListener(RMP.EventType.Keyboard , callback)
+    end
+
+    function RMP.EventListener:onMouse(callback)
+        return self:addEventListener(RMP.EventType.Mouse , callback)
+    end
+
+    function RMP.EventListener:onFocuse(callback)
+        return self:addEventListener(RMP.EventType.Focuse , callback)
+    end
 
 	-- @param key : RMP.EventType value
 	-- @return : self
@@ -744,6 +910,10 @@ do
 end
 
 -- all components should return VirtualTerminal obj
+-- VirtualTerminal class used to create a virtual terminal
+-- each plugin should have his own VirtualTerminal object
+-- so when the plugin is initialized it create his own VirtualTerminal object
+-- and draw on it
 RMP.VirtualTerminal = OOP.class("VirtualTerminal" , RMP.EventListener)
 do	-- VirtualTerminal
 	function RMP.VirtualTerminal:constructor(width, height) -- constructor
@@ -899,8 +1069,6 @@ do	-- VirtualTerminal
 		if thatTerm and thatTerm:instanceOf(RMP.VirtualTerminal) then
 			vt_rmp.merge(self.native_vt_rmp , thatTerm:getVT() , offsetX or 0, offsetY or 0)
 
-			-- FIXME: fix this later
-			-- TODO: add sound
 			local event = thatTerm:getEvent()
 			if event:instanceOf(HashMap) then
 
@@ -948,6 +1116,7 @@ do	-- VirtualTerminal
 end
 
 -- NOTE: Terminal class uses ansii escape code i need to create shared library to handle terminal for each platform
+-- Terminal class used to handle terminal operations
 RMP.Terminal = OOP.class("Terminal")
 do	-- Terminal
 
@@ -1018,6 +1187,7 @@ do	-- Terminal
 	end
 end
 
+-- Input class used to handle user input
 RMP.Input = OOP.class("Input")
 do
 	function RMP.Input:constructor(label, x, y, width, defaultText, cancelKey)
@@ -1270,6 +1440,17 @@ end
 
 -- Simple High-Level Input API for RMP Framework
 -- simpleinput component - handles everything internally
+-- usage:
+-- local input = RMP.SimpleInput:new({x=1, y=1, width=20, label="Name: ", placeholder="Enter your name", maxLength=50})
+-- input:render(vterm)
+-- input:focus() -- to activate input
+-- input:blur() -- to deactivate input
+-- local value = input:getValue() -- to get the current value
+-- input:setValue("New Value") -- to set a new value
+-- input:clear() -- to clear the input
+-- if input:isActive() then ... end -- to check if input is active
+-- if input:hasError() then ... end -- to check if there is an error
+-- local error_msg = input:getError() -- to get the error message
 RMP.SimpleInput = OOP.class("SimpleInput")
 do
 	function RMP.SimpleInput:constructor(options)

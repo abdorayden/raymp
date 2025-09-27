@@ -72,9 +72,8 @@ typedef enum {
 	KEY_DOLAR, KEY_PERSANT, KEY_STAR, KEY_DOT, KEY_UNDERS,
 	KEY_SEMICOL, KEY_QUISTION_MARK, KEY_AT, KEY_OPCURB,
 	KEY_CLCURB, KEY_BACK_SLASH, KEY_BACKTICK, KEY_OPEN_BRAKET,
-	KEY_CLOSED_BRAKET, KEY_BAR, KEY_DBL_QUOTE, KEY_SINGLE_QOUTE,KEY_SLASH,
-
-	NONE
+	KEY_CLOSED_BRAKET, KEY_BAR, KEY_DBL_QUOTE, KEY_SINGLE_QOUTE,KEY_SLASH, KEY_COLON,KEY_COMMA, 
+    NONE
 } Keys;
 
 #if defined(_WIN32)
@@ -156,6 +155,8 @@ static Keys handle_keys() {
 				case '\'': return KEY_SINGLE_QOUTE;
 				case ' ': return KEY_SPACE;
 				case '/': return KEY_SLASH;
+				case ':': return KEY_COLON;
+				case ',': return KEY_COMMA;
 			}
 		}
 
@@ -339,6 +340,8 @@ static Keys handle_keys() {
 		case '"': return KEY_DBL_QUOTE;
 		case '\'': return KEY_SINGLE_QOUTE;
 		case '/': return KEY_SLASH;
+		case ':': return KEY_COLON;
+		case ',': return KEY_COMMA;
 
 			   // Arrow keys (escape sequences)
 		case '\033': {

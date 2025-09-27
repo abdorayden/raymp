@@ -23,6 +23,589 @@
 
 // gcc is all you need :)
 
+// untested and buggable code below
+// this is a new implementation of the RMP engine in C using Lua API
+#if 0
+// rmp_engine.c - RMP Engine implemented in C using Lua API
+#include <lua.h>
+#include <lauxlib.h>
+#include <lualib.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <time.h>
+#ifdef _WIN32
+    #define PATH_SEP "\\"
+#else
+    #define PATH_SEP "/"
+#endif
+typedef struct {
+    lua_State *L;
+    int plugManager_ref;
+    int template_ref;
+    int settings_ref;
+    int otherPlugs_ref;
+    int soundCfg_ref;
+    bool quit;
+    bool restart;
+} RMPEngine;
+// Helper function to detect path separator
+static const char* detect_path_separator(lua_State *L) {
+    lua_getglobal(L, "require");
+    lua_pushstring(L, "rmp.directory");
+    lua_call(L, 1, 1);
+    lua_getfield(L, -1, "get_current_path");
+    lua_call(L, 0, 1);
+    if (!lua_isnil(L, -1)) {
+        const char *path = lua_tostring(L, -1);
+        if (path && strstr(path, "\\")) {
+            lua_pop(L, 2);
+            return "\\";
+        }
+    }
+    lua_pop(L, 2);
+    return "/";
+}
+// Helper function to join paths
+static void join_path(char *result, size_t size, int argc, ...) {
+    va_list args;
+    va_start(args, argc);
+    result[0] = '\0';
+    const char *sep = PATH_SEP;
+    for (int i = 0; i < argc; i++) {
+        const char *part = va_arg(args, const char*);
+        if (part && part[0]) {
+            if (i > 0 && result[strlen(result)-1] != '/' && result[strlen(result)-1] != '\\') {
+                strncat(result, sep, size - strlen(result) - 1);
+            }
+            // Skip leading separator in part
+            if (part[0] == '/' || part[0] == '\\') {
+                part++;
+            }
+            strncat(result, part, size - strlen(result) - 1);
+        }
+    }
+    va_end(args);
+}
+// Create PlugManager instance
+static int create_plug_manager(lua_State *L, int cfgObj_ref) {
+    // Create PlugManager instance
+    lua_getglobal(L, "require");
+    lua_pushstring(L, "rmp.oop");
+    lua_call(L, 1, 1);
+    lua_getfield(L, -1, "class");
+    lua_pushstring(L, "PlugManager");
+    lua_call(L, 1, 1);
+    // Store class and create new instance
+    lua_getfield(L, -1, "new");
+    lua_rawgeti(L, LUA_REGISTRYINDEX, cfgObj_ref);
+    lua_call(L, 1, 1);
+    int ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    lua_pop(L, 2); // pop oop module and class
+    return ref;
+}
+// Create TemplateParser instance
+static int create_template_parser(lua_State *L, int template_ref, int plugManager_ref) {
+    lua_getglobal(L, "require");
+    lua_pushstring(L, "rmp.oop");
+    lua_call(L, 1, 1);
+    lua_getfield(L, -1, "class");
+    lua_pushstring(L, "TemplateParser");
+    lua_call(L, 1, 1);
+    lua_getfield(L, -1, "new");
+    lua_rawgeti(L, LUA_REGISTRYINDEX, template_ref);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, plugManager_ref);
+    lua_call(L, 2, 1);
+    int ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    lua_pop(L, 2);
+    return ref;
+}
+// Log functions
+static void log_error(lua_State *L, const char *err) {
+    lua_getglobal(L, "io");
+    lua_getfield(L, -1, "write");
+    lua_getglobal(L, "require");
+    lua_pushstring(L, "rmp.rmp");
+    lua_call(L, 1, 1);
+    // Build colored error string
+    lua_getfield(L, -1, "BGColors");
+    lua_getfield(L, -1, "Brights");
+    lua_getfield(L, -1, "Red");
+    lua_getfield(L, -4, "FGColors");
+    lua_getfield(L, -1, "Brights");
+    lua_getfield(L, -1, "Yellow");
+    lua_pushstring(L, "RMP Error:");
+    lua_getfield(L, -8, "Default");
+    lua_pushstring(L, " ");
+    lua_pushstring(L, err);
+    lua_pushstring(L, "\n");
+    lua_concat(L, 8);
+    lua_call(L, 1, 0);
+    lua_pop(L, 5);
+}
+static void log_note(lua_State *L, const char *note) {
+    lua_getglobal(L, "io");
+    lua_getfield(L, -1, "write");
+    lua_getglobal(L, "require");
+    lua_pushstring(L, "rmp.rmp");
+    lua_call(L, 1, 1);
+    lua_getfield(L, -1, "BGColors");
+    lua_getfield(L, -1, "Brights");
+    lua_getfield(L, -1, "Blue");
+    lua_getfield(L, -4, "FGColors");
+    lua_getfield(L, -1, "Brights");
+    lua_getfield(L, -1, "White");
+    lua_pushstring(L, "RMP Note:");
+    lua_getfield(L, -8, "Default");
+    lua_pushstring(L, " ");
+    lua_pushstring(L, note);
+    lua_pushstring(L, "\n");
+    lua_concat(L, 8);
+    lua_call(L, 1, 0);
+    lua_pop(L, 5);
+}
+// Load configuration
+static bool load_configuration(RMPEngine *engine) {
+    lua_State *L = engine->L;
+    // Get api.Config.new()
+    lua_getglobal(L, "require");
+    lua_pushstring(L, "rmp.rmp");
+    lua_call(L, 1, 1);
+    lua_getfield(L, -1, "Config");
+    lua_getfield(L, -1, "new");
+    lua_call(L, 0, 1);
+    int config_idx = lua_gettop(L);
+    // Check if valid config
+    lua_getfield(L, config_idx, "isValidConfig");
+    lua_pushvalue(L, config_idx);
+    lua_call(L, 1, 1);
+    bool is_valid = lua_toboolean(L, -1);
+    lua_pop(L, 1);
+    if (is_valid) {
+        // Load user config
+        lua_getfield(L, config_idx, "load");
+        lua_pushvalue(L, config_idx);
+        lua_call(L, 1, 2);
+  
+        bool ok = lua_toboolean(L, -2);
+        if (!ok) {
+            const char *err = lua_tostring(L, -1);
+            char msg[256];
+            snprintf(msg, sizeof(msg), "loading user configuration: %s", err);
+            log_error(L, msg);
+            lua_pop(L, 4);
+            return false;
+        }
+        lua_pop(L, 2);
+  
+        // Get config object
+        lua_getfield(L, config_idx, "getInitFileAsObject");
+        lua_pushvalue(L, config_idx);
+        lua_call(L, 1, 1);
+        int cfgObj_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+  
+        // Get template name
+        lua_rawgeti(L, LUA_REGISTRYINDEX, cfgObj_ref);
+        lua_getfield(L, -1, "template");
+        const char *themeName = lua_tostring(L, -1);
+  
+        if (!themeName) {
+            log_error(L, "Invalid theme name in configuration");
+            lua_pop(L, 4);
+            return false;
+        }
+  
+        // Load template file
+        lua_getfield(L, config_idx, "homePath");
+        lua_getfield(L, -1, "getPath");
+        lua_pushvalue(L, -2);
+        lua_call(L, 1, 1);
+        const char *homePath = lua_tostring(L, -1);
+  
+        char templatePath[512];
+        snprintf(templatePath, sizeof(templatePath), "%s%s.rmp%sthemes%s%s.lua",
+                 homePath, PATH_SEP, PATH_SEP, PATH_SEP, themeName);
+  
+        if (luaL_dofile(L, templatePath) != 0) {
+            const char *err = lua_tostring(L, -1);
+            char msg[256];
+            snprintf(msg, sizeof(msg), "loading user template: %s", err);
+            log_error(L, msg);
+            lua_pop(L, 6);
+            return false;
+        }
+  
+        engine->template_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+        engine->settings_ref = cfgObj_ref;
+  
+        lua_pop(L, 5);
+        return true;
+  
+    } else {
+        // Load default config
+        lua_getglobal(L, "require");
+        lua_pushstring(L, "rmp.selfrmp.init");
+        lua_call(L, 1, 1);
+        engine->settings_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+  
+        lua_rawgeti(L, LUA_REGISTRYINDEX, engine->settings_ref);
+        lua_getfield(L, -1, "template");
+        const char *templateName = lua_tostring(L, -1);
+  
+        char requirePath[256];
+        snprintf(requirePath, sizeof(requirePath), "rmp.selfrmp.themes.%s", templateName);
+  
+        lua_getglobal(L, "require");
+        lua_pushstring(L, requirePath);
+        lua_call(L, 1, 1);
+        engine->template_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+  
+        lua_pop(L, 4);
+        return true;
+    }
+}
+// Setup plugins
+static bool setup_plugins(RMPEngine *engine, bool is_userconfig) {
+    lua_State *L = engine->L;
+    // Get plugins from config
+    lua_rawgeti(L, LUA_REGISTRYINDEX, engine->settings_ref);
+    lua_getfield(L, -1, "plugins");
+    if (!lua_istable(L, -1)) {
+        log_error(L, "Invalid plugins configuration");
+        lua_pop(L, 2);
+        return false;
+    }
+    // Create HashMap for plugs
+    lua_getglobal(L, "require");
+    lua_pushstring(L, "rmp.util");
+    lua_call(L, 1, 1);
+    lua_getfield(L, -1, "HashMap");
+    lua_getfield(L, -1, "new");
+    lua_call(L, 0, 1);
+    int plugs_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    // Create Queue for otherPlugs
+    lua_getfield(L, -1, "Queue");
+    lua_getfield(L, -1, "new");
+    lua_call(L, 0, 1);
+    engine->otherPlugs_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    // Iterate through plugins
+    int plugins_idx = lua_gettop(L) - 1;
+    lua_pushnil(L);
+    while (lua_next(L, plugins_idx) != 0) {
+        if (lua_istable(L, -1)) {
+            lua_getfield(L, -1, "themeWindowId");
+            const char *windowId = lua_tostring(L, -1);
+            lua_pop(L, 1);
+      
+            lua_getfield(L, -1, "isActivated");
+            bool isActivated = lua_toboolean(L, -1);
+            lua_pop(L, 1);
+      
+            if (isActivated) {
+                lua_getfield(L, -1, "names");
+                if (lua_istable(L, -1)) {
+                    // Create Queue for this window's plugins
+                    lua_getfield(L, -4, "Queue");
+                    lua_getfield(L, -1, "new");
+                    lua_call(L, 0, 1);
+                    int pq_idx = lua_gettop(L);
+              
+                    // Load each plugin
+                    lua_pushnil(L);
+                    while (lua_next(L, -4) != 0) {
+                        const char *name = lua_tostring(L, -1);
+                        if (name) {
+                            // Load plugin (simplified - would need full path logic)
+                            lua_getglobal(L, "require");
+                            char requirePath[256];
+                            snprintf(requirePath, sizeof(requirePath), 
+                                    is_userconfig ? "%s" : "rmp.selfrmp.plugins.%s", name);
+                            lua_pushstring(L, requirePath);
+                      
+                            if (lua_pcall(L, 1, 1, 0) == 0) {
+                                // Push to queue
+                                lua_getfield(L, pq_idx, "push");
+                                lua_pushvalue(L, pq_idx);
+                                lua_pushvalue(L, -3);
+                                lua_call(L, 2, 0);
+                                lua_pop(L, 1);
+                            } else {
+                                lua_pop(L, 1);
+                            }
+                        }
+                        lua_pop(L, 1);
+                    }
+              
+                    if (windowId) {
+                        // Store in HashMap
+                        lua_rawgeti(L, LUA_REGISTRYINDEX, plugs_ref);
+                        lua_getfield(L, -1, "put");
+                        lua_pushvalue(L, -2);
+                        lua_pushstring(L, windowId);
+                  
+                        // Create table {switchKey, queue}
+                        lua_newtable(L);
+                        lua_getfield(L, -8, "switchPluginKey");
+                        lua_rawseti(L, -2, 1);
+                        lua_pushvalue(L, pq_idx);
+                        lua_rawseti(L, -2, 2);
+                  
+                        lua_call(L, 3, 0);
+                        lua_pop(L, 1);
+                    } else {
+                        // Add to otherPlugs
+                        // (simplified)
+                    }
+              
+                    lua_pop(L, 2);
+                }
+                lua_pop(L, 1);
+            }
+        }
+        lua_pop(L, 1);
+    }
+    // Create PlugManager
+    engine->plugManager_ref = create_plug_manager(L, plugs_ref);
+    lua_pop(L, 3);
+    return true;
+}
+// Main run loop
+static bool run_rmp_application(RMPEngine *engine) {
+    lua_State *L = engine->L;
+    // Get terminal size
+    lua_getglobal(L, "require");
+    lua_pushstring(L, "rmp.rmp");
+    lua_call(L, 1, 1);
+    int api_idx = lua_gettop(L);
+    lua_getfield(L, api_idx, "Terminal");
+    lua_getfield(L, -1, "getSize");
+    lua_call(L, 0, 2);
+    int h = lua_tointeger(L, -2);
+    int w = lua_tointeger(L, -1);
+    lua_pop(L, 2);
+    // Create Frame
+    lua_getfield(L, api_idx, "Frame");
+    lua_getfield(L, -1, "new");
+    lua_call(L, 0, 1);
+    int frame_idx = lua_gettop(L);
+    // Hide cursor
+    lua_getfield(L, api_idx, "Terminal");
+    lua_getfield(L, -1, "hideCursor");
+    lua_call(L, 0, 0);
+    // Create Sound object
+    lua_getfield(L, api_idx, "Sound");
+    lua_getfield(L, -1, "new");
+    lua_call(L, 0, 1);
+    int sound_idx = lua_gettop(L);
+    // Setup FPS if configured
+    lua_rawgeti(L, LUA_REGISTRYINDEX, engine->settings_ref);
+    lua_getfield(L, -1, "settings");
+    if (!lua_isnil(L, -1)) {
+        lua_getfield(L, -1, "fps");
+        if (lua_isnumber(L, -1)) {
+            int fps = lua_tointeger(L, -1);
+            if (fps > 0 && fps <= 120) {
+                lua_getfield(L, frame_idx, "setFps");
+                lua_pushvalue(L, frame_idx);
+                lua_pushinteger(L, fps);
+                lua_call(L, 2, 0);
+            }
+        }
+        lua_pop(L, 1);
+    }
+    lua_pop(L, 2);
+    // Create TemplateParser
+    int parser_ref = create_template_parser(L, engine->template_ref, engine->plugManager_ref);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, parser_ref);
+    int parser_idx = lua_gettop(L);
+    // Main loop
+    engine->quit = false;
+    engine->restart = false;
+    while (!engine->quit) {
+        // Handle keyboard input
+        lua_getfield(L, api_idx, "Terminal");
+        lua_getfield(L, -1, "handleKey");
+        lua_call(L, 0, 1);
+        int key = lua_tointeger(L, -1);
+  
+        // Check for terminal resize
+        lua_getfield(L, parser_idx, "wasTerminalResized");
+        lua_pushvalue(L, parser_idx);
+        lua_call(L, 1, 1);
+        if (lua_toboolean(L, -1)) {
+            lua_getfield(L, api_idx, "Terminal");
+            lua_getfield(L, -1, "getSize");
+            lua_call(L, 0, 2);
+            h = lua_tointeger(L, -2);
+            w = lua_tointeger(L, -1);
+      
+            lua_getfield(L, frame_idx, "resize");
+            lua_pushvalue(L, frame_idx);
+            lua_pushinteger(L, w);
+            lua_pushinteger(L, h);
+            lua_call(L, 3, 0);
+            lua_pop(L, 2);
+        }
+        lua_pop(L, 2);
+  
+        // Parse template and get windows
+        lua_getfield(L, parser_idx, "parseTemplate");
+        lua_pushvalue(L, parser_idx);
+        lua_call(L, 1, 2);
+  
+        // Add windows to frame
+        lua_pushnil(L);
+        while (lua_next(L, -3) != 0) {
+            lua_getfield(L, frame_idx, "add");
+            lua_pushvalue(L, frame_idx);
+            lua_pushvalue(L, -3);
+            lua_call(L, 2, 0);
+            lua_pop(L, 1);
+        }
+  
+        // Update sound
+        lua_getfield(L, sound_idx, "update");
+        lua_pushvalue(L, sound_idx);
+        lua_call(L, 1, 0);
+  
+        // Run frame
+        lua_getfield(L, frame_idx, "run");
+        lua_pushvalue(L, frame_idx);
+        lua_pushinteger(L, key);
+        lua_pushnil(L); // mouse
+        lua_pushvalue(L, sound_idx);
+        lua_call(L, 4, 0);
+  
+        lua_pop(L, 3); // pop windows, context, key
+  
+        if (engine->restart) {
+            break;
+        }
+    }
+    // Cleanup
+    lua_getfield(L, sound_idx, "cleanup");
+    lua_pushvalue(L, sound_idx);
+    lua_call(L, 1, 0);
+    lua_getfield(L, api_idx, "Terminal");
+    lua_getfield(L, -1, "showCursor");
+    lua_call(L, 0, 0);
+    lua_getfield(L, -1, "rawMode");
+    lua_pushboolean(L, false);
+    lua_call(L, 1, 0);
+    lua_getfield(L, -1, "closeKey");
+    lua_call(L, 0, 0);
+    lua_pop(L, lua_gettop(L));
+    return engine->restart;
+}
+// Main entry point
+int rmp_engine_run(lua_State *L) {
+    RMPEngine engine = {0};
+    engine.L = L;
+    // Load required modules
+    lua_getglobal(L, "require");
+    lua_pushstring(L, "rmp.rmp");
+    lua_call(L, 1, 1);
+    lua_setglobal(L, "api");
+    lua_getglobal(L, "require");
+    lua_pushstring(L, "rmp.util");
+    lua_call(L, 1, 1);
+    lua_setglobal(L, "utils");
+    lua_getglobal(L, "require");
+    lua_pushstring(L, "rmp.oop");
+    lua_call(L, 1, 1);
+    lua_setglobal(L, "OOP");
+    bool restart = false;
+    do {
+        // Load configuration
+        if (!load_configuration(&engine)) {
+            log_error(L, "Failed to load configuration. Exiting.");
+            log_note(L, "check your configuration file or try to reset it by deleting ~/.rmp/config.lua");
+            return 1;
+        }
+  
+        // Determine if user config or default
+        lua_rawgeti(L, LUA_REGISTRYINDEX, engine.settings_ref);
+        lua_getfield(L, -1, "__is_user_config");
+        bool is_userconfig = lua_toboolean(L, -1);
+        lua_pop(L, 2);
+  
+        // Setup plugins
+        if (!setup_plugins(&engine, is_userconfig)) {
+            log_error(L, "Failed to setup plugins. Exiting.");
+            return 1;
+        }
+  
+        // Setup sound config
+        lua_rawgeti(L, LUA_REGISTRYINDEX, engine.settings_ref);
+        lua_getfield(L, -1, "soundMap");
+        if (lua_isnil(L, -1)) {
+            // Create default sound config
+            lua_pop(L, 1);
+            lua_newtable(L);
+      
+            // Set default keys (simplified)
+            lua_getglobal(L, "api");
+            lua_getfield(L, -1, "KEY_SPACE");
+            lua_setfield(L, -3, "pause_sound");
+            lua_getfield(L, -1, "KEY_SPACE");
+            lua_setfield(L, -3, "resume_sound");
+            // ... more default keys
+            lua_pop(L, 1);
+        }
+        engine.soundCfg_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+        lua_pop(L, 1);
+  
+        // Run application
+        restart = run_rmp_application(&engine);
+  
+        // Clean up references
+        if (engine.plugManager_ref) {
+            luaL_unref(L, LUA_REGISTRYINDEX, engine.plugManager_ref);
+            engine.plugManager_ref = 0;
+        }
+        if (engine.template_ref) {
+            luaL_unref(L, LUA_REGISTRYINDEX, engine.template_ref);
+            engine.template_ref = 0;
+        }
+        if (engine.settings_ref) {
+            luaL_unref(L, LUA_REGISTRYINDEX, engine.settings_ref);
+            engine.settings_ref = 0;
+        }
+        if (engine.otherPlugs_ref) {
+            luaL_unref(L, LUA_REGISTRYINDEX, engine.otherPlugs_ref);
+            engine.otherPlugs_ref = 0;
+        }
+        if (engine.soundCfg_ref) {
+            luaL_unref(L, LUA_REGISTRYINDEX, engine.soundCfg_ref);
+            engine.soundCfg_ref = 0;
+        }
+  
+    } while (restart);
+    return 0;
+}
+// Integration with main.c
+int main(int argc, char** argv) {
+    // ... existing argument parsing code ...
+    lua_State *L = luaL_newstate();
+    if (L == NULL) {
+        fprintf(stderr, "[RMP] failed creating Engine Lua state.\n");
+        return 1;
+    }
+    luaL_openlibs(L);
+    // Run the C engine instead of Lua string
+    int result = rmp_engine_run(L);
+    lua_close(L);
+    return result;
+}
+#endif
+
+
+
+
+
+
+
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"
