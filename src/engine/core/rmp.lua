@@ -600,6 +600,8 @@ RMP.KEY_BAR = RMP.enum()
 RMP.KEY_DBL_QUOTE = RMP.enum() 
 RMP.KEY_SINGLE_QOUTE = RMP.enum()
 RMP.KEY_SLASH  = RMP.enum()
+RMP.KEY_COLON  = RMP.enum()
+RMP.KEY_COMMA  = RMP.enum()
 RMP.NONE = RMP.enum()
 
 RMP.Window = OOP.class("Window")
@@ -1241,7 +1243,8 @@ do
 			[RMP.KEY_OPCURB] = "{", [RMP.KEY_CLCURB] = "}", [RMP.KEY_BAR] = "|",
 			[RMP.KEY_SEMICOL] = ";", [RMP.KEY_DBL_QUOTE] = "\"", [RMP.KEY_SINGLE_QOUTE] = "'",
 			[RMP.KEY_BACKTICK] = "`", [RMP.KEY_HASHTAG] = "#", [RMP.KEY_DOLAR] = "$",
-			[RMP.KEY_PERSANT] = "%", [RMP.KEY_AT] = "@", [RMP.KEY_GT] = ">", [RMP.KEY_LT] = "<"
+			[RMP.KEY_PERSANT] = "%", [RMP.KEY_AT] = "@", [RMP.KEY_GT] = ">", [RMP.KEY_LT] = "<" , [RMP.KEY_QUISTION_MARK] = "?",
+            [RMP.KEY_COLON] = ":", [RMP.KEY_COMMA] = ","
 		}
 
 		local shiftMap = {
@@ -1361,7 +1364,8 @@ do
 			RMP.KEY_OPEN_BRAKET, RMP.KEY_CLOSED_BRAKET, RMP.KEY_OPCURB,
 			RMP.KEY_CLCURB, RMP.KEY_BAR, RMP.KEY_SEMICOL, RMP.KEY_DBL_QUOTE,
 			RMP.KEY_SINGLE_QOUTE, RMP.KEY_BACKTICK, RMP.KEY_HASHTAG,
-			RMP.KEY_DOLAR, RMP.KEY_PERSANT, RMP.KEY_AT, RMP.KEY_GT, RMP.KEY_LT
+			RMP.KEY_DOLAR, RMP.KEY_PERSANT, RMP.KEY_AT, RMP.KEY_GT, RMP.KEY_LT,
+            RMP.KEY_QUISTION_MARK, RMP.KEY_COLON, RMP.KEY_COMMA
 		}
 		
 		for _, special_key in ipairs(specialKeys) do
