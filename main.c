@@ -1549,8 +1549,6 @@ int main(int argc , char** argv)
 		/* } */
 	}
 
-
-
 #ifdef ONE_FILE
 	lua_State *L = luaL_newstate();
 	if (L == NULL) {

@@ -26,10 +26,10 @@ REM /***************************************************************************
 
 set INIT_PATH=%USERPROFILE%\.rmp\.init.lua
 set INCLUDE_PATH=-I../src/engine/lua/include
-set LIB_PATH=../src/engine/lua/lib/liblua54.a
+set LUA_LIB_PATH=../src/engine/lua/lib
 set CC=gcc.exe
 
-set FLAGS=-shared -s -Wall
+set FLAGS=-shared -s -Wall -static
 
 :: Check if no command was provided or if help is requested
 if "%~1"=="" goto help
@@ -46,9 +46,9 @@ goto :skip_admin_check
 :check_admin
 net session >nul 2>&1
 if %errorlevel% neq 0 (
-	echo ERROR: This script must be run as administrator
-	echo Try: Run as Administrator
-	goto help
+    echo ERROR: This script must be run as administrator
+    echo Try: Run as Administrator
+    goto help
 )
 
 :skip_admin_check
@@ -62,92 +62,85 @@ if not exist "%LUA_SHARE%" mkdir "%LUA_SHARE%"
 if not exist "%LUA_LIB%" mkdir "%LUA_LIB%"
 
 if "%~1"=="clean" (
-	echo [+] Cleaning...
-	if "%~2"=="-v" echo on
-	del "%LUA_LIB%\rmpaudio.dll" 2>nul
-	del "%LUA_LIB%\keyboard.dll" 2>nul
-	del "%LUA_LIB%\sleep.dll" 2>nul
-	del "%LUA_LIB%\directory.dll" 2>nul
-	del "%LUA_LIB%\window.dll" 2>nul
-	del "%LUA_LIB%\platform.dll" 2>nul
-	del "%LUA_LIB%\virtualterminalrmp.dll" 2>nul
+    echo [+] Cleaning...
+    if "%~2"=="-v" echo on
+    del "%LUA_LIB%\rmpaudio.dll" 2>nul
+    del "%LUA_LIB%\keyboard.dll" 2>nul
+    del "%LUA_LIB%\sleep.dll" 2>nul
+    del "%LUA_LIB%\directory.dll" 2>nul
+    del "%LUA_LIB%\window.dll" 2>nul
+    del "%LUA_LIB%\platform.dll" 2>nul
+    del "%LUA_LIB%\virtualterminalrmp.dll" 2>nul
 
-	del "%LUA_SHARE%\rmp.lua" 2>nul
-	del "%LUA_SHARE%\promises.lua" 2>nul
-	del "%LUA_SHARE%\util.lua" 2>nul
-	del "%LUA_SHARE%\oop.lua" 2>nul
+    del "%LUA_SHARE%\rmp.lua" 2>nul
+    del "%LUA_SHARE%\promises.lua" 2>nul
+    del "%LUA_SHARE%\util.lua" 2>nul
+    del "%LUA_SHARE%\oop.lua" 2>nul
 
-	echo Clean completed.
-	goto :eof
+    echo Clean completed.
+    goto :eof
 )
 
 if "%~1"=="compile" (
-	echo [+] Compiling...
-	if "%~2"=="-v" echo on
+    echo [+] Compiling...
+    if "%~2"=="-v" echo on
 
-	%CC% %FLAGS% -o ../src/engine/core/lib/rmpaudio.dll ../src/engine/core/src/rmpaudio.c %INCLUDE_PATH% %LIB_PATH% -lwinmm
-	%CC% %FLAGS% -o ../src/engine/core/lib/virtualterminalrmp.dll ../src/engine/core/src/virtualterminalrmp.c %INCLUDE_PATH% %LIB_PATH%
-	%CC% %FLAGS% -o ../src/engine/core/lib/keyboard.dll ../src/engine/core/src/keyboard.c %INCLUDE_PATH% %LIB_PATH% -luser32
-	%CC% %FLAGS% -o ../src/engine/core/lib/sleep.dll ../src/engine/core/src/sleep.c %INCLUDE_PATH% %LIB_PATH%
-	%CC% %FLAGS% -o ../src/engine/core/lib/platform.dll ../src/engine/core/src/platform.c %INCLUDE_PATH% %LIB_PATH%
-	%CC% %FLAGS% -o ../src/engine/core/lib/directory.dll ../src/engine/core/src/directory.c %INCLUDE_PATH% %LIB_PATH%
-	%CC% %FLAGS% -o ../src/engine/core/lib/window.dll ../src/engine/core/src/window.c %INCLUDE_PATH% %LIB_PATH% -lgdi32 -luser32
+    :: Check which Lua library to use
+    if exist "%LUA_LIB_PATH%\lua54.dll" (
+        set LIB_FILE=%LUA_LIB_PATH%\lua54.dll
+    ) else (
+        echo ERROR: No Lua library found in %LUA_LIB_PATH%
+        goto :eof
+    )
 
-	%CC% -s -Wall -o ../rmp.exe ../main.c ../src/engine/runner.c %INCLUDE_PATH% -I../src/engine %LIB_PATH%
+    %CC% %FLAGS% -o ../src/engine/core/lib/rmpaudio.dll ../src/engine/core/src/rmpaudio.c %INCLUDE_PATH% %LIB_FILE% -lwinmm
+    %CC% %FLAGS% -o ../src/engine/core/lib/virtualterminalrmp.dll ../src/engine/core/src/virtualterminalrmp.c %INCLUDE_PATH% %LIB_FILE%
+    %CC% %FLAGS% -o ../src/engine/core/lib/keyboard.dll ../src/engine/core/src/keyboard.c %INCLUDE_PATH% %LIB_FILE% -luser32
+    %CC% %FLAGS% -o ../src/engine/core/lib/sleep.dll ../src/engine/core/src/sleep.c %INCLUDE_PATH% %LIB_FILE%
+    %CC% %FLAGS% -o ../src/engine/core/lib/platform.dll ../src/engine/core/src/platform.c %INCLUDE_PATH% %LIB_FILE%
+    %CC% %FLAGS% -o ../src/engine/core/lib/directory.dll ../src/engine/core/src/directory.c %INCLUDE_PATH% %LIB_FILE%
+    %CC% %FLAGS% -o ../src/engine/core/lib/window.dll ../src/engine/core/src/window.c %INCLUDE_PATH% %LIB_FILE% -lgdi32 -luser32
 
-	echo Compile completed.
-	goto :eof
+    %CC% -s -Wall -static -o ../rmp.exe ../main.c ../src/engine/runner.c %INCLUDE_PATH% -I../src/engine %LIB_FILE%
+
+    echo Compile completed.
+    goto :eof
 )
 
 if "%~1"=="install" (
-	echo [+] Installing...
-	if "%~2"=="-v" echo on
+    echo [+] Installing...
+    if "%~2"=="-v" echo on
 
-	copy "..\src\engine\core\lib\rmpaudio.dll" "%LUA_LIB%"
-	copy "..\src\engine\core\lib\keyboard.dll" "%LUA_LIB%"
-	copy "..\src\engine\core\lib\sleep.dll" "%LUA_LIB%"
-	copy "..\src\engine\core\lib\platform.dll" "%LUA_LIB%"
-	copy "..\src\engine\core\lib\directory.dll" "%LUA_LIB%"
-	copy "..\src\engine\core\lib\window.dll" "%LUA_LIB%"
-	copy "..\src\engine\core\lib\virtualterminalrmp.dll" "%LUA_LIB%"
+    :: Copy Lua DLL to system path if it exists
+    if exist "%LUA_LIB_PATH%\lua54.dll" (
+        copy "%LUA_LIB_PATH%\lua54.dll" "%SystemRoot%\system32\" >nul 2>&1
+        if errorlevel 1 (
+            echo Note: Could not copy lua54.dll to system32. You may need to add it to PATH.
+        ) else (
+            echo Copied lua54.dll to system32.
+        )
+    )
 
-	if not exist "%LUA_SHARE%\selfrmp" mkdir "%LUA_SHARE%\selfrmp"
-	xcopy "..\src\engine\selfrmp" "%LUA_SHARE%\selfrmp" /E /I /Y
+    copy "..\src\engine\core\lib\rmpaudio.dll" "%LUA_LIB%"
+    copy "..\src\engine\core\lib\keyboard.dll" "%LUA_LIB%"
+    copy "..\src\engine\core\lib\sleep.dll" "%LUA_LIB%"
+    copy "..\src\engine\core\lib\platform.dll" "%LUA_LIB%"
+    copy "..\src\engine\core\lib\directory.dll" "%LUA_LIB%"
+    copy "..\src\engine\core\lib\window.dll" "%LUA_LIB%"
+    copy "..\src\engine\core\lib\virtualterminalrmp.dll" "%LUA_LIB%"
 
-	copy "..\src\promises.lua" "%LUA_SHARE%"
-	copy "..\src\util.lua" "%LUA_SHARE%"
-	copy "..\src\oop.lua" "%LUA_SHARE%"
-	copy "..\src\engine\core\rmp.lua" "%LUA_SHARE%"
+    if not exist "%LUA_SHARE%\selfrmp" mkdir "%LUA_SHARE%\selfrmp"
+    xcopy "..\src\engine\selfrmp" "%LUA_SHARE%\selfrmp" /E /I /Y
 
-	REM :: Create user config directory if it doesn't exist
-	REM if not exist "%USERPROFILE%\.rmp" (
-	REM     mkdir "%USERPROFILE%\.rmp"
-	REM     mkdir "%USERPROFILE%\.rmp\themes"
-	REM     mkdir "%USERPROFILE%\.rmp\plugins"
+    copy "..\src\promises.lua" "%LUA_SHARE%"
+    copy "..\src\util.lua" "%LUA_SHARE%"
+    copy "..\src\oop.lua" "%LUA_SHARE%"
+    copy "..\src\engine\core\rmp.lua" "%LUA_SHARE%"
 
-	REM     (
-	REM         echo return {
-	REM         echo     sound_cfg = {
-	REM         echo         pause = api.KEY_SPACE,
-	REM         echo         resume = api.KEY_SPACE,
-	REM         echo         next = api.KEY_N,
-	REM         echo         prev = api.KEY_P,
-	REM         echo         vol_up = api.KEY_PLUS,
-	REM         echo         vol_down = api.KEY_MINUS,
-	REM         echo         seek_left = api.KEY_LEFT,
-	REM         echo         seek_right = api.KEY_RIGHT,
-	REM         echo         speed_up = api.KEY_UP,
-	REM         echo         speed_down = api.KEY_DOWN,
-	REM         echo     },
-	REM         echo     theme = "theme path",
-	REM         echo     plugins = {
-	REM         echo     },
-	REM         echo }
-	REM     ) > "%INIT_PATH%"
-	REM )
-
-	echo Install completed.
-	goto :eof
+    echo Install completed.
+    echo.
+    echo IMPORTANT: Make sure lua54.dll is in your PATH or in the same directory as your application.
+    goto :eof
 )
 
 :help
