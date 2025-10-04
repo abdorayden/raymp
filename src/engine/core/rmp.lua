@@ -378,7 +378,6 @@ RMP.BoxDrawing = {
         "┴", -- Light up and horizontal tee (U+2534)
         "┼", -- Light vertical and horizontal cross (U+253C)
     },
-    RoundedBorder = RMP.BoxDrawing.RoundedCorners
 }
 
 -- TODO: create class Animation for handling diffrent animation
