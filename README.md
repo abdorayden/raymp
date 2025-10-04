@@ -793,6 +793,8 @@ api.KEY_RIGHT                       -- Right arrow
 api.KEY_CTRL_A, api.KEY_CTRL_B, ... -- Ctrl combinations
 ```
 
+### check the docs from [RMP Framework](https://rayden-six.vercel.app/raymp/framework)
+
 ## 🐛 Troubleshooting
 
 ### Common Issues
