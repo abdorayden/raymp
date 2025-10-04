@@ -1,6 +1,6 @@
 --
 --	Copyright 2024 by rayden
---		 
+--		
 --
 --		 this is UI Style of old rmp version , with better performance
 --
@@ -32,9 +32,9 @@ return {
                     foregroundColor = api.FGColors.Brights.Cyan,
                     backgroundColor = api.BGColors.NoBrights.Black,
                     style = api.TextStyle.Bold,
-		    dynamic = function(context)
-			    return "[ RMP - " .. os.date("%H:%M:%S") .. " ]"
-		    end
+                    dynamic = function(context)
+                        return "[ RMP - " .. os.date("%H:%M:%S") .. " ]"
+                    end
                 },
                 width = "w - w/4",
                 height = "h/2",
@@ -51,9 +51,9 @@ return {
                 x = 2,
                 y = "h/8 + h - (h/2) + 2",
                 border = api.BoxDrawing.RoundedCorners,
-		condition = function(context)
-			return context.w > 100
-		end
+                condition = function(context)
+                    return context.w > 100
+                end
             }
         }
     }

@@ -325,11 +325,11 @@ return {
                     style = api.TextStyle.Bold,
                     dynamic = function(context)
                         local status = context.player_status or "STOPPED"
-                        local color = status == "PLAYING" and api.FGColors.Brights.Green 
-                                    or status == "PAUSED" and api.FGColors.Brights.Yellow 
-                                    or api.FGColors.Brights.Red
+                        local color = status == "PLAYING" and api.FGColors.Brights.Green
+                            or status == "PAUSED" and api.FGColors.Brights.Yellow
+                            or api.FGColors.Brights.Red
                         -- return {value = status, foregroundColor = color, backgroundColor = api.BGColors.NoBrights.Black}
-			return status
+                        return status
                     end
                 },
                 width = "w - 2",

@@ -28,3 +28,4 @@ TODO:
 -[ ]: create docuumentation and link it to my port folio implemented using js only (challenge) , and the potentiel error or problem as documentation
 
 -[ ]: create simple help with beautiful animations to displayed and create repo for plugin manager to download and install plugins and themes
+-[ ]: create a simple default template with a simple plugins to manage the audio player

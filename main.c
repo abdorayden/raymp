@@ -613,7 +613,7 @@ int main(int argc, char** argv) {
 #include <stdbool.h>
 #include <string.h>
 
-// #define ONE_FILE
+#define ONE_FILE
 
 void print_help(char* progname)
 {
