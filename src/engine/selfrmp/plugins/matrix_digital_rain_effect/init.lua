@@ -5,13 +5,13 @@ local streams = {}
 
 return function(x, y, xx, yy)
     local h, w = (yy - y), (xx - x)
-    local cols = math.floor(w / 2)  
+    local cols = math.floor(w / 2)
     local vt = api.VirtualTerminal.new()
 
     for i = 1, cols do
         if not streams[i] then
             streams[i] = {
-                position = math.random(-20, 0),  
+                position = math.random(-20, 0),
                 speed = math.random(5, 15) / 10,
                 length = math.random(5, 20),
                 chars = {}

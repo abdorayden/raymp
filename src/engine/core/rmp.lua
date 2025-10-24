@@ -288,55 +288,159 @@ RMP.Bar_Shading_75_per  = "▓"
 
 RMP.Bar_100_per         = "█"
 
--- RMP.CheckMark 	= "✔"
--- RMP.Error 		= "✗"
+-- RMP.CheckMark           = "✔"
+-- RMP.Error               = "✗"
 
 RMP.IError              = "❌"
 RMP.IWarning            = "⚠️"
 RMP.IMessage            = "💬"
 RMP.IInfo               = "ℹ️"
 
--- TODO: create table class to create tables
-RMP.Table               = OOP.class("Table")
+local Renderable        = OOP.interface("Renderable",
+    -- @return : virtual terminal frame
+    "render")
+
+-- TODO: Add sorting, selection, and editing features
+-- TODO: Add scrolling for large tables
+-- TODO: Add support for different data types and formatting
+-- TODO: add colors
+RMP.Table               = OOP.class("Table", nil, Renderable)
 do
-    -- advanced table class
-    function RMP.Table:constructor(data)
-        self.data = data or {}
+    function RMP.Table:constructor(x, y, headers, rows)
+        self.x = x or 1
+        self.y = y or 1
+        self._headers = headers or {}
+        self._rows = rows or {}
+        self._colWidths = {}
+        self:_calculateColumnWidths()
         return self
+    end
+
+    function RMP.Table:setX(x)
+        self.x = x
+    end
+
+    function RMP.Table:setY(y)
+        self.y = y
+    end
+
+    function RMP.Table:_calculateColumnWidths()
+        for i, header in ipairs(self._headers) do
+            self._colWidths[i] = #header
+        end
+
+        for _, row in ipairs(self._rows) do
+            for i, cell in ipairs(row) do
+                local cellStr = tostring(cell)
+                if self._colWidths[i] then
+                    self._colWidths[i] = math.max(self._colWidths[i], #cellStr)
+                else
+                    self._colWidths[i] = #cellStr
+                end
+            end
+        end
+
+        for i = 1, #self._colWidths do
+            self._colWidths[i] = self._colWidths[i] + 2
+        end
+    end
+
+    function RMP.Table:getColumnWidths()
+        return self._colWidths
+    end
+
+    function RMP.Table:setHeaders(headers)
+        self._headers = headers or {}
+        self:_calculateColumnWidths()
+    end
+
+    function RMP.Table:setDataAt(rowIndex, colIndex, value)
+        if self._rows[rowIndex] then
+            self._rows[rowIndex][colIndex] = value
+            self:_calculateColumnWidths()
+        end
+    end
+
+    function RMP.Table:getDataAt(rowIndex, colIndex)
+        if self._rows[rowIndex] then
+            return self._rows[rowIndex][colIndex]
+        end
+        return nil
     end
 
     function RMP.Table:addRow(row)
-        table.insert(self.data, row)
-        return self
+        table.insert(self._rows, row)
+        self:_calculateColumnWidths()
     end
 
-    function RMP.Table:getRow(index)
-        return self.data[index]
-    end
+    function RMP.Table:render()
+        local x = self.x
+        local y = self.y
+        local vterm = RMP.VirtualTerminal.new()
+        local currentY = y
 
-    function RMP.Table:getData()
-        return self.data
-    end
+        local topBorder = "┌"
+        for i, width in ipairs(self._colWidths) do
+            topBorder = topBorder .. string.rep("─", width) .. (i < #self._colWidths and "┬" or "┐")
+        end
+        vterm:writeText(x, currentY, topBorder)
+        currentY = currentY + 1
 
-    function RMP.Table:removeRow(index)
-        table.remove(self.data, index)
-        return self
-    end
+        local headerLine = "│"
+        for i, header in ipairs(self._headers) do
+            local padding = self._colWidths[i] - #header
+            local leftPad = math.floor(padding / 2)
+            local rightPad = padding - leftPad
+            headerLine = headerLine .. string.rep(" ", leftPad) .. header .. string.rep(" ", rightPad) .. "│"
+        end
+        vterm:writeText(x, currentY, headerLine)
+        currentY = currentY + 1
 
-    function RMP.Table:clear()
-        self.data = {}
-        return self
-    end
+        local separator = "├"
+        for i, width in ipairs(self._colWidths) do
+            separator = separator .. string.rep("─", width) .. (i < #self._colWidths and "┼" or "┤")
+        end
+        vterm:writeText(x, currentY, separator)
+        currentY = currentY + 1
 
-    function RMP.Table:size()
-        return #self.data
+        for _, row in ipairs(self._rows) do
+            local rowLine = "│"
+            for i, cell in ipairs(row) do
+                local cellStr = tostring(cell)
+                local padding = self._colWidths[i] - #cellStr
+                local leftPad = 1
+                local rightPad = padding - leftPad
+                rowLine = rowLine .. string.rep(" ", leftPad) .. cellStr .. string.rep(" ", rightPad) .. "│"
+            end
+            vterm:writeText(x, currentY, rowLine)
+            currentY = currentY + 1
+        end
+
+        local bottomBorder = "└"
+        for i, width in ipairs(self._colWidths) do
+            bottomBorder = bottomBorder .. string.rep("─", width) .. (i < #self._colWidths and "┴" or "┘")
+        end
+        vterm:writeText(x, currentY, bottomBorder)
+
+        return vterm
     end
 end
 
 -- TODO: handle this border table later to let plugin developers change the border
-
 RMP.BoxDrawing = {
-    -- TODO: api.BoxDrawing.NoBorder
+    NoBorder = {
+        " ",
+        " ",
+        " ",
+        " ",
+        " ",
+        " ",
+        " ",
+        " ",
+        " ",
+        " ",
+        " ",
+    },
     LightBorder = {
         -- Light border set (single-line)
         "─", -- Light horizontal line (U+2500)
@@ -380,12 +484,87 @@ RMP.BoxDrawing = {
     },
 }
 
--- TODO: create class Animation for handling diffrent animation
--- for animation
-RMP.BraillePattern = {
-    "⠁", "⠃", "⠇", "⠏", "⠟", "⠿", "⣿", "⡿",
-    "⣟", "⣯", "⣷", "⣾", "⣿"
+-- Animation patterns
+RMP.AnimationPatterns = {
+    BraillePattern = {
+        "⠁", "⠃", "⠇", "⠏", "⠟", "⠿", "⣿", "⡿",
+        "⣟", "⣯", "⣷", "⣾", "⣿"
+    },
+    Spinner = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" },
+    Dots = { "⠁", "⠂", "⠄", "⡀", "⢀", "⠠", "⠐", "⠈" },
+    Line = { "-", "\\", "|", "/" },
+    Arrow = { "←", "↖", "↑", "↗", "→", "↘", "↓", "↙" },
+    BouncingBall = { "⠁", "⠂", "⠄", "⡀", "⢀", "⠠", "⠐", "⠈" },
+    Clock = { "🕐", "🕑", "🕒", "🕓", "🕔", "🕕", "🕖", "🕗", "🕘", "🕙", "🕚", "🕛" },
+    Moon = { "🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘" },
+    Block = { "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█", "▇", "▆", "▅", "▄", "▃", "▂" },
+    Circle = { "◐", "◓", "◑", "◒" },
+    SquareCorners = { "◰", "◳", "◲", "◱" },
+    Dots2 = { "⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷" },
+    Dots3 = { "⠋", "⠙", "⠚", "⠞", "⠖", "⠦", "⠴", "⠲", "⠳", "⠓" },
+    BoxBounce = { "▖", "▘", "▝", "▗" },
+    Triangle = { "◢", "◣", "◤", "◥" },
+    GrowingBar = { "▁", "▃", "▄", "▅", "▆", "▇", "█" }
 }
+
+-- LoadingSpinner class for handling different loading animations
+RMP.LoadingSpinner = OOP.class("LoadingSpinner", nil, Renderable)
+do
+    function RMP.LoadingSpinner:constructor(x, y, fg, bg, vterm)
+        self.x = x or 2
+        self.y = y or 2
+        self.fg = fg or RMP.FGColors.Brights.White
+        self.bg = bg or RMP.BGColors.NoBrights.Black
+        self.vterm = vterm or RMP.VirtualTerminal.new()
+        self.frameIndex = 1
+        self.pattern = RMP.AnimationPatterns.Spinner
+        self.prefix = ""
+        self.suffix = ""
+        return self
+    end
+
+    function RMP.LoadingSpinner:setPattern(patternName)
+        self.pattern = patternName
+        self.frameIndex = 1
+        return self
+    end
+
+    function RMP.LoadingSpinner:setText(prefix, suffix)
+        self.prefix = prefix or ""
+        self.suffix = suffix or ""
+        return self
+    end
+
+    function RMP.LoadingSpinner:setColors(fg, bg)
+        self.fg = fg or self.fg
+        self.bg = bg or self.bg
+        return self
+    end
+
+    function RMP.LoadingSpinner:nextFrame()
+        local char = self.pattern[self.frameIndex]
+        local text = self.prefix .. char .. self.suffix
+        for i = 1, #text do
+            self.vterm:setChar(self.x + i - 1, self.y, text:sub(i, i), self.fg, self.bg)
+        end
+
+        self.frameIndex = (self.frameIndex % #self.pattern) + 1
+        return self
+    end
+
+    function RMP.LoadingSpinner:reset()
+        self.frameIndex = 1
+        return self
+    end
+
+    function RMP.LoadingSpinner:render()
+        return self.vterm
+    end
+
+    function RMP.LoadingSpinner:getPatterns()
+        return RMP.AnimationPatterns
+    end
+end
 
 do -- color from hex
     RMP.FG = "38"
@@ -431,12 +610,12 @@ function RMP.sleep(time)
 end
 
 -- Text class used to work with texts
-RMP.Text = OOP.class("Text")
+RMP.Text = OOP.class("Text", nil, Renderable)
 do -- text
     -- constructor
     -- TODO: fix the error
-    function RMP.Text:constructor(text, style, fg, bg)
-        self.vterm = RMP.VirtualTerminal.new()
+    function RMP.Text:constructor(text, style, fg, bg, vterm)
+        self.vterm = vterm or RMP.VirtualTerminal.new()
         self.text = text or ""
         self.fg = fg or RMP.Default
         self.bg = bg or RMP.Default
@@ -453,9 +632,14 @@ do -- text
         return self
     end
 
+    -- @deprecated
     function RMP.Text:asVTerm()
         self.vterm:writeText(self.x, self.y, self.text, self.fg, self.bg, self.style)
         return self.vterm
+    end
+
+    function RMP.Text:render()
+        return self:asVTerm()
     end
 
     -- ColoredText accept text and color and return colored text
@@ -612,8 +796,9 @@ RMP.Window            = OOP.class("Window")
 do -- creating window
     -- callback function accept 4 agrs
 
-    function RMP.Window:constructor(id)
+    function RMP.Window:constructor(id, vterm)
         self.id = id or nil
+        self.vterm = vterm or RMP.VirtualTerminal.new()
         return self
     end
 
@@ -626,7 +811,7 @@ do -- creating window
     end
 
     function RMP.Window:createWindow(title, width, height, x, y, border_color, background_color, border_style, callback)
-        local vterm = RMP.VirtualTerminal.new()
+        local vterm = self.vterm
 
         if not width and not height and not x and not y then
             return
@@ -648,7 +833,6 @@ do -- creating window
 end
 
 -- TODO: create Mouse class
-
 RMP.Mouse = OOP.class("Mouse")
 do
     function RMP.Mouse:constructor(x, y, button, action)
@@ -919,7 +1103,7 @@ end
 -- each plugin should have his own VirtualTerminal object
 -- so when the plugin is initialized it create his own VirtualTerminal object
 -- and draw on it
-RMP.VirtualTerminal = OOP.class("VirtualTerminal", RMP.EventListener)
+RMP.VirtualTerminal = OOP.class("VirtualTerminal", RMP.EventListener, Renderable)
 do                                                          -- VirtualTerminal
     function RMP.VirtualTerminal:constructor(width, height) -- constructor
         self:super("constructor")
@@ -1098,6 +1282,13 @@ do                                                          -- VirtualTerminal
 
                 while not event:get(RMP.EventType.Sound):isEmpty() do
                     myevent:get(RMP.EventType.Sound):push(event:get(RMP.EventType.Sound):pop())
+                end
+            end
+        else
+            if thatTerm:implements(Renderable) then
+                local vterm = thatTerm:render()
+                if vterm and vterm:instanceOf(RMP.VirtualTerminal) then
+                    vt_rmp.merge(self.native_vt_rmp, vterm:getVT(), offsetX or 0, offsetY or 0)
                 end
             end
         end
@@ -1968,7 +2159,12 @@ end
 
 RMP.Draw = OOP.class("Draw")
 do -- Draw
-    function RMP.Draw:rectangle(x, y, width, height, color)
+    -- TODO: draw something based on table of boolean
+    function RMP.Draw:draw(x, y, boolTable)
+
+    end
+
+    function RMP.Draw:rectangle(x, y, width, height, color, vterm)
         x = x or 0
         x = math.floor(x)
 
@@ -1982,7 +2178,7 @@ do -- Draw
         width = math.floor(width)
         height = math.floor(height)
 
-        local vterm = RMP.VirtualTerminal.new()
+        vterm = vterm or RMP.VirtualTerminal.new()
         vterm:moveCursor(x, y)
 
         for i = y, height + y do
@@ -1994,16 +2190,19 @@ do -- Draw
         return vterm
     end
 
-    function RMP.Draw:circle(centerX, centerY, r, color)
-        r = math.floor(r or 5)
+    function RMP.Draw:circle(centerX, centerY, r, color, vterm)
+        r = math.floor(math.floor(r) or 5)
         if r <= 0 then return nil end
 
-        local vterm = RMP.VirtualTerminal.new()
+        local centerX = math.floor(centerX or 0)
+        local centerY = math.floor(centerY or 0)
+
+        vterm = vterm or RMP.VirtualTerminal.new()
         for y = -r, r do
             for x = -r, r do
                 if x * x + y * y <= r * r then
-                    local term_x = x + r + 1
-                    local term_y = y + r + 1
+                    local term_x = x + r + 1 + centerX
+                    local term_y = y + r + 1 + centerY
                     vterm:setChar(term_x, term_y, " ", nil, color, nil)
                 end
             end
@@ -2011,9 +2210,10 @@ do -- Draw
         return vterm
     end
 
-    function RMP.Draw:triangle(height, pos_x, pos_y, color)
-        local vterm = RMP.VirtualTerminal.new()
-        local char = RMP.Text.new(" ", nil, nil):getColoredText()
+    function RMP.Draw:triangle(height, pos_x, pos_y, color, vterm)
+        vterm = vterm or RMP.VirtualTerminal.new()
+        local char = " "
+        local height = math.floor(height)
         for y = 0, height - 1 do
             local spaces = height - y - 1
             local stars = 2 * y + 1
@@ -2023,8 +2223,8 @@ do -- Draw
         return vterm
     end
 
-    function RMP.Draw:line(x, y, width, color)
-        local vterm = RMP.VirtualTerminal.new()
+    function RMP.Draw:line(x, y, width, color, vterm)
+        vterm = vterm or RMP.VirtualTerminal.new()
         vterm:moveCursor(x, y)
         for i = x, width + x do
             vterm:setChar(i, y, " ", nil, color, nil)
@@ -2033,8 +2233,8 @@ do -- Draw
         return vterm
     end
 
-    function RMP.Draw:column(x, y, height, color)
-        local vterm = RMP.VirtualTerminal.new()
+    function RMP.Draw:column(x, y, height, color, vterm)
+        vterm = vterm or RMP.VirtualTerminal.new()
         for i = y, height + y do
             vterm:setChar(x, i, " ", nil, color, nil)
         end
@@ -2054,7 +2254,7 @@ RMP.PopupPosition = {
 -- TODO: handle timeout async for popups
 RMP.Popup = OOP.class("Popup")
 do -- Popups
-    function RMP.Popup:run(message, title, border_color, bg_color, poslayout)
+    function RMP.Popup:run(message, title, border_color, bg_color, poslayout, vterm)
         local rows, cols = RMP.Terminal:getSize()
         poslayout = poslayout or RMP.PopupPosition.CENTER
         local x, y = nil, nil
@@ -2070,7 +2270,9 @@ do -- Popups
             x, y = (cols / 2) - (cols / 8), (rows / 2) - (rows / 8)
         end
 
-        return RMP.Window.new(99):createWindow(
+        vterm = vterm or RMP.VirtualTerminal.new()
+
+        return RMP.Window.new(99, vterm):createWindow(
             title,
             -- 		cols / 2 ,
             -- 		rows / 2 ,
@@ -2083,21 +2285,23 @@ do -- Popups
             RMP.BoxDrawing.LightBorder,
             function(lx, ly, xx, yy)
                 -- TODO: fix message inside box
-                local vterm = RMP.VirtualTerminal.new()
+                vterm = RMP.VirtualTerminal.new()
                 vterm:moveCursor(lx + 1, ly + 1)
                 -- i think i delete this helper function
                 -- TODO: implement cleanTextLocal
-                local text = remove_new_lines_from_str(message)
+
+                -- local text = remove_new_lines_from_str(message)
+                local text = message
 
                 local spl = 1
-                local remider = 0
+                Remider = 0
                 if #text > (xx - lx - 1) then
                     if spl == math.floor((xx - lx - 1) / #text) then
                         spl = math.floor(#text / (xx - lx - 1)) + 1
                     else
                         spl = math.floor(#text / (xx - lx - 1))
                     end
-                    remider = #text % (xx - lx)
+                    Remider = #text % (xx - lx)
                 end
 
                 for i = 0, math.min(spl, yy - ly - 4) do
@@ -2113,14 +2317,16 @@ end
 RMP.Notify = OOP.class("Notify", RMP.Popup)
 do
     function RMP.Notify:constructor(
-        time,   -- the time will live on the Frame , should be ms
-        fps,    -- the fps time
-        message -- the message
+        time,    -- the time will live on the Frame , should be ms
+        fps,     -- the fps time
+        message, -- the message
+        vterm
     )
         self.message = message or ""
         self.time = time
         self.counter = 0
         self.fps = fps
+        self.vterm = vterm or RMP.VirtualTerminal.new()
     end
 
     function RMP.Notify:setMessage(message)
@@ -2147,7 +2353,8 @@ do
                 ),
                 RMP.FGColors.NoBrights.Red,
                 nil,
-                poslayout
+                poslayout,
+                self.vterm
             )
         end
     end
@@ -2168,7 +2375,8 @@ do
                 ),
                 RMP.FGColors.NoBrights.Green,
                 nil,
-                poslayout
+                poslayout,
+                self.vterm
             )
         end
     end
@@ -2189,7 +2397,8 @@ do
                 ),
                 RMP.FGColors.NoBrights.Blue,
                 nil,
-                poslayout
+                poslayout,
+                self.vterm
             )
         end
     end
@@ -2210,7 +2419,8 @@ do
                 ),
                 RMP.FGColors.NoBrights.Yellow,
                 nil,
-                poslayout
+                poslayout,
+                self.vterm
 
             )
         end
@@ -3356,7 +3566,7 @@ do -- Config
 end
 
 -- /////////////////////////////////////////////////////
--- Hight Level API
+-- Hight Level API Components
 -- /////////////////////////////////////////////////////
 
 RMP.Frame = OOP.class("Frame", RMP.VirtualTerminal)
@@ -3364,6 +3574,17 @@ do
     function RMP.Frame:constructor(width, heigth)
         self:super("constructor", width, heigth)
         self.fps = 30
+    end
+
+    function RMP.Frame:initMainFrame()
+        RMP.Terminal:clearWindow()
+        RMP.Terminal:hideCursor()
+    end
+
+    function RMP.Frame:cleanupMainFrame()
+        RMP.Terminal:closeKey()
+        RMP.Terminal:showCursor()
+        RMP.Terminal:clearWindow()
     end
 
     function RMP.Frame:setFps(fps)
@@ -3388,6 +3609,10 @@ do
         self:super("merge", component)
     end
 
+    function RMP.Frame:addMany(components)
+        self:super("mergeAll", components)
+    end
+
     function RMP.Frame:addEventListener(key, callback)
         self:super("addEventListener", key, callback)
     end
@@ -3401,5 +3626,296 @@ do
 end
 
 -- TODO: add class Code to manage code highlighting for the text
+RMP.CodeSyntax = {
+    LUA = {
+        { word = "and",      type = "logical",    color = RMP.FGColors.Brights.Magenta },
+        { word = "break",    type = "control",    color = RMP.FGColors.Brights.Red },
+        { word = "do",       type = "control",    color = RMP.FGColors.Brights.Red },
+        { word = "else",     type = "control",    color = RMP.FGColors.Brights.Red },
+        { word = "elseif",   type = "control",    color = RMP.FGColors.Brights.Red },
+        { word = "end",      type = "control",    color = RMP.FGColors.Brights.Red },
+        { word = "false",    type = "literal",    color = RMP.FGColors.Brights.Cyan },
+        { word = "for",      type = "control",    color = RMP.FGColors.Brights.Red },
+        { word = "function", type = "definition", color = RMP.FGColors.Brights.Blue },
+        { word = "goto",     type = "control",    color = RMP.FGColors.Brights.Red },
+        { word = "if",       type = "control",    color = RMP.FGColors.Brights.Red },
+        { word = "in",       type = "control",    color = RMP.FGColors.Brights.Red },
+        { word = "local",    type = "definition", color = RMP.FGColors.Brights.Blue },
+        { word = "nil",      type = "literal",    color = RMP.FGColors.Brights.Cyan },
+        { word = "not",      type = "logical",    color = RMP.FGColors.Brights.Magenta },
+        { word = "or",       type = "logical",    color = RMP.FGColors.Brights.Magenta },
+        { word = "repeat",   type = "control",    color = RMP.FGColors.Brights.Red },
+        { word = "return",   type = "control",    color = RMP.FGColors.Brights.Red },
+        { word = "then",     type = "control",    color = RMP.FGColors.Brights.Red },
+        { word = "true",     type = "literal",    color = RMP.FGColors.Brights.Cyan },
+        { word = "until",    type = "control",    color = RMP.FGColors.Brights.Red },
+        { word = "while",    type = "control",    color = RMP.FGColors.Brights.Red }
+    },
+    C = {
+        { word = "auto",     type = "storage_class",  color = RMP.FGColors.Brights.Yellow },
+        { word = "break",    type = "control_flow",   color = RMP.FGColors.Brights.Red },
+        { word = "case",     type = "control_flow",   color = RMP.FGColors.Brights.Red },
+        { word = "char",     type = "data_type",      color = RMP.FGColors.Brights.Green },
+        { word = "const",    type = "type_qualifier", color = RMP.FGColors.Brights.Yellow },
+        { word = "continue", type = "control_flow",   color = RMP.FGColors.Brights.Red },
+        { word = "default",  type = "control_flow",   color = RMP.FGColors.Brights.Red },
+        { word = "do",       type = "control_flow",   color = RMP.FGColors.Brights.Red },
+        { word = "double",   type = "data_type",      color = RMP.FGColors.Brights.Green },
+        { word = "else",     type = "control_flow",   color = RMP.FGColors.Brights.Red },
+        { word = "enum",     type = "complex_type",   color = RMP.FGColors.Brights.Cyan },
+        { word = "extern",   type = "storage_class",  color = RMP.FGColors.Brights.Yellow },
+        { word = "float",    type = "data_type",      color = RMP.FGColors.Brights.Green },
+        { word = "for",      type = "control_flow",   color = RMP.FGColors.Brights.Red },
+        { word = "goto",     type = "control_flow",   color = RMP.FGColors.Brights.Red },
+        { word = "if",       type = "control_flow",   color = RMP.FGColors.Brights.Red },
+        { word = "int",      type = "data_type",      color = RMP.FGColors.Brights.Green },
+        { word = "long",     type = "data_type",      color = RMP.FGColors.Brights.Green },
+        { word = "register", type = "storage_class",  color = RMP.FGColors.Brights.Yellow },
+        { word = "return",   type = "control_flow",   color = RMP.FGColors.Brights.Red },
+        { word = "short",    type = "data_type",      color = RMP.FGColors.Brights.Green },
+        { word = "signed",   type = "type_qualifier", color = RMP.FGColors.Brights.Yellow },
+        { word = "sizeof",   type = "operator",       color = RMP.FGColors.Brights.Magenta },
+        { word = "static",   type = "storage_class",  color = RMP.FGColors.Brights.Yellow },
+        { word = "struct",   type = "complex_type",   color = RMP.FGColors.Brights.Cyan },
+        { word = "switch",   type = "control_flow",   color = RMP.FGColors.Brights.Red },
+        { word = "typedef",  type = "storage_class",  color = RMP.FGColors.Brights.Yellow },
+        { word = "union",    type = "complex_type",   color = RMP.FGColors.Brights.Cyan },
+        { word = "unsigned", type = "type_qualifier", color = RMP.FGColors.Brights.Yellow },
+        { word = "void",     type = "data_type",      color = RMP.FGColors.Brights.Green },
+        { word = "volatile", type = "type_qualifier", color = RMP.FGColors.Brights.Yellow },
+        { word = "while",    type = "control_flow",   color = RMP.FGColors.Brights.Red }
+    },
+    PYTHON = {
+        { word = "False",    type = "constant",  color = RMP.FGColors.Brights.Cyan,    version = "2.3+" },
+        { word = "None",     type = "constant",  color = RMP.FGColors.Brights.Cyan,    version = "all" },
+        { word = "True",     type = "constant",  color = RMP.FGColors.Brights.Cyan,    version = "2.3+" },
+        { word = "and",      type = "operator",  color = RMP.FGColors.Brights.Magenta, version = "all" },
+        { word = "as",       type = "clause",    color = RMP.FGColors.Brights.Yellow,  version = "2.5+" },
+        { word = "assert",   type = "debugging", color = RMP.FGColors.Brights.Red,     version = "all" },
+        { word = "async",    type = "async",     color = RMP.FGColors.Brights.Blue,    version = "3.5+" },
+        { word = "await",    type = "async",     color = RMP.FGColors.Brights.Blue,    version = "3.5+" },
+        { word = "break",    type = "control",   color = RMP.FGColors.Brights.Red,     version = "all" },
+        { word = "class",    type = "oop",       color = RMP.FGColors.Brights.Blue,    version = "all" },
+        { word = "continue", type = "control",   color = RMP.FGColors.Brights.Red,     version = "all" },
+        { word = "def",      type = "function",  color = RMP.FGColors.Brights.Blue,    version = "all" },
+        { word = "del",      type = "operation", color = RMP.FGColors.Brights.Magenta, version = "all" },
+        { word = "elif",     type = "control",   color = RMP.FGColors.Brights.Red,     version = "all" },
+        { word = "else",     type = "control",   color = RMP.FGColors.Brights.Red,     version = "all" },
+        { word = "except",   type = "exception", color = RMP.FGColors.Brights.Yellow,  version = "all" },
+        { word = "finally",  type = "exception", color = RMP.FGColors.Brights.Yellow,  version = "all" },
+        { word = "for",      type = "control",   color = RMP.FGColors.Brights.Red,     version = "all" },
+        { word = "from",     type = "import",    color = RMP.FGColors.Brights.Green,   version = "all" },
+        { word = "global",   type = "scope",     color = RMP.FGColors.Brights.Yellow,  version = "all" },
+        { word = "if",       type = "control",   color = RMP.FGColors.Brights.Red,     version = "all" },
+        { word = "import",   type = "import",    color = RMP.FGColors.Brights.Green,   version = "all" },
+        { word = "in",       type = "operator",  color = RMP.FGColors.Brights.Magenta, version = "all" },
+        { word = "is",       type = "operator",  color = RMP.FGColors.Brights.Magenta, version = "all" },
+        { word = "lambda",   type = "function",  color = RMP.FGColors.Brights.Blue,    version = "all" },
+        { word = "nonlocal", type = "scope",     color = RMP.FGColors.Brights.Yellow,  version = "3.0+" },
+        { word = "not",      type = "operator",  color = RMP.FGColors.Brights.Magenta, version = "all" },
+        { word = "or",       type = "operator",  color = RMP.FGColors.Brights.Magenta, version = "all" },
+        { word = "pass",     type = "control",   color = RMP.FGColors.Brights.Red,     version = "all" },
+        { word = "raise",    type = "exception", color = RMP.FGColors.Brights.Yellow,  version = "all" },
+        { word = "return",   type = "function",  color = RMP.FGColors.Brights.Red,     version = "all" },
+        { word = "try",      type = "exception", color = RMP.FGColors.Brights.Yellow,  version = "all" },
+        { word = "while",    type = "control",   color = RMP.FGColors.Brights.Red,     version = "all" },
+        { word = "with",     type = "context",   color = RMP.FGColors.Brights.Yellow,  version = "2.5+" },
+        { word = "yield",    type = "function",  color = RMP.FGColors.Brights.Blue,    version = "2.3+" }
+    },
+}
+
+RMP.Code = OOP.class("Code", nil, Renderable)
+do
+    function RMP.Code:constructor(code, syntax, x, y)
+        self.code = code or ""
+        self.syntax = syntax or RMP.CodeSyntax.LUA
+        self.x = x or 3
+        self.y = y or 3
+        return self
+    end
+
+    function RMP.Code:setSyntax(syntax)
+        self.syntax = syntax
+        return self
+    end
+
+    function RMP.Code:setPosition(x, y)
+        self.x = x
+        self.y = y
+        return self
+    end
+
+    function RMP.Code:highlight()
+        local lines = {}
+        for line in self.code:gmatch("[^\r\n]+") do
+            table.insert(lines, line)
+        end
+
+        local syntaxTable = RMP.CodeSyntax[self.syntax]
+        if not syntaxTable then
+            syntaxTable = RMP.CodeSyntax.LUA
+        end
+
+        local vt = RMP.VirtualTerminal.new()
+
+        for lineIdx, line in ipairs(lines) do
+            local col = 1
+            local i = 1
+
+            while i <= #line do
+                local matched = false
+                for _, keyword in ipairs(syntaxTable) do
+                    local word = keyword.word
+                    local wordLen = #word
+
+                    if i + wordLen - 1 <= #line then
+                        local substr = line:sub(i, i + wordLen - 1)
+                        local before = i == 1 or line:sub(i - 1, i - 1):match("[^%w_]")
+                        local after = i + wordLen > #line or line:sub(i + wordLen, i + wordLen):match("[^%w_]")
+
+                        if substr == word and before and after then
+                            vt:writeText(self.x + col - 1, self.y + lineIdx - 1, word, keyword.color)
+                            col = col + wordLen
+                            i = i + wordLen
+                            matched = true
+                            break
+                        end
+                    end
+                end
+
+                if not matched then
+                    local char = line:sub(i, i)
+                    vt:writeText(self.x + col - 1, self.y + lineIdx - 1, char, RMP.FGColors.Brights.White)
+                    col = col + 1
+                    i = i + 1
+                end
+            end
+        end
+
+        return vt
+    end
+
+    function RMP.Code:render()
+        return self:highlight()
+    end
+end
+
+
+RMP.StatusBar = OOP.class("StatusBar", nil, Renderable)
+do
+    function RMP.StatusBar:constructor(y, width)
+        local _, w = RMP.Terminal:getSize()
+        self.width = width or w
+        self._y = y or 1
+        self._components = {}
+        return self
+    end
+
+    -- Add a component to the status bar
+    -- text: the text to display
+    -- fg: foreground color (from api.FGColors)
+    -- bg: background color (from api.BGColors)
+    -- style: text style (from api.TextStyle)
+    -- align: "left" (default), "right", or "center"
+    function RMP.StatusBar:addComponent(text, fg, bg, style, align)
+        table.insert(self._components, {
+            text = text or "",
+            fg = fg,
+            bg = bg,
+            style = style,
+            align = align or "left"
+        })
+        return self
+    end
+
+    function RMP.StatusBar:clear()
+        self._components = {}
+        return self
+    end
+
+    function RMP.StatusBar:updateComponent(index, text, fg, bg, style, align)
+        if self._components[index] then
+            if text then self._components[index].text = text end
+            if fg then self._components[index].fg = fg end
+            if bg then self._components[index].bg = bg end
+            if style then self._components[index].style = style end
+            if align then self._components[index].align = align end
+        end
+        return self
+    end
+
+    function RMP.StatusBar:render()
+        local width = self.width
+        local vterm = RMP.VirtualTerminal.new()
+
+        local leftComps, rightComps, centerComps = {}, {}, {}
+        for _, comp in ipairs(self._components) do
+            if comp.align == "right" then
+                table.insert(rightComps, comp)
+            elseif comp.align == "center" then
+                table.insert(centerComps, comp)
+            else
+                table.insert(leftComps, comp)
+            end
+        end
+
+        local leftWidth, rightWidth, centerWidth = 0, 0, 0
+        for _, c in ipairs(leftComps) do leftWidth = leftWidth + #c.text end
+        for _, c in ipairs(rightComps) do rightWidth = rightWidth + #c.text end
+        for _, c in ipairs(centerComps) do centerWidth = centerWidth + #c.text end
+
+        local x = 1
+
+        for _, comp in ipairs(leftComps) do
+            local text = RMP.Text.new(comp.text, comp.style, comp.fg, comp.bg)
+            text:setPosition(x, self._y)
+            vterm:merge(text:render())
+            x = x + #comp.text
+        end
+
+        local remaining = width - leftWidth - rightWidth - centerWidth
+
+        if #centerComps > 0 then
+            local leftPad = math.floor(remaining / 2)
+            if leftPad > 0 then
+                local pad = RMP.Text.new(string.rep(" ", leftPad), nil, nil, nil)
+                pad:setPosition(x, self._y)
+                vterm:merge(pad:render())
+                x = x + leftPad
+            end
+
+            for _, comp in ipairs(centerComps) do
+                local text = RMP.Text.new(comp.text, comp.style, comp.fg, comp.bg)
+                text:setPosition(x, self._y)
+                vterm:merge(text:render())
+                x = x + #comp.text
+            end
+
+            local rightPad = remaining - leftPad
+            if rightPad > 0 then
+                local pad = RMP.Text.new(string.rep(" ", rightPad), nil, nil, nil)
+                pad:setPosition(x, self._y)
+                vterm:merge(pad:render())
+                x = x + rightPad
+            end
+        else
+            if remaining > 0 then
+                local pad = RMP.Text.new(string.rep(" ", remaining), nil, nil, nil)
+                pad:setPosition(x, self._y)
+                vterm:merge(pad:render())
+                x = x + remaining
+            end
+        end
+
+        for _, comp in ipairs(rightComps) do
+            local text = RMP.Text.new(comp.text, comp.style, comp.fg, comp.bg)
+            text:setPosition(x, self._y)
+            vterm:merge(text:render())
+            x = x + #comp.text
+        end
+
+        return vterm
+    end
+end
 
 return RMP

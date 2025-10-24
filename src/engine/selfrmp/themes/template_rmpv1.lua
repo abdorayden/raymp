@@ -1,16 +1,9 @@
---
 --	Copyright 2024 by rayden
 --		
 --
 --		 this is UI Style of old rmp version , with better performance
---
---
 
 local api = require("rmp.rmp")
-
-local Terminal = api.Terminal
-local Window = api.Window
-local Text = api.Text
 
 return {
     {

@@ -272,11 +272,11 @@ local statusWindow = api.Window.new(2):createWindow(
     end
 )
 
-frame:add(mainWindow)
-frame:add(statusWindow)
 
 -- Event loop
 while true do
+    frame:add(mainWindow)
+    frame:add(statusWindow)
     local key = api.Terminal:handleKey()
     if key == api.KEY_Q then break end
     frame:run(key)
@@ -322,29 +322,25 @@ local gameWindow = api.Window.new(1):createWindow(
 )
 
 -- Game input handling
-gameWindow:addEventListener(api.KEY_W, function()
-    gameState.playerY = math.max(1, gameState.playerY - 1)
+gameWindow:addEventListener(api.EventType.Keyboard, function(key)
+    if key == api.KEY_W then
+        gameState.playerY = math.max(1, gameState.playerY - 1)
+    elseif key == api.KEY_S then
+        gameState.playerY = math.min(18, gameState.playerY + 1)
+    elseif key == api.KEY_A then
+        gameState.playerX = math.max(1, gameState.playerX - 1)
+    elseif key == api.KEY_D then
+        gameState.playerX = math.min(58, gameState.playerX + 1)
+    end
 end)
 
-gameWindow:addEventListener(api.KEY_S, function()
-    gameState.playerY = math.min(18, gameState.playerY + 1)
-end)
-
-gameWindow:addEventListener(api.KEY_A, function()
-    gameState.playerX = math.max(1, gameState.playerX - 1)
-end)
-
-gameWindow:addEventListener(api.KEY_D, function()
-    gameState.playerX = math.min(58, gameState.playerX + 1)
-end)
-
-frame:add(gameWindow)
 
 -- Game loop
 while true do
     local key = api.Terminal:handleKey()
     if key == api.KEY_Q then break end
     
+    frame:add(gameWindow)
     -- Update game state here (enemy movement, collision detection, etc.)
     
     frame:run(key)

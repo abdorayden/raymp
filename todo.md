@@ -1,31 +1,28 @@
-TODO:
--[X]: fix utf-8 unicode in my terminal virtualterminalrmp in C
--[X]: create simple plugin to test and debug Options and Scroller classes
--[X]: complete file browser plugin and fix the issues
--[X]: introduce Input feature in rmp framework
--[X]: fix text editor plugin and add more features
--[X]: add transform data event to share data between plugins
--[X]: create readme and licence
--[X]: change theme to templates and create an engine
--[X]: make it compileable for windows and add more testes
--[L]: fix Sound and add support to access the low level api using lua
--[X]: add events for sound engine and engine it self to make it restarted and ...
--[L]: create repos for build-in plugins
--[ ]: start creating the default page and introduce the first version of raymp after add engine to C
-
-
--[ ]: make sure that all plugins are stable
--[ ]: edit relations between components and classes inside rmp framework
--[ ]: introduce Focuse and fix event to work with them
--[ ]: write waves music animation with works sound frames
--[ ]: introduce Table and Bar , SearchAnimations , TextField , TextArea , as a hight level components and fix Text class bugs
--[ ]: socket support with TCP,UDP implementations (optional maybe we use external libs) with asyncio support
--[ ]: implements Albome plugin and 2 diffrent themes
--[ ]: implement a full main and rewrite RmpManager to C with default lua codes
--[ ]: with complete configuration management
--[ ]: prepare the default interface for new users or who they doesn't have configurations (simple animations , help)
--[ ]: move all plugins to external repos and implement PlugManager as plugin to manage others
--[ ]: create docuumentation and link it to my port folio implemented using js only (challenge) , and the potentiel error or problem as documentation
-
--[ ]: create simple help with beautiful animations to displayed and create repo for plugin manager to download and install plugins and themes
--[ ]: create a simple default template with a simple plugins to manage the audio player
+# TODO
+- [X] fix utf-8 unicode in my terminal virtualterminalrmp in C
+- [X] create simple plugin to test and debug Options and Scroller classes
+- [X] complete file browser plugin and fix the issues
+- [X] introduce Input feature in rmp framework
+- [X] fix text editor plugin and add more features
+- [X] add transform data event to share data between plugins
+- [X] create readme and licence
+- [X] change theme to templates and create an engine
+- [X] make it compileable for windows and add more testes
+- [ ] fix Sound and add support to access the low level api using lua
+- [X] add events for sound engine and engine it self to make it restarted and ...
+- [-] create repos for build-in plugins
+- [ ] start creating the default page and introduce the first version of raymp after add engine to C
+- [ ] make sure that all plugins are stable
+- [ ] edit relations between components and classes inside rmp framework
+- [ ] introduce Focuse and fix event to work with them
+- [ ] write waves music animation with works sound frames
+- [ ] introduce Table and Bar , SearchAnimations , TextField , TextArea , as a hight level components and fix Text class bugs
+- [ ] socket support with TCP,UDP implementations (optional maybe we use external libs) with asyncio support
+- [ ] implements Albome plugin and 2 diffrent themes
+- [ ] implement a full main and rewrite RmpManager to C with default lua codes
+- [ ] with complete configuration management
+- [ ] prepare the default interface for new users or who they doesn't have configurations (simple animations , help)
+- [ ] move all plugins to external repos and implement PlugManager as plugin to manage others
+- [ ] create docuumentation and link it to my port folio implemented using js only (challenge) , and the potentiel error or problem as documentation
+- [ ] create simple help with beautiful animations to displayed and create repo for plugin manager to download and install plugins and themes
+- [ ] create a simple default template with a simple plugins to manage the audio player

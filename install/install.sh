@@ -94,6 +94,7 @@ then
 
 	rm "$LUA_SHARE/rmp.lua"
 	rm "$LUA_SHARE/promises.lua"
+	rm "$LUA_SHARE/future.lua"
 	rm "$LUA_SHARE/util.lua"
 	rm "$LUA_SHARE/oop.lua"
 
@@ -177,6 +178,7 @@ then
 	cp -r ../src/engine/selfrmp $LUA_SHARE
 
 	cp ../src/promises.lua 		$LUA_SHARE
+	cp ../src/future.lua 		$LUA_SHARE
 	cp ../src/util.lua 		$LUA_SHARE
 	cp ../src/oop.lua 		$LUA_SHARE
 	cp ../src/engine/core/rmp.lua 	$LUA_SHARE
