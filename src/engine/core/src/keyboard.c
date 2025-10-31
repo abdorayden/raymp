@@ -376,6 +376,19 @@ static Keys handle_keys() {
 										      return KEY_END;
 									      }
 							     }break;
+                                // FIXME: Mouse events handling can be added here if needed
+                                //  case 'M': {
+                                //           if(read(STDIN_FILENO, &seq[2], 1) == 1) {
+                                //               switch(seq[2]) {
+                                //                   case ' ': return MOUSE_LEFT_PRESS;
+                                //                   case '!': return MOUSE_MIDDLE_PRESS;
+                                //                   case '"': return MOUSE_RIGHT_PRESS;
+                                //                   case '#': return MOUSE_RELEASE;
+                                //                   case '$': return MOUSE_SCROLL_UP;
+                                //                   case '%': return MOUSE_SCROLL_DOWN;
+                                //               };
+                                //          }
+                                // }break; // Mouse event start
 						     }
 					     }
 				     }

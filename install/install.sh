@@ -88,6 +88,7 @@ then
 	fi
 	rm "$LUA_LIB/rmpaudio.so"
 	rm "$LUA_LIB/keyboard.so"
+	rm "$LUA_LIB/rsocket.so"
 	rm "$LUA_LIB/sleep.so"
 	rm "$LUA_LIB/directory.so"
 	rm "$LUA_LIB/window.so"
@@ -149,6 +150,12 @@ then
 		$LIB_PATH
 
 	$CC \
+		$FLAGS\
+		-o ../src/engine/core/lib/rsocket.so ../src/engine/core/src/rsocket.c \
+		$INCLUDE_PATH	\
+		$LIB_PATH
+
+	$CC \
 		-Wall \
 		-Wextra \
 		-Wunused-variable\
@@ -172,6 +179,7 @@ then
 	cp ../src/engine/core/lib/platform.so $LUA_LIB
 	cp ../src/engine/core/lib/directory.so $LUA_LIB
 	cp ../src/engine/core/lib/window.so $LUA_LIB
+	cp ../src/engine/core/lib/rsocket.so $LUA_LIB
 	cp ../src/engine/core/lib/virtualterminalrmp.so $LUA_LIB
 
 	# install the local plugins and themes if the configuration dir not found on home dir

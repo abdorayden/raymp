@@ -111,6 +111,7 @@
 RMP = {}
 
 local io = require("io")
+
 local keyboard = require("rmp.keyboard")
 local rmpaudio = require("rmp.rmpaudio")
 local sleep = require("rmp.sleep")
@@ -118,11 +119,13 @@ local platform = require("rmp.platform")
 local directory = require("rmp.directory")
 local window = require("rmp.window")
 local vt_rmp = require("rmp.virtualterminalrmp")
+local rsocket = require("rmp.rsocket")
 
 -- require rmp utility
 local OOP = require("rmp.oop")
 -- TODO: make some functions async
 local Promise = require("rmp.promises")
+local FutureLib = require("rmp.future")
 local Util = require("rmp.util")
 
 local HashMap = Util.HashMap
@@ -490,6 +493,7 @@ RMP.AnimationPatterns = {
         "⠁", "⠃", "⠇", "⠏", "⠟", "⠿", "⣿", "⡿",
         "⣟", "⣯", "⣷", "⣾", "⣿"
     },
+
     Spinner = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" },
     Dots = { "⠁", "⠂", "⠄", "⡀", "⢀", "⠠", "⠐", "⠈" },
     Line = { "-", "\\", "|", "/" },
@@ -504,7 +508,118 @@ RMP.AnimationPatterns = {
     Dots3 = { "⠋", "⠙", "⠚", "⠞", "⠖", "⠦", "⠴", "⠲", "⠳", "⠓" },
     BoxBounce = { "▖", "▘", "▝", "▗" },
     Triangle = { "◢", "◣", "◤", "◥" },
-    GrowingBar = { "▁", "▃", "▄", "▅", "▆", "▇", "█" }
+    GrowingBar = { "▁", "▃", "▄", "▅", "▆", "▇", "█" },
+
+    -- NEW ANIMATION PATTERNS:
+
+    -- Braille Variations
+    BrailleClockwise = {
+        "⠁", "⠃", "⠇", "⠏", "⠟", "⠯", "⠾", "⣾",
+        "⣷", "⣯", "⣟", "⣏", "⡋", "⠍", "⠎", "⠞"
+    },
+    BrailleCounterClockwise = {
+        "⠁", "⠂", "⠄", "⠈", "⠐", "⠠", "⠡", "⠢",
+        "⠤", "⠦", "⠶", "⠞", "⠎", "⠍", "⡋", "⣏"
+    },
+    BrailleDotSpin = {
+        "⠁", "⠂", "⠄", "⠈", "⠐", "⠠", "⡀", "⢀",
+        "⢈", "⢐", "⢠", "⡠", "⠤", "⠢", "⠡", "⠠"
+    },
+    BrailleSpiral = {
+        "⠁", "⠃", "⠋", "⠛", "⠟", "⠿", "⡿", "⣿",
+        "⣻", "⣹", "⣸", "⣴", "⣲", "⣱", "⣰", "⣮"
+    },
+
+    -- Weather & Nature
+    Weather = { "☀️", "⛅", "☁️", "🌧️", "⛈️", "🌦️" },
+    GrowingPlant = { "🌱", "🌿", "🪴", "🌲", "🌳" },
+    WaterFlow = { "💧", "🌊", "💦", "🌀", "🌫️" },
+    Fire = { "🔥", "🌪️", "💥", "✨", "🌟" },
+
+    -- Technology & Loading
+    Binary = { "0", "1", "0", "1", "0", "1" },
+    Signal = { "📶", "📶", "📶", "📶", "📶", " " },
+    Download = { "📥", "⏬", "⬇️", "🔽", "📥" },
+    Upload = { "📤", "⏫", "⬆️", "🔼", "📤" },
+
+    -- Faces & Emotions
+    Happy = { "😊", "😄", "😃", "😀", "😁", "😆" },
+    Thinking = { "🤔", "💭", "🧠", "💡", "🌟" },
+    Sleeping = { "😴", "💤", "😪", "🌙", "🛌" },
+
+    -- Animals & Creatures
+    Cat = { "😺", "😸", "😹", "😻", "😼", "😽" },
+    Dog = { "🐶", "🐕", "🦮", "🐩", "🐕‍🦺" },
+    Bird = { "🐦", "🦅", "🦆", "🦉", "🐧" },
+    Fish = { "🐠", "🐟", "🐡", "🦈", "🐋" },
+
+    -- Food & Drink
+    Coffee = { "☕", "🌱", "🔥", "💧", "☕" },
+    Cooking = { "🍳", "🥘", "🍲", "🥣", "🍜" },
+    Eating = { "🍎", "🍕", "🍦", "🍩", "🍰" },
+
+    -- Vehicles & Travel
+    Car = { "🚗", "🚙", "🚐", "🚛", "🚒" },
+    Plane = { "✈️", "🛫", "🛬", "🛩️", "💺" },
+    Rocket = { "🚀", "🛸", "👽", "🌟", "🌕" },
+
+    -- Music & Arts
+    Music = { "🎵", "🎶", "🎼", "🎹", "🎷", "🎺" },
+    Dance = { "💃", "🕺", "👯", "🎭", "🎪" },
+    Painting = { "🎨", "🖼️", "🖌️", "👨‍🎨", "🖍️" },
+
+    -- Sports & Games
+    Ball = { "⚽", "🏀", "🏈", "⚾", "🎾", "🏐" },
+    Chess = { "♟️", "♜", "♞", "♝", "♛", "♚" },
+    Dice = { "⚀", "⚁", "⚂", "⚃", "⚄", "⚅" },
+
+    -- Time & Calendar
+    Hourglass = { "⏳", "⌛", "⏰", "🕰️", "📅" },
+    Calendar = { "📅", "📆", "🗓️", "⏱️", "⌚" },
+
+    -- Shapes & Symbols
+    Hearts = { "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎" },
+    Stars = { "⭐", "🌟", "✨", "💫", "🌠" },
+    Geometric = { "⬜", "⬛", "🔴", "🟢", "🔵", "🟡", "🟣" },
+
+    -- Tools & Objects
+    Tools = { "🛠️", "🔧", "🔨", "⚒️", "🪚", "⛏️" },
+    Writing = { "📝", "✏️", "🖊️", "🖋️", "📄", "📖" },
+    Science = { "🔬", "🧪", "⚗️", "🧫", "🦠", "🧬" },
+
+    -- Advanced Braille Patterns
+    BrailleWave = {
+        "⠁", "⠃", "⠇", "⠏", "⠟", "⠿", "⡿", "⣿",
+        "⣻", "⣹", "⣸", "⣴", "⣲", "⣱", "⣰", "⣮"
+    },
+    BraillePulse = {
+        "⠁", "⠉", "⠍", "⠝", "⠟", "⠿", "⡿", "⣿",
+        "⡿", "⠿", "⠟", "⠝", "⠍", "⠉", "⠁", "⠀"
+    },
+    BrailleExpand = {
+        "⠁", "⠃", "⠋", "⠛", "⠟", "⠿", "⡿", "⣿",
+        "⣿", "⡿", "⠿", "⠟", "⠛", "⠋", "⠃", "⠁"
+    },
+
+    -- Minimalist
+    MinimalDot = { ".", "..", "...", "....", ".....", "......" },
+    MinimalBar = { "[    ]", "[=   ]", "[==  ]", "[=== ]", "[====]" },
+    MinimalSpin = { "|", "/", "-", "\\" },
+
+    -- Retro & Pixel
+    PixelMan = { "ᕕ( ᐛ )ᕗ", "ᕕ( ◕3◕ )ᕗ", "ᕕ( ◔3◔ )ᕗ", "ᕕ( ◕‿◕ )ᕗ" },
+    RetroGame = { "▰", "▱", "◼", "◻", "■", "□" },
+    Arcade = { "🕹️", "👾", "🤖", "🎮", "💾", "📺" },
+
+    -- Fantasy & Magic
+    Magic = { "🔮", "✨", "🌟", "💫", "🪄", "🧙" },
+    Dragon = { "🐲", "🔥", "🌪️", "💨", "⚡" },
+    Unicorn = { "🦄", "🌈", "🌟", "✨", "💫" },
+
+    -- Professional
+    Loading = { "⏳", "⌛", "⏰", "🕐", "🕑", "🕒" },
+    Progress = { "▱▱▱", "▰▱▱", "▰▰▱", "▰▰▰" },
+    Working = { "💼", "📊", "📈", "📉", "📋" }
 }
 
 -- LoadingSpinner class for handling different loading animations
@@ -3565,6 +3680,127 @@ do -- Config
     end
 end
 
+-- TODO: create wrapper for native socket library implementation
+-- TODO: make sure that every socket method works async
+RMP.Socket = OOP.class("Socket")
+do
+    function RMP.Socket:constructor(host, port)
+        self.host = host or "localhost"
+        self.port = port or 8080
+        self.socket = rsocket.new()
+        return self
+    end
+
+    function RMP.Socket:connect()
+        return self.socket:connect(self.host, self.port)
+    end
+
+    function RMP.Socket:bind()
+        return self.socket:bind(self.host, self.port)
+    end
+
+    function RMP.Socket:listen(backlog)
+        backlog = backlog or 5
+        return self.socket:listen(backlog)
+    end
+
+    -- returns another socket objetc
+    function RMP.Socket:accept()
+        return self.socket:accept()
+    end
+
+    function RMP.Socket:send(data)
+        return self.socket:send(data)
+    end
+
+    function RMP.Socket:recv(size)
+        return self.socket:recv(size)
+    end
+
+    function RMP.Socket:close()
+        return self.socket:close()
+    end
+
+    function RMP.Socket:setnonblock(non_blocking)
+        return self.socket:setnonblock(non_blocking)
+    end
+
+    function RMP.Socket:setnodelay(no_delay)
+        return self.socket:setnodelay(no_delay)
+    end
+
+    function RMP.Socket:setbroadcast(istrue)
+        return self.socket:setbroadcast(istrue)
+    end
+
+    function RMP.Socket:getprotocol()
+        return self.socket:getprotocol()
+    end
+
+    function RMP.Socket:sendto(packet, host, port)
+        -- TODO: check if the packet is instace of Packet
+        if packet:instanceOf(RMP.Packet) then
+            packet = packet:getReadableSocketByte()
+        end
+        return self.socket:sendto(packet, host, port)
+    end
+
+    function RMP.Socket:recvfrom(size)
+        return self.socket:recvfrom(size)
+    end
+end
+
+RMP.Packet = OOP.class("Packet")
+do
+    function RMP.Packet:constructor()
+        return self
+    end
+
+    function RMP.Packet:getReadableSocketByte()
+    end
+end
+
+RMP.TCPSocket = OOP.class("TCPSocket", RMP.Socket)
+do
+    function RMP.TCPSocket:constructor(host, port)
+        self:super("constructor", host, port)
+        self.port = port
+        return self
+    end
+end
+
+-- TODO: make sure that the socket native library support UDP sockets
+RMP.UDPSocket = OOP.class("UDPSocket", RMP.Socket)
+do
+    function RMP.UDPSocket:constructor(host, port)
+        self:super("constructor", host, port)
+        self.port = port
+        return self
+    end
+end
+
+RMP.FTPClient = OOP.class("FTPClient", RMP.TCPSocket)
+do
+    function RMP.FTPClient:constructor()
+        return self
+    end
+end
+
+RMP.HTTPServer = OOP.class("HTTPServer", RMP.TCPSocket)
+do
+    function RMP.HTTPServer:constructor(port)
+        self.port = port or 8080
+        return self
+    end
+end
+
+RMP.HTTPClient = OOP.class("HTTPClient", RMP.TCPSocket)
+do
+    function RMP.HTTPClient:constructor()
+        return self
+    end
+end
+
 -- /////////////////////////////////////////////////////
 -- Hight Level API Components
 -- /////////////////////////////////////////////////////
@@ -3800,6 +4036,11 @@ do
     end
 end
 
+RMP.StatusBarPosition = {
+    LEFT = "left",
+    RIGHT = "right",
+    CENTER = "CENTER"
+}
 
 RMP.StatusBar = OOP.class("StatusBar", nil, Renderable)
 do
