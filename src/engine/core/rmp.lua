@@ -299,7 +299,7 @@ RMP.IWarning            = "⚠️"
 RMP.IMessage            = "💬"
 RMP.IInfo               = "ℹ️"
 
-local Renderable        = OOP.interface("Renderable",
+RMP.Renderable          = OOP.interface("Renderable",
     -- @return : virtual terminal frame
     "render")
 
@@ -307,7 +307,7 @@ local Renderable        = OOP.interface("Renderable",
 -- TODO: Add scrolling for large tables
 -- TODO: Add support for different data types and formatting
 -- TODO: add colors
-RMP.Table               = OOP.class("Table", nil, Renderable)
+RMP.Table               = OOP.class("Table", nil, RMP.Renderable)
 do
     function RMP.Table:constructor(x, y, headers, rows)
         self.x = x or 1
@@ -623,7 +623,7 @@ RMP.AnimationPatterns = {
 }
 
 -- LoadingSpinner class for handling different loading animations
-RMP.LoadingSpinner = OOP.class("LoadingSpinner", nil, Renderable)
+RMP.LoadingSpinner = OOP.class("LoadingSpinner", nil, RMP.Renderable)
 do
     function RMP.LoadingSpinner:constructor(x, y, fg, bg, vterm)
         self.x = x or 2
@@ -725,7 +725,7 @@ function RMP.sleep(time)
 end
 
 -- Text class used to work with texts
-RMP.Text = OOP.class("Text", nil, Renderable)
+RMP.Text = OOP.class("Text", nil, RMP.Renderable)
 do -- text
     -- constructor
     -- TODO: fix the error
@@ -1218,7 +1218,7 @@ end
 -- each plugin should have his own VirtualTerminal object
 -- so when the plugin is initialized it create his own VirtualTerminal object
 -- and draw on it
-RMP.VirtualTerminal = OOP.class("VirtualTerminal", RMP.EventListener, Renderable)
+RMP.VirtualTerminal = OOP.class("VirtualTerminal", RMP.EventListener, RMP.Renderable)
 do                                                          -- VirtualTerminal
     function RMP.VirtualTerminal:constructor(width, height) -- constructor
         self:super("constructor")
@@ -1400,7 +1400,7 @@ do                                                          -- VirtualTerminal
                 end
             end
         else
-            if thatTerm:implements(Renderable) then
+            if thatTerm:implements(RMP.Renderable) then
                 local vterm = thatTerm:render()
                 if vterm and vterm:instanceOf(RMP.VirtualTerminal) then
                     vt_rmp.merge(self.native_vt_rmp, vterm:getVT(), offsetX or 0, offsetY or 0)
@@ -3336,7 +3336,12 @@ do -- Path
         return directory.list_dir(self.path) -- may return nil
     end
 
+    function RMP.Path:exists()
+        return self:listDir() ~= nil
+    end
+
     function RMP.Path:makeDir(dir_name)
+        dir_name = dir_name or ""
         local full_dir = nil
         if string.sub(self.path, -1) == "/" then
             full_dir = self.path .. dir_name
@@ -3682,6 +3687,7 @@ end
 
 -- TODO: create wrapper for native socket library implementation
 -- TODO: make sure that every socket method works async
+-- TODO: handle SSL/TLS sockets
 RMP.Socket = OOP.class("Socket")
 do
     function RMP.Socket:constructor(host, port)
@@ -3960,7 +3966,7 @@ RMP.CodeSyntax = {
     },
 }
 
-RMP.Code = OOP.class("Code", nil, Renderable)
+RMP.Code = OOP.class("Code", nil, RMP.Renderable)
 do
     function RMP.Code:constructor(code, syntax, x, y)
         self.code = code or ""
@@ -4042,7 +4048,7 @@ RMP.StatusBarPosition = {
     CENTER = "CENTER"
 }
 
-RMP.StatusBar = OOP.class("StatusBar", nil, Renderable)
+RMP.StatusBar = OOP.class("StatusBar", nil, RMP.Renderable)
 do
     function RMP.StatusBar:constructor(y, width)
         local _, w = RMP.Terminal:getSize()

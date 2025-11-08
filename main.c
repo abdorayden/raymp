@@ -21,6 +21,8 @@
 /*  											*/ 
 /****************************************************************************************/
 
+// make audio choose multi devices headphones and more ...
+
 // gcc is all you need :)
 
 // untested and buggable code below

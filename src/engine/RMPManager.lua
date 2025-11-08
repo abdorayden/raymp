@@ -521,7 +521,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         exit = api.KEY_Q
     end
 
-    api.Terminal:hideCursor()
+    mainFrame:initMainFrame()
 
     local parser = TemplateParser.new(template, plugManager)
     local switchKeys = parser:getPluginSwitchKeys()
@@ -684,7 +684,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
 
         mainFrame:run(
             key,
-            nil, -- add mouse support later
+            nil, -- TODO: add mouse support later
             sound
         )
 
@@ -695,9 +695,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
 
     sound:cleanup()
 
-    api.Terminal:showCursor()
-    api.Terminal:rawMode(false)
-    api.Terminal:closeKey()
+    mainFrame:cleanupMainFrame()
     return restart
 end
 

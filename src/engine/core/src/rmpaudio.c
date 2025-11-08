@@ -26,6 +26,8 @@
  *	rmpaudio.c is part of raymp project
  * */
 
+// TODO: make audio choose multi devices headphones and more ...
+
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
