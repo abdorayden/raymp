@@ -27,11 +27,16 @@
  * 	Supports Windows, Linux, and macOS with non-blocking input
  */
 
+// TODO: add support for alt keys and F1-12 keys
+
 #include <stdbool.h>
 
-#include "lua.h"
-#include "lauxlib.h"
-#include "lualib.h"
+// #include "lua.h"
+#include "../../lua/include/lua.h"
+// #include "lauxlib.h"
+#include "../../lua/include/lauxlib.h"
+// #include "lualib.h"
+#include "../../lua/include/lualib.h"
 
 #include "simply.h"
 
@@ -45,9 +50,21 @@ typedef enum {
 	KEY_CTRL_U, KEY_CTRL_V, KEY_CTRL_W, KEY_CTRL_X, KEY_CTRL_Y,
 	KEY_CTRL_Z,
 
+	// Alt keys
+	KEY_ALT_A, KEY_ALT_B, KEY_ALT_C, KEY_ALT_D, KEY_ALT_E,
+	KEY_ALT_F, KEY_ALT_G, KEY_ALT_H, KEY_ALT_I, KEY_ALT_J,
+	KEY_ALT_K, KEY_ALT_L, KEY_ALT_M, KEY_ALT_N, KEY_ALT_O,
+	KEY_ALT_P, KEY_ALT_Q, KEY_ALT_R, KEY_ALT_S, KEY_ALT_T,
+	KEY_ALT_U, KEY_ALT_V, KEY_ALT_W, KEY_ALT_X, KEY_ALT_Y,
+	KEY_ALT_Z,
+
 	// Special keys
 	KEY_ENTER, KEY_SPACE, KEY_ESCAPE, KEY_UP, KEY_DOWN,
 	KEY_LEFT, KEY_RIGHT, KEY_TAB, KEY_DELETE, KEY_HOME,KEY_END,KEY_BACKSPACE,
+
+	// Function keys
+	KEY_F1, KEY_F2, KEY_F3, KEY_F4, KEY_F5, KEY_F6,
+	KEY_F7, KEY_F8, KEY_F9, KEY_F10, KEY_F11, KEY_F12,
 
 	// Alphabet keys (lowercase)
 	KEY_A, KEY_B, KEY_C, KEY_D, KEY_E, KEY_F, KEY_G, KEY_H,
@@ -73,6 +90,7 @@ typedef enum {
 	KEY_SEMICOL, KEY_QUISTION_MARK, KEY_AT, KEY_OPCURB,
 	KEY_CLCURB, KEY_BACK_SLASH, KEY_BACKTICK, KEY_OPEN_BRAKET,
 	KEY_CLOSED_BRAKET, KEY_BAR, KEY_DBL_QUOTE, KEY_SINGLE_QOUTE,KEY_SLASH, KEY_COLON,KEY_COMMA, 
+    KEY_OPPAERN , KEY_CLPAREN , KEY_EQUAL,
     NONE
 } Keys;
 
@@ -124,6 +142,12 @@ static Keys handle_keys() {
 			if (ch >= 1 && ch <= 26) return KEY_CTRL_A + (ch - 1);
 		}
 
+		// Handle Alt+key combinations
+		if (ctrlState & (LEFT_ALT_PRESSED | RIGHT_ALT_PRESSED)) {
+			if (ch >= 'a' && ch <= 'z') return KEY_ALT_A + (ch - 'a');
+			if (ch >= 'A' && ch <= 'Z') return KEY_ALT_A + (ch - 'A');
+		}
+
 		// Handle regular keys
 		if (ch >= 32 && ch <= 126) {
 			if (ch >= 'a' && ch <= 'z') return KEY_A + (ch - 'a');
@@ -157,6 +181,9 @@ static Keys handle_keys() {
 				case '/': return KEY_SLASH;
 				case ':': return KEY_COLON;
 				case ',': return KEY_COMMA;
+                case '(' : return KEY_OPPAERN;
+                case ')' : return KEY_CLPAREN;
+                case '=' : return KEY_EQUAL;
 			}
 		}
 
@@ -173,6 +200,20 @@ static Keys handle_keys() {
 			case VK_UP: return KEY_UP;
 			case VK_RIGHT: return KEY_RIGHT;
 			case VK_DOWN: return KEY_DOWN;
+
+			// Function keys
+			case VK_F1: return KEY_F1;
+			case VK_F2: return KEY_F2;
+			case VK_F3: return KEY_F3;
+			case VK_F4: return KEY_F4;
+			case VK_F5: return KEY_F5;
+			case VK_F6: return KEY_F6;
+			case VK_F7: return KEY_F7;
+			case VK_F8: return KEY_F8;
+			case VK_F9: return KEY_F9;
+			case VK_F10: return KEY_F10;
+			case VK_F11: return KEY_F11;
+			case VK_F12: return KEY_F12;
 		}
 	}
 
@@ -184,6 +225,7 @@ static Keys handle_keys() {
 #include <termios.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <stdlib.h>
 
 static struct termios orig_termios;
 static bool initialized = false;
@@ -209,6 +251,10 @@ static void restore_terminal() {
 
 #define CTRL_KEY(k) ((k) & 0x1f)
 
+/*
+ *  Handles F1-F12, Alt+key, and other special keys for POSIX systems
+ *  by parsing terminal escape sequences.
+ */
 static Keys handle_keys() {
 	init_terminal();
 
@@ -245,6 +291,7 @@ static Keys handle_keys() {
 				     // Special keys
 		case '\t': return KEY_TAB;
 		case '\n': return KEY_ENTER;
+		case '\r': return KEY_ENTER; // Also carriage return
 		case ' ': return KEY_SPACE;
 		case 127: return KEY_BACKSPACE;
 
@@ -342,57 +389,77 @@ static Keys handle_keys() {
 		case '/': return KEY_SLASH;
 		case ':': return KEY_COLON;
 		case ',': return KEY_COMMA;
-
-			   // Arrow keys (escape sequences)
+        case '(' : return KEY_OPPAERN;
+        case ')' : return KEY_CLPAREN;
+        case '=' : return KEY_EQUAL;
+			   // Arrow keys (escape sequences) and special keys
 		case '\033': {
-				     char seq[3];
-				     if (read(STDIN_FILENO, &seq[0], 1) != 1) return KEY_ESCAPE;
-				     if (seq[0] == '[') {
-					     if (read(STDIN_FILENO, &seq[1], 1) == 1) {
-						     switch (seq[1]) {
-							     case 'A': return KEY_UP;
-							     case 'B': return KEY_DOWN;
-							     case 'C': return KEY_RIGHT;
-							     case 'D': return KEY_LEFT;
-							     case 'H': return KEY_HOME;    // Home key
-							     case 'F': return KEY_END;     // End key
-							     case '3': {
-									       // Check for Delete key (ESC [ 3 ~)
-									       if (read(STDIN_FILENO, &seq[2], 1) == 1 && seq[2] == '~') {
-										       return KEY_DELETE;
-									       }
-							     }break;
-							     case '1': 
-							     case '7':{ 
-									      // Home key variants (ESC [ 1 ~ or ESC [ 7 ~)
-									      if (read(STDIN_FILENO, &seq[2], 1) == 1 && seq[2] == '~') {
-										      return KEY_HOME;
-									      }
-							     }break;
-							     case '4': 
-							     case '8':{ 
-									      // End key variants (ESC [ 4 ~ or ESC [ 8 ~)
-									      if (read(STDIN_FILENO, &seq[2], 1) == 1 && seq[2] == '~') {
-										      return KEY_END;
-									      }
-							     }break;
-                                // FIXME: Mouse events handling can be added here if needed
-                                //  case 'M': {
-                                //           if(read(STDIN_FILENO, &seq[2], 1) == 1) {
-                                //               switch(seq[2]) {
-                                //                   case ' ': return MOUSE_LEFT_PRESS;
-                                //                   case '!': return MOUSE_MIDDLE_PRESS;
-                                //                   case '"': return MOUSE_RIGHT_PRESS;
-                                //                   case '#': return MOUSE_RELEASE;
-                                //                   case '$': return MOUSE_SCROLL_UP;
-                                //                   case '%': return MOUSE_SCROLL_DOWN;
-                                //               };
-                                //          }
-                                // }break; // Mouse event start
-						     }
-					     }
-				     }
-				     return KEY_ESCAPE;
+				     char seq[4];
+                     if (read(STDIN_FILENO, &seq[0], 1) != 1) return KEY_ESCAPE;
+
+                     // Alt+key combinations (Alt sends ESC + the key)
+                     if (seq[0] >= 'a' && seq[0] <= 'z') {
+                         return KEY_ALT_A + (seq[0] - 'a');
+                     }
+                     if (seq[0] >= 'A' && seq[0] <= 'Z') {
+                         return KEY_ALT_A + (seq[0] - 'A');
+                     }
+
+                     if (seq[0] == '[') {
+                         if (read(STDIN_FILENO, &seq[1], 1) != 1) return NONE;
+                         if (seq[1] >= '0' && seq[1] <= '9') {
+                             if (read(STDIN_FILENO, &seq[2], 1) != 1) return NONE;
+                             if (seq[2] == '~') { // E.g. [3~ for Delete
+                                 switch (seq[1]) {
+                                     case '1': return KEY_HOME;
+                                     case '3': return KEY_DELETE;
+                                     case '4': return KEY_END;
+                                     case '7': return KEY_HOME;
+                                     case '8': return KEY_END;
+                                 }
+                             } else if (seq[2] >= '0' && seq[2] <= '9') {
+                                if (read(STDIN_FILENO, &seq[3], 1) == 1 && seq[3] == '~') { // E.g. [11~ for F1
+                                    char num_str[3] = {seq[1], seq[2], '\0'};
+                                    int code = atoi(num_str);
+                                    switch (code) {
+                                        case 11: return KEY_F1;
+                                        case 12: return KEY_F2;
+                                        case 13: return KEY_F3;
+                                        case 14: return KEY_F4;
+                                        case 15: return KEY_F5;
+                                        case 17: return KEY_F6;
+                                        case 18: return KEY_F7;
+                                        case 19: return KEY_F8;
+                                        case 20: return KEY_F9;
+                                        case 21: return KEY_F10;
+                                        case 23: return KEY_F11;
+                                        case 24: return KEY_F12;
+                                    }
+                                }
+                             }
+                         } else {
+                             switch (seq[1]) {
+                                 case 'A': return KEY_UP;
+                                 case 'B': return KEY_DOWN;
+                                 case 'C': return KEY_RIGHT;
+                                 case 'D': return KEY_LEFT;
+                                 case 'H': return KEY_HOME;
+                                 case 'F': return KEY_END;
+                             }
+                         }
+                     } else if (seq[0] == 'O') {
+                        if (read(STDIN_FILENO, &seq[1], 1) == 1) {
+                            switch(seq[1]) {
+                                case 'F': return KEY_END;
+                                case 'H': return KEY_HOME;
+                                case 'P': return KEY_F1;
+                                case 'Q': return KEY_F2;
+                                case 'R': return KEY_F3;
+                                case 'S': return KEY_F4;
+                            }
+                        }
+                     }
+                     return KEY_ESCAPE;
 			     }
 
 		default: return NONE;

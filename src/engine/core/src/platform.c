@@ -20,9 +20,12 @@
 /*  THE SOFTWARE. 									*/
 /*  											*/ 
 /****************************************************************************************/
-#include "lua.h"
-#include "lauxlib.h"
-#include "lualib.h"
+// #include "lua.h"
+#include "../../lua/include/lua.h"
+// #include "lauxlib.h"
+#include "../../lua/include/lauxlib.h"
+// #include "lualib.h"
+#include "../../lua/include/lualib.h"
 
 #include "simply.h"
 
