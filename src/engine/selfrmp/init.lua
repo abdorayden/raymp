@@ -9,8 +9,9 @@ return {
     -- the default configuration of the sound
     settings = {
         fps = 60,
-        volume = 0.5,           -- 0 to 1
-        speed = 1.0,            -- 0.25 to 4.0
+        help_key = api.KEY_H,
+        volume = 0.5,                 -- 0 to 1
+        speed = 1.0,                  -- 0.25 to 4.0
         mode = api.PlaybackMode.ONES, -- playback modes
         restart_engine = api.KEY_CTRL_R,
         exit = api.KEY_Q,
@@ -39,7 +40,7 @@ return {
     -- template = "music_player_template",
     -- template = "4_windows_ui",
     -- plugins
-    plugins = {        -- this is global plugins you may run in background or in window globaly
+    plugins = {                -- this is global plugins you may run in background or in window globaly
         {
             themeWindowId = 2, -- if this attr is not nil or exists , the runner ignore activate
             isActivated = true,
@@ -51,7 +52,8 @@ return {
                 "matrix_digital_rain_effect",
                 "music_waves",
                 "text_editor",
-                "tellme_yourname",
+                -- "tellme_yourname",
+                "tellme_yournamev2",
                 "digital_clock_with_effects",
                 "3d_cube",
                 "filebrowser"

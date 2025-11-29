@@ -602,12 +602,6 @@ int main(int argc, char** argv) {
 }
 #endif
 
-
-
-
-
-
-
 #include "lua.h"
 #include "lauxlib.h"
 #include "lualib.h"

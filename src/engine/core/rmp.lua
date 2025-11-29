@@ -108,6 +108,10 @@
 --         - Color conversion (hex to ANSI)
 --
 
+-- TODO: add layout manager to Frame class
+-- TODO: add re to syntax Code class for better code highlighting
+-- TODO: make some functions async
+
 RMP = {}
 
 local io = require("io")
@@ -123,7 +127,6 @@ local rsocket = require("rmp.rsocket")
 
 -- require rmp utility
 local OOP = require("rmp.oop")
--- TODO: make some functions async
 local Promise = require("rmp.promises")
 local FutureLib = require("rmp.future")
 local Util = require("rmp.util")
@@ -905,6 +908,9 @@ RMP.KEY_SINGLE_QOUTE  = RMP.enum()
 RMP.KEY_SLASH         = RMP.enum()
 RMP.KEY_COLON         = RMP.enum()
 RMP.KEY_COMMA         = RMP.enum()
+RMP.KEY_OPPAERN       = RMP.enum()
+RMP.KEY_CLPAREN       = RMP.enum()
+RMP.KEY_EQUAL         = RMP.enum()
 RMP.NONE              = RMP.enum()
 
 RMP.Window            = OOP.class("Window")
@@ -1082,8 +1088,8 @@ RMP.EventType = {
     -- sound
     Sound = RMP.enum(),            -- plugins can add event for sound
     -- the callback function accept sound object so they can add or get informations like freqs , so they can create visualization
-    Engine = RMP.enum(),           -- Engine Event to apply a commands on the engine
-    Configuration = RMP.enum()     -- get access to the configurations also save a new configuration
+    Configuration = RMP.enum(),    -- get access to the configurations also save a new configuration (cfg for plugins)
+    Engine = RMP.enum()            -- Engine Event to apply a commands on the engine
 }
 
 local Event = OOP.interface("Event",
@@ -1110,6 +1116,8 @@ do
         self.events:put(RMP.EventType.TransformDataPut, Queue.new())
 
         self.events:put(RMP.EventType.Sound, Queue.new())
+
+        self.events:put(RMP.EventType.Configuration, Queue.new())
 
         return self
     end
@@ -1148,11 +1156,23 @@ do
         return self:addEventListener(RMP.EventType.Focuse, callback)
     end
 
+    function RMP.EventListener:onConfiguration(callback)
+        return self:addEventListener(RMP.EventType.Configuration, callback)
+    end
+
     -- @param key : RMP.EventType value
     -- @return : self
     -- rename it to handleEvent
     -- TODO: add sound
-    function RMP.EventListener:handleEvent(key, mouse, sound)
+    function RMP.EventListener:handleEvent(key, mouse, sound, config)
+        local cfgs_queue = self.events:get(RMP.EventType.Configuration)
+        while not cfgs_queue:isEmpty() do
+            local cfg_callback = cfgs_queue:pop()
+            if cfg_callback and type(cfg_callback) == 'function' then
+                cfg_callback(config)
+            end
+        end
+
         -- TODO: make sure that processTransformDataEvents is working fine with complicated cases
         local put_queue = self.events:get(RMP.EventType.TransformDataPut)
         local get_queue = self.events:get(RMP.EventType.TransformDataGet)
@@ -1534,68 +1554,71 @@ do
 
     function RMP.Input:keyToChar(key)
         local keyMap = {
-            [RMP.KEY_A] = "a",
-            [RMP.KEY_B] = "b",
-            [RMP.KEY_C] = "c",
-            [RMP.KEY_D] = "d",
-            [RMP.KEY_E] = "e",
-            [RMP.KEY_F] = "f",
-            [RMP.KEY_G] = "g",
-            [RMP.KEY_H] = "h",
-            [RMP.KEY_I] = "i",
-            [RMP.KEY_J] = "j",
-            [RMP.KEY_K] = "k",
-            [RMP.KEY_L] = "l",
-            [RMP.KEY_M] = "m",
-            [RMP.KEY_N] = "n",
-            [RMP.KEY_O] = "o",
-            [RMP.KEY_P] = "p",
-            [RMP.KEY_Q] = "q",
-            [RMP.KEY_R] = "r",
-            [RMP.KEY_S] = "s",
-            [RMP.KEY_T] = "t",
-            [RMP.KEY_U] = "u",
-            [RMP.KEY_V] = "v",
-            [RMP.KEY_W] = "w",
-            [RMP.KEY_X] = "x",
-            [RMP.KEY_Y] = "y",
-            [RMP.KEY_Z] = "z",
-            [RMP.KEY_0] = "0",
-            [RMP.KEY_1] = "1",
-            [RMP.KEY_2] = "2",
-            [RMP.KEY_3] = "3",
-            [RMP.KEY_4] = "4",
-            [RMP.KEY_5] = "5",
-            [RMP.KEY_6] = "6",
-            [RMP.KEY_7] = "7",
-            [RMP.KEY_8] = "8",
-            [RMP.KEY_9] = "9",
-            [RMP.KEY_SPACE] = " ",
-            [RMP.KEY_DOT] = ".",
-            [RMP.KEY_MINUS] = "-",
-            [RMP.KEY_UNDERS] = "_",
-            [RMP.KEY_PLUS] = "+",
-            [RMP.KEY_STAR] = "*",
-            [RMP.KEY_SLASH] = "/",
-            [RMP.KEY_BACK_SLASH] = "\\",
-            [RMP.KEY_OPEN_BRAKET] = "[",
+            [RMP.KEY_A]             = "a",
+            [RMP.KEY_B]             = "b",
+            [RMP.KEY_C]             = "c",
+            [RMP.KEY_D]             = "d",
+            [RMP.KEY_E]             = "e",
+            [RMP.KEY_F]             = "f",
+            [RMP.KEY_G]             = "g",
+            [RMP.KEY_H]             = "h",
+            [RMP.KEY_I]             = "i",
+            [RMP.KEY_J]             = "j",
+            [RMP.KEY_K]             = "k",
+            [RMP.KEY_L]             = "l",
+            [RMP.KEY_M]             = "m",
+            [RMP.KEY_N]             = "n",
+            [RMP.KEY_O]             = "o",
+            [RMP.KEY_P]             = "p",
+            [RMP.KEY_Q]             = "q",
+            [RMP.KEY_R]             = "r",
+            [RMP.KEY_S]             = "s",
+            [RMP.KEY_T]             = "t",
+            [RMP.KEY_U]             = "u",
+            [RMP.KEY_V]             = "v",
+            [RMP.KEY_W]             = "w",
+            [RMP.KEY_X]             = "x",
+            [RMP.KEY_Y]             = "y",
+            [RMP.KEY_Z]             = "z",
+            [RMP.KEY_0]             = "0",
+            [RMP.KEY_1]             = "1",
+            [RMP.KEY_2]             = "2",
+            [RMP.KEY_3]             = "3",
+            [RMP.KEY_4]             = "4",
+            [RMP.KEY_5]             = "5",
+            [RMP.KEY_6]             = "6",
+            [RMP.KEY_7]             = "7",
+            [RMP.KEY_8]             = "8",
+            [RMP.KEY_9]             = "9",
+            [RMP.KEY_SPACE]         = " ",
+            [RMP.KEY_DOT]           = ".",
+            [RMP.KEY_MINUS]         = "-",
+            [RMP.KEY_UNDERS]        = "_",
+            [RMP.KEY_PLUS]          = "+",
+            [RMP.KEY_STAR]          = "*",
+            [RMP.KEY_SLASH]         = "/",
+            [RMP.KEY_BACK_SLASH]    = "\\",
+            [RMP.KEY_OPEN_BRAKET]   = "[",
             [RMP.KEY_CLOSED_BRAKET] = "]",
-            [RMP.KEY_OPCURB] = "{",
-            [RMP.KEY_CLCURB] = "}",
-            [RMP.KEY_BAR] = "|",
-            [RMP.KEY_SEMICOL] = ";",
-            [RMP.KEY_DBL_QUOTE] = "\"",
-            [RMP.KEY_SINGLE_QOUTE] = "'",
-            [RMP.KEY_BACKTICK] = "`",
-            [RMP.KEY_HASHTAG] = "#",
-            [RMP.KEY_DOLAR] = "$",
-            [RMP.KEY_PERSANT] = "%",
-            [RMP.KEY_AT] = "@",
-            [RMP.KEY_GT] = ">",
-            [RMP.KEY_LT] = "<",
+            [RMP.KEY_OPCURB]        = "{",
+            [RMP.KEY_CLCURB]        = "}",
+            [RMP.KEY_BAR]           = "|",
+            [RMP.KEY_SEMICOL]       = ";",
+            [RMP.KEY_DBL_QUOTE]     = "\"",
+            [RMP.KEY_SINGLE_QOUTE]  = "'",
+            [RMP.KEY_BACKTICK]      = "`",
+            [RMP.KEY_HASHTAG]       = "#",
+            [RMP.KEY_DOLAR]         = "$",
+            [RMP.KEY_PERSANT]       = "%",
+            [RMP.KEY_AT]            = "@",
+            [RMP.KEY_GT]            = ">",
+            [RMP.KEY_LT]            = "<",
             [RMP.KEY_QUISTION_MARK] = "?",
-            [RMP.KEY_COLON] = ":",
-            [RMP.KEY_COMMA] = ","
+            [RMP.KEY_COLON]         = ":",
+            [RMP.KEY_COMMA]         = ",",
+            [RMP.KEY_OPPAERN]       = "(",
+            [RMP.KEY_CLPAREN]       = ")",
+            [RMP.KEY_EQUAL]         = "=",
         }
 
         local shiftMap = {
@@ -1734,7 +1757,8 @@ do
             RMP.KEY_CLCURB, RMP.KEY_BAR, RMP.KEY_SEMICOL, RMP.KEY_DBL_QUOTE,
             RMP.KEY_SINGLE_QOUTE, RMP.KEY_BACKTICK, RMP.KEY_HASHTAG,
             RMP.KEY_DOLAR, RMP.KEY_PERSANT, RMP.KEY_AT, RMP.KEY_GT, RMP.KEY_LT,
-            RMP.KEY_QUISTION_MARK, RMP.KEY_COLON, RMP.KEY_COMMA
+            RMP.KEY_QUISTION_MARK, RMP.KEY_COLON, RMP.KEY_COMMA, RMP.KEY_OPPAERN,
+            RMP.KEY_CLPAREN, RMP.KEY_EQUAL,
         }
 
         for _, special_key in ipairs(specialKeys) do
@@ -1983,45 +2007,71 @@ do
 
     function RMP.SimpleInput:_keyToChar(key)
         local keyMap = {
-            [RMP.KEY_A] = "a",
-            [RMP.KEY_B] = "b",
-            [RMP.KEY_C] = "c",
-            [RMP.KEY_D] = "d",
-            [RMP.KEY_E] = "e",
-            [RMP.KEY_F] = "f",
-            [RMP.KEY_G] = "g",
-            [RMP.KEY_H] = "h",
-            [RMP.KEY_I] = "i",
-            [RMP.KEY_J] = "j",
-            [RMP.KEY_K] = "k",
-            [RMP.KEY_L] = "l",
-            [RMP.KEY_M] = "m",
-            [RMP.KEY_N] = "n",
-            [RMP.KEY_O] = "o",
-            [RMP.KEY_P] = "p",
-            [RMP.KEY_Q] = "q",
-            [RMP.KEY_R] = "r",
-            [RMP.KEY_S] = "s",
-            [RMP.KEY_T] = "t",
-            [RMP.KEY_U] = "u",
-            [RMP.KEY_V] = "v",
-            [RMP.KEY_W] = "w",
-            [RMP.KEY_X] = "x",
-            [RMP.KEY_Y] = "y",
-            [RMP.KEY_Z] = "z",
-            [RMP.KEY_0] = "0",
-            [RMP.KEY_1] = "1",
-            [RMP.KEY_2] = "2",
-            [RMP.KEY_3] = "3",
-            [RMP.KEY_4] = "4",
-            [RMP.KEY_5] = "5",
-            [RMP.KEY_6] = "6",
-            [RMP.KEY_7] = "7",
-            [RMP.KEY_8] = "8",
-            [RMP.KEY_9] = "9",
-            [RMP.KEY_SPACE] = " ",
-            [RMP.KEY_DOT] = ".",
-            [RMP.KEY_MINUS] = "-"
+            [RMP.KEY_A]             = "a",
+            [RMP.KEY_B]             = "b",
+            [RMP.KEY_C]             = "c",
+            [RMP.KEY_D]             = "d",
+            [RMP.KEY_E]             = "e",
+            [RMP.KEY_F]             = "f",
+            [RMP.KEY_G]             = "g",
+            [RMP.KEY_H]             = "h",
+            [RMP.KEY_I]             = "i",
+            [RMP.KEY_J]             = "j",
+            [RMP.KEY_K]             = "k",
+            [RMP.KEY_L]             = "l",
+            [RMP.KEY_M]             = "m",
+            [RMP.KEY_N]             = "n",
+            [RMP.KEY_O]             = "o",
+            [RMP.KEY_P]             = "p",
+            [RMP.KEY_Q]             = "q",
+            [RMP.KEY_R]             = "r",
+            [RMP.KEY_S]             = "s",
+            [RMP.KEY_T]             = "t",
+            [RMP.KEY_U]             = "u",
+            [RMP.KEY_V]             = "v",
+            [RMP.KEY_W]             = "w",
+            [RMP.KEY_X]             = "x",
+            [RMP.KEY_Y]             = "y",
+            [RMP.KEY_Z]             = "z",
+            [RMP.KEY_0]             = "0",
+            [RMP.KEY_1]             = "1",
+            [RMP.KEY_2]             = "2",
+            [RMP.KEY_3]             = "3",
+            [RMP.KEY_4]             = "4",
+            [RMP.KEY_5]             = "5",
+            [RMP.KEY_6]             = "6",
+            [RMP.KEY_7]             = "7",
+            [RMP.KEY_8]             = "8",
+            [RMP.KEY_9]             = "9",
+            [RMP.KEY_SPACE]         = " ",
+            [RMP.KEY_DOT]           = ".",
+            [RMP.KEY_MINUS]         = "-",
+            [RMP.KEY_UNDERS]        = "_",
+            [RMP.KEY_PLUS]          = "+",
+            [RMP.KEY_STAR]          = "*",
+            [RMP.KEY_SLASH]         = "/",
+            [RMP.KEY_BACK_SLASH]    = "\\",
+            [RMP.KEY_OPEN_BRAKET]   = "[",
+            [RMP.KEY_CLOSED_BRAKET] = "]",
+            [RMP.KEY_OPCURB]        = "{",
+            [RMP.KEY_CLCURB]        = "}",
+            [RMP.KEY_BAR]           = "|",
+            [RMP.KEY_SEMICOL]       = ";",
+            [RMP.KEY_DBL_QUOTE]     = "\"",
+            [RMP.KEY_SINGLE_QOUTE]  = "'",
+            [RMP.KEY_BACKTICK]      = "`",
+            [RMP.KEY_HASHTAG]       = "#",
+            [RMP.KEY_DOLAR]         = "$",
+            [RMP.KEY_PERSANT]       = "%",
+            [RMP.KEY_AT]            = "@",
+            [RMP.KEY_GT]            = ">",
+            [RMP.KEY_LT]            = "<",
+            [RMP.KEY_QUISTION_MARK] = "?",
+            [RMP.KEY_COLON]         = ":",
+            [RMP.KEY_COMMA]         = ",",
+            [RMP.KEY_OPPAERN]       = "(",
+            [RMP.KEY_CLPAREN]       = ")",
+            [RMP.KEY_EQUAL]         = "=",
         }
 
         local shiftMap = {
@@ -3811,11 +3861,66 @@ end
 -- Hight Level API Components
 -- /////////////////////////////////////////////////////
 
+-- NOTE: should i create Lyout interface ??
+RMP.Grid = OOP.class("Grid", nil, RMP.Renderable)
+do
+    function RMP.Grid:constructor(rows, cols)
+        self.rows = rows
+        self.cols = cols
+    end
+
+    function RMP.Grid:setRows(rows)
+        self.rows = rows
+    end
+
+    function RMP.Grid:setCols(cols)
+        self.cols = cols
+    end
+
+    function RMP.Grid:getRows()
+        return self.rows
+    end
+
+    function RMP.Grid:getCols()
+        return self.cols
+    end
+end
+
+RMP.FlowLayout = OOP.class("FlowLayout", nil, RMP.Renderable)
+do
+    function RMP.FlowLayout:constructor(rows, cols)
+        self.rows = rows
+        self.cols = cols
+    end
+
+    function RMP.FlowLayout:setRows(rows)
+        self.rows = rows
+    end
+
+    function RMP.FlowLayout:setCols(cols)
+        self.cols = cols
+    end
+
+    function RMP.FlowLayout:getRows()
+        return self.rows
+    end
+
+    function RMP.FlowLayout:getCols()
+        return self.cols
+    end
+end
+
 RMP.Frame = OOP.class("Frame", RMP.VirtualTerminal)
 do
     function RMP.Frame:constructor(width, heigth)
         self:super("constructor", width, heigth)
+        self.layout = nil
         self.fps = 30
+    end
+
+    function RMP.Frame:setLayout(layout)
+        -- layout object implements Renderable interface
+        self.layout = layout
     end
 
     function RMP.Frame:initMainFrame()
@@ -3848,7 +3953,11 @@ do
     end
 
     function RMP.Frame:add(component)
-        self:super("merge", component)
+        if self.layout == nil then
+            self:super("merge", component)
+        elseif self.layout:instanceOf(RMP.Grid) then
+            -- manage the layout
+        end
     end
 
     function RMP.Frame:addMany(components)
@@ -3859,8 +3968,8 @@ do
         self:super("addEventListener", key, callback)
     end
 
-    function RMP.Frame:run(key, mouse, sound)
-        self:super("handleEvent", key, mouse, sound)
+    function RMP.Frame:run(key, mouse, sound, config)
+        self:super("handleEvent", key, mouse, sound, config)
         self:super("render")
         self:super("clear")
         RMP.sleep(math.floor(RMP.Duration.new(self:getDeltaTime()):fromSec()))
@@ -3870,6 +3979,7 @@ end
 -- TODO: add class Code to manage code highlighting for the text
 RMP.CodeSyntax = {
     LUA = {
+        { word = "--",       type = "comment",    color = RMP.FGColors.Brights.Black },
         { word = "and",      type = "logical",    color = RMP.FGColors.Brights.Magenta },
         { word = "break",    type = "control",    color = RMP.FGColors.Brights.Red },
         { word = "do",       type = "control",    color = RMP.FGColors.Brights.Red },
@@ -3894,6 +4004,7 @@ RMP.CodeSyntax = {
         { word = "while",    type = "control",    color = RMP.FGColors.Brights.Red }
     },
     C = {
+        { word = "//",       type = "comment",        color = RMP.FGColors.Brights.Black },
         { word = "auto",     type = "storage_class",  color = RMP.FGColors.Brights.Yellow },
         { word = "break",    type = "control_flow",   color = RMP.FGColors.Brights.Red },
         { word = "case",     type = "control_flow",   color = RMP.FGColors.Brights.Red },
@@ -3928,6 +4039,7 @@ RMP.CodeSyntax = {
         { word = "while",    type = "control_flow",   color = RMP.FGColors.Brights.Red }
     },
     PYTHON = {
+        { word = "#",        type = "comment",   color = RMP.FGColors.Brights.Black },
         { word = "False",    type = "constant",  color = RMP.FGColors.Brights.Cyan,    version = "2.3+" },
         { word = "None",     type = "constant",  color = RMP.FGColors.Brights.Cyan,    version = "all" },
         { word = "True",     type = "constant",  color = RMP.FGColors.Brights.Cyan,    version = "2.3+" },
@@ -3993,7 +4105,13 @@ do
             table.insert(lines, line)
         end
 
-        local syntaxTable = RMP.CodeSyntax[self.syntax]
+        local syntaxTable = nil
+        if type(self.syntax) == "string" then
+            syntaxTable = RMP.CodeSyntax[self.syntax]
+        elseif type(self.syntax) == "table" then
+            syntaxTable = self.syntax
+        end
+
         if not syntaxTable then
             syntaxTable = RMP.CodeSyntax.LUA
         end
@@ -4094,6 +4212,9 @@ do
     function RMP.StatusBar:render()
         local width = self.width
         local vterm = RMP.VirtualTerminal.new()
+
+        -- set background color black as default
+        RMP.Draw:line(1, self.y, w, RMP.BGColors.NoBrights.Black, vterm)
 
         local leftComps, rightComps, centerComps = {}, {}, {}
         for _, comp in ipairs(self._components) do

@@ -25,7 +25,7 @@
 -- complete rmp engine with error handling , plugin management , template parsing and layout engine
 -- enhanced version of rmpv1 with better structure and modularity
 -- TODO: rewrote all engine to C for better performance and lower memory usage
-
+-- TODO: handle help
 -- TODO: add script property in template returned table to run lua code in the context of the template
 
 local api = require("rmp.rmp")
@@ -194,6 +194,7 @@ do
     end
 end
 
+-- TODO: replcae all those logs with simple notifications and add them to the logs file
 local function logerror(err)
     io.write(api.BGColors.Brights.Red ..
         api.FGColors.Brights.Yellow .. "RMP Error:" .. api.Default .. " " .. tostring(err) .. "\n")
@@ -315,6 +316,7 @@ do
 
         local currentPlugin = self.pluginCache[windowConfig.id]
         if not currentPlugin and windowConfig.id and self.plugManager then
+            -- plugin is table with {name , configuration}
             local plugin, err = self.plugManager:getNextPlug(windowConfig.id)
             if plugin and not err then
                 currentPlugin = plugin
@@ -446,7 +448,83 @@ do
     end
 end
 
-local function runRMPApplication(plugManager, template, settings, otherPlugs, soundCfg)
+-- TODO: add ability to make help functionality interactive like scrolling or searching , also make it configured from config file
+-- so we can use more advanced plugins for better help messages
+local function engine_render_help(frame, w, h, settings, soundCfg)
+    local ktc = function(k)
+        if k == api.KEY_RIGHT then
+            return "<right>"
+        elseif k == api.KEY_LEFT then
+            return "<left>"
+        elseif k == api.KEY_UP then
+            return "<up>"
+        elseif k == api.KEY_DOWN then
+            return "<down>"
+        elseif k == api.KEY_SPACE then
+            return "<space>"
+        elseif k == api.KEY_TAB then
+            return "<tab>"
+        else
+            return api.Input.new():keyToChar(k)
+        end
+    end
+
+    local helpText = {
+        "RMP Help:",
+        "-------------",
+        "General Controls:",
+        "  " .. ktc(settings.help_key) .. " : Show Help",
+        "  " .. ktc(settings.exit) .. " : Quit Application",
+        "",
+        "Sound Controls:",
+        "  " .. ktc(soundCfg.pause_sound) .. ": Pause",
+        "  " .. ktc(soundCfg.resume_sound) .. ": Resume",
+        "  " .. ktc(soundCfg.next_sound) .. ": Next Track",
+        "  " .. ktc(soundCfg.prev_sound) .. ": Previous Track",
+        "  " .. ktc(soundCfg.vol_up) .. ": Volume Up",
+        "  " .. ktc(soundCfg.vol_down) .. ": Volume Down",
+        "  " .. ktc(soundCfg.seek_left) .. ": Seek Backward",
+        "  " .. ktc(soundCfg.seek_right) .. ": Seek Forward",
+        "  " .. ktc(soundCfg.speed_up) .. ": Speed Up",
+        "  " .. ktc(soundCfg.speed_down) .. ": Slow Down",
+        "  " .. ktc(soundCfg.change_playback_mode) .. ": Change Playback Mode",
+        "",
+        "Plugin Controls:",
+        "  [Plugin Switch Keys]: Switch Plugins in Windows (if configured)",
+    }
+
+    -- Calculate dimensions for the help box
+    local maxTextWidth = 0
+    for _, line in ipairs(helpText) do
+        if #line > maxTextWidth then
+            maxTextWidth = #line
+        end
+    end
+
+    -- Add some padding
+    local boxWidth = maxTextWidth + 4
+    local boxHeight = #helpText + 4 -- +2 for top/bottom padding, +2 more for visual padding
+    local boxX = math.floor((w - boxWidth) / 2)
+    local boxY = math.floor((h - boxHeight) / 2)
+
+    -- Create a box using the VirtualTerminal's drawBox method
+    frame:drawBox(
+        api.Text.new("Help", api.TextStyle.Bold, api.FGColors.Brights.Yellow, api.BGColors.NoBrights.Black),
+        boxX, boxY, boxWidth, boxHeight,
+        api.BoxDrawing.LightBorder,
+        api.FGColors.Brights.Yellow, -- border color
+        api.BGColors.NoBrights.Black -- background color
+    )
+
+    -- Draw the help text inside the box
+    for i, line in ipairs(helpText) do
+        local textX = boxX + 2     -- Add padding from the left border
+        local textY = boxY + 1 + i -- Add padding from the top border
+        frame:writeText(textX, textY, line, api.FGColors.Brights.White, api.BGColors.NoBrights.Black)
+    end
+end
+
+local function runRMPApplication(plugManager, template, settings, otherPlugs, soundCfg, pl_cfgs)
     local h, w = api.Terminal:getSize()
     local mainFrame = api.Frame.new()
 
@@ -457,27 +535,36 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
     local inc_volume = nil
     local inc_seek = nil
     local valid_restart = false
+    local help_fn = nil
     local exit = nil
 
     -- TODO: handle the mode playback from configuration
     if settings then
         if settings.fps and type(settings.fps) == "number" and settings.fps > 0 and settings.fps <= 120 then
             mainFrame:setFps(settings.fps)
+        else
+            -- default engine fps
+            settings.fps = 60
+            mainFrame:setFps(settings.fps)
         end
 
         if settings.restart_engine and type(settings.restart_engine) == "number" then
             valid_restart = true
+        else
+            settings.restart_engine = api.KEY_CTRL_R
         end
 
-        if settings.volume and type(settings.volume) == "number" and settings.volume >= 0 and settings.volume <= 100 then
+        if settings.volume and type(settings.volume) == "number" and settings.volume >= 0 and settings.volume <= 1 then
             sound:setVolume(settings.volume)
         else
+            settings.volume = 0.5
             sound:setVolume(0.5)
         end
 
         if settings.speed and type(settings.speed) == "number" and settings.speed > 0.0 and settings.speed <= 3.0 then
             sound:setSpeed(settings.speed)
         else
+            settings.speed = 1.0
             sound:setSpeed(1.0)
         end
 
@@ -488,30 +575,43 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         if settings.mode and type(settings.mode) == "number" and settings.mode >= 0 and settings.mode <= 3 then
             sound:setPlayBackMode(settings.mode)
         else
+            settings.mode = 0
             sound:setPlayBackMode(0)
+        end
+
+        if settings.help_key and type(settings.help_key) == "number" then
+            help_fn = settings.help_key
+        else
+            -- TODO: implement F1-10 and alt keys and replace help with F2
+            settings.help_key = api.KEY_H
+            help_fn = api.KEY_H
         end
 
         if settings.inc_speed and type(settings.inc_speed) == "number" and settings.inc_speed > 0 and settings.inc_speed <= 50 then
             inc_speed = settings.inc_speed
         else
+            settings.inc_speed = 0.1
             inc_speed = 0.1
         end
 
         if settings.inc_seek and type(settings.inc_seek) == "number" and settings.inc_seek > 0 and settings.inc_seek <= 30 then
             inc_seek = settings.inc_seek
         else
+            settings.inc_seek = 5
             inc_seek = 5
         end
 
-        if settings.inc_volume and type(settings.inc_volume) == "number" and settings.inc_volume > 0 and settings.inc_volume <= 50 then
+        if settings.inc_volume and type(settings.inc_volume) == "number" and settings.inc_volume > 0 and settings.inc_volume <= 1 then
             inc_volume = settings.inc_volume
         else
-            inc_volume = 10
+            settings.inc_volume = 0.1
+            inc_volume = 0.1
         end
 
         if settings.exit and type(settings.exit) == "number" then
             exit = settings.exit
         else
+            settings.exit = api.KEY_Q
             exit = api.KEY_Q
         end
     else
@@ -682,16 +782,27 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         end
         oq = qq
 
+        if render_help then
+            engine_render_help(mainFrame, w, h, settings, soundCfg)
+        end
+
+        if key == help_fn then
+            render_help = not render_help
+        end
+
         mainFrame:run(
             key,
             nil, -- TODO: add mouse support later
-            sound
+            sound,
+            pl_cfgs
         )
 
         if restart then
             break
         end
     end
+
+    local render_help = false
 
     sound:cleanup()
 
@@ -797,6 +908,7 @@ local function setupPlugins(configObj, is_userconfig)
     local plugins = configObj.plugins
     local otherPlugs = Queue.new() -- this is for global plugins not attached to any window
     local currentPath = api.Path.new():getHomePath()
+    local plugins_configurations = HashMap.new()
 
 
     if not plugins or type(plugins) ~= "table" then
@@ -821,7 +933,6 @@ local function setupPlugins(configObj, is_userconfig)
         return nil, nil
     end
 
-
     for _, plug in ipairs(plugins) do
         if plug.themeWindowId and plug.isActivated and plug.names then
             local pq = Queue.new()
@@ -831,22 +942,38 @@ local function setupPlugins(configObj, is_userconfig)
 
                 if is_userconfig then
                     local homePath = api.Path.new():getHomePath()
-                    local singleFile = joinPath(homePath, ".rmp", "plugins", name .. ".lua")
-                    local folderInit = joinPath(homePath, ".rmp", "plugins", name, "init.lua")
+                    if type(name) == "string" then
+                        singleFile = joinPath(homePath, ".rmp", "plugins", name .. ".lua")
+                        folderInit = joinPath(homePath, ".rmp", "plugins", name, "init.lua")
+                        plugins_configurations:put(name, nil)
+                    elseif type(name) == "table" then
+                        singleFile = joinPath(homePath, ".rmp", "plugins", name[1] .. ".lua")
+                        folderInit = joinPath(homePath, ".rmp", "plugins", name[1], "init.lua")
+                        plugins_configurations:put(name[1], name[2])
+                    end
 
                     pluginOk, pluginModule = pcall(dofile, singleFile)
                     if not pluginOk then
                         pluginOk, pluginModule = pcall(dofile, folderInit)
                     end
                 else
-                    pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name) -- try to load from default selfrmp plugins
+                    if type(name) == "string" then
+                        pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name) -- try to load from default selfrmp plugins
+                        plugins_configurations:put(name, nil)
+                    elseif type(name) == "table" then
+                        pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name[1]) -- try to load from default selfrmp plugins
+                        plugins_configurations:put(name[1], name[2])
+                    end
                 end
 
                 if pluginOk and pluginModule then
                     pq:push(pluginModule)
                 else
-                    logwarn("Could not load plugin '" ..
-                        name .. "' make sure that default plugin are installed: " .. tostring(pluginModule) .. "\n")
+                    if type(name) == "string" then
+                        logwarn("Could not load global plugin '" .. name .. "': " .. tostring(pluginModule) .. "\n")
+                    elseif type(name) == "table" then
+                        logwarn("Could not load global plugin '" .. name[1] .. "': " .. tostring(pluginModule) .. "\n")
+                    end
                     os.exit(1)
                 end
             end
@@ -859,27 +986,45 @@ local function setupPlugins(configObj, is_userconfig)
                 local pluginOk, pluginModule
                 if is_userconfig then
                     local homePath = api.Path.new():getHomePath()
-                    local singleFile = joinPath(homePath, ".rmp", "plugins", name .. ".lua")
-                    local folderInit = joinPath(homePath, ".rmp", "plugins", name, "init.lua")
+                    if type(name) == "string" then
+                        singleFile = joinPath(homePath, ".rmp", "plugins", name .. ".lua")
+                        folderInit = joinPath(homePath, ".rmp", "plugins", name, "init.lua")
+                        plugins_configurations:put(name, nil)
+                    elseif type(name) == "table" then
+                        -- first index is plugin name the second is configuration
+                        singleFile = joinPath(homePath, ".rmp", "plugins", name[1] .. ".lua")
+                        folderInit = joinPath(homePath, ".rmp", "plugins", name[1], "init.lua")
+                        plugins_configurations:put(name[1], name[2])
+                    end
 
                     pluginOk, pluginModule = pcall(dofile, singleFile)
                     if not pluginOk then
                         pluginOk, pluginModule = pcall(dofile, folderInit)
                     end
                 else
-                    pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name) -- try to load from default selfrmp plugins
+                    if type(name) == "string" then
+                        pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name) -- try to load from default selfrmp plugins
+                        plugins_configurations:put(name, nil)
+                    elseif type(name) == "table" then
+                        pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name[1]) -- try to load from default selfrmp plugins
+                        plugins_configurations:put(name[1], name[2])
+                    end
                 end
                 if pluginOk and pluginModule then
                     otherPlugs:push(pluginModule)
                 else
-                    logwarn("Could not load global plugin '" .. name .. "': " .. tostring(pluginModule) .. "\n")
+                    if type(name) == "string" then
+                        logwarn("Could not load global plugin '" .. name .. "': " .. tostring(pluginModule) .. "\n")
+                    elseif type(name) == "table" then
+                        logwarn("Could not load global plugin '" .. name[1] .. "': " .. tostring(pluginModule) .. "\n")
+                    end
                     os.exit(1)
                 end
             end
         end
     end
 
-    return PlugManager.new(plugs), otherPlugs
+    return PlugManager.new(plugs), otherPlugs, plugins_configurations
 end
 
 -- Main Entry Point
@@ -949,7 +1094,7 @@ local function main()
         end
     end
 
-    local plugManager, otherPlugs = setupPlugins(configObj, is_userconfig)
+    local plugManager, otherPlugs, plugs_cfgs = setupPlugins(configObj, is_userconfig)
 
     if not plugManager and not otherPlugs then
         logerror("Failed to setup plugins. Exiting.")
@@ -961,7 +1106,7 @@ local function main()
     local parser = TemplateParser.new(template, plugManager)
     -- You could add template validation here if needed
 
-    if runRMPApplication(plugManager, template, configObj.settings, otherPlugs, soundCfg) then
+    if runRMPApplication(plugManager, template, configObj.settings, otherPlugs, soundCfg, plugs_cfgs) then
         goto here
     end
 end
