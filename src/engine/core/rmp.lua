@@ -111,6 +111,7 @@
 -- TODO: add layout manager to Frame class
 -- TODO: add re to syntax Code class for better code highlighting
 -- TODO: make some functions async
+-- TODO: create binding for raylib
 
 RMP = {}
 

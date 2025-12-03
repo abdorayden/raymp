@@ -450,6 +450,7 @@ end
 
 -- TODO: add ability to make help functionality interactive like scrolling or searching , also make it configured from config file
 -- so we can use more advanced plugins for better help messages
+-- TODO: make sure that the help show keys
 local function engine_render_help(frame, w, h, settings, soundCfg)
     local ktc = function(k)
         if k == api.KEY_RIGHT then
@@ -464,6 +465,105 @@ local function engine_render_help(frame, w, h, settings, soundCfg)
             return "<space>"
         elseif k == api.KEY_TAB then
             return "<tab>"
+
+        elseif k == api.KEY_ALT_A then
+            return "<A-a>"
+        elseif k == api.KEY_ALT_B then
+            return "<A-b>"
+        elseif k == api.KEY_ALT_C then
+            return "<A-c>"
+        elseif k == api.KEY_ALT_D then
+            return "<A-d>"
+        elseif k == api.KEY_ALT_E then
+            return "<A-e>"
+        elseif k == api.KEY_ALT_F then
+            return "<A-f>"
+        elseif k == api.KEY_ALT_G then
+            return "<A-g>"
+        elseif k == api.KEY_ALT_H then
+            return "<A-h>"
+        elseif k == api.KEY_ALT_K then
+            return "<A-k>"
+        elseif k == api.KEY_ALT_L then
+            return "<A-l>"
+        elseif k == api.KEY_ALT_M then
+            return "<A-m>"
+        elseif k == api.KEY_ALT_N then
+            return "<A-n>"
+        elseif k == api.KEY_ALT_O then
+            return "<A-o>"
+        elseif k == api.KEY_ALT_P then
+            return "<A-p>"
+        elseif k == api.KEY_ALT_Q then
+            return "<A-q>"
+        elseif k == api.KEY_ALT_R then
+            return "<A-r>"
+        elseif k == api.KEY_ALT_S then
+            return "<A-s>"
+        elseif k == api.KEY_ALT_T then
+            return "<A-t>"
+        elseif k == api.KEY_ALT_U then
+            return "<A-u>"
+        elseif k == api.KEY_ALT_V then
+            return "<A-v>"
+        elseif k == api.KEY_ALT_W then
+            return "<A-w>"
+        elseif k == api.KEY_ALT_X then
+            return "<A-x>"
+        elseif k == api.KEY_ALT_Y then
+            return "<A-y>"
+        elseif k == api.KEY_ALT_Z then
+            return "<A-z>"
+
+        elseif k == api.KEY_CTRL_A then
+            return "<C-a>"
+        elseif k == api.KEY_CTRL_B then
+            return "<C-b>"
+        elseif k == api.KEY_CTRL_C then
+            return "<C-c>"
+        elseif k == api.KEY_CTRL_D then
+            return "<C-d>"
+        elseif k == api.KEY_CTRL_E then
+            return "<C-e>"
+        elseif k == api.KEY_CTRL_F then
+            return "<C-f>"
+        elseif k == api.KEY_CTRL_G then
+            return "<C-g>"
+        elseif k == api.KEY_CTRL_H then
+            return "<C-h>"
+        elseif k == api.KEY_CTRL_K then
+            return "<C-k>"
+        elseif k == api.KEY_CTRL_L then
+            return "<C-l>"
+        elseif k == api.KEY_CTRL_M then
+            return "<C-m>"
+        elseif k == api.KEY_CTRL_N then
+            return "<C-n>"
+        elseif k == api.KEY_CTRL_O then
+            return "<C-o>"
+        elseif k == api.KEY_CTRL_P then
+            return "<C-p>"
+        elseif k == api.KEY_CTRL_Q then
+            return "<C-q>"
+        elseif k == api.KEY_CTRL_R then
+            return "<C-r>"
+        elseif k == api.KEY_CTRL_S then
+            return "<C-s>"
+        elseif k == api.KEY_CTRL_T then
+            return "<C-t>"
+        elseif k == api.KEY_CTRL_U then
+            return "<C-u>"
+        elseif k == api.KEY_CTRL_V then
+            return "<C-v>"
+        elseif k == api.KEY_CTRL_W then
+            return "<C-w>"
+        elseif k == api.KEY_CTRL_X then
+            return "<C-x>"
+        elseif k == api.KEY_CTRL_Y then
+            return "<C-y>"
+        elseif k == api.KEY_CTRL_Z then
+            return "<C-z>"
+
         else
             return api.Input.new():keyToChar(k)
         end
@@ -630,6 +730,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
     local restart = false
 
     while not quit do
+        mainFrame:clear()
         local key = api.Terminal:handleKey()
 
         if parser:wasTerminalResized() then
