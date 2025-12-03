@@ -90,14 +90,14 @@ function Promise.timeout(ms)
     end)
 end
 
-function Promise:athen(onFulfilled, onRejected)
+function Promise:tthen(onFulfilled, onRejected)
     local nextPromise = Promise.new(function(resolve, reject)
         local function handleCallback(callback, value)
             if type(callback) == "function" then
                 local success, result = pcall(callback, value)
                 if success then
                     if type(result) == "table" and getmetatable(result) == Promise then
-                        result:athen(resolve, reject)
+                        result:tthen(resolve, reject)
                     else
                         resolve(result)
                     end
@@ -131,18 +131,70 @@ function Promise:athen(onFulfilled, onRejected)
 end
 
 function Promise:catch(onRejected)
-    return self:athen(nil, onRejected)
+    return self:tthen(nil, onRejected)
+end
+
+function Promise:finally(onFinally)
+    return self:tthen(
+        function(value)
+            return Promise.resolve(type(onFinally) == 'function' and onFinally() or nil):tthen(function() return value end)
+        end,
+        function(reason)
+            return Promise.resolve(type(onFinally) == 'function' and onFinally() or nil):tthen(function()
+                return Promise
+                    .reject(reason)
+            end)
+        end
+    )
 end
 
 function Promise.resolve(value)
-    return Promise.new(function(resolve)
-        resolve(value)
-    end)
+    if type(value) == "table" and getmetatable(value) == Promise then
+        return value
+    else
+        return Promise.new(function(resolve)
+            resolve(value)
+        end)
+    end
 end
 
 function Promise.reject(reason)
     return Promise.new(function(_, reject)
         reject(reason)
+    end)
+end
+
+function Promise.all(promises)
+    return Promise.new(function(resolve, reject)
+        local results = {}
+        local completed = 0
+        local total = #promises
+
+        if total == 0 then
+            resolve({})
+            return
+        end
+
+        for i, p in ipairs(promises) do
+            Promise.resolve(p):tthen(
+                function(value)
+                    results[i] = value
+                    completed = completed + 1
+                    if completed == total then
+                        resolve(results)
+                    end
+                end,
+                reject
+            )
+        end
+    end)
+end
+
+function Promise.race(promises)
+    return Promise.new(function(resolve, reject)
+        for _, p in ipairs(promises) do
+            Promise.resolve(p):tthen(resolve, reject)
+        end
     end)
 end
 
@@ -167,7 +219,7 @@ function Promise.async(generator)
                 end
 
                 if type(value) == "table" and getmetatable(value) == Promise then
-                    value:athen(
+                    value:tthen(
                         function(...) step(...) end,
                         function(err) reject(err) end
                     )
@@ -189,18 +241,24 @@ function Promise.await(promise)
     end
 end
 
+-- runner used to invoke run inside other event loop
+function Promise.runner()
+    local now = os.clock()
+    for i = #tasks, 1, -1 do
+        if now >= tasks[i].time then
+            local cb = tasks[i].cb
+            table.remove(tasks, i)
+            cb()
+        end
+    end
+end
+
+-- run the event loop
 function Promise.run()
     -- i use pcall to manage errors in lua to not stop the program
     local ok, err = pcall(function()
         while #tasks > 0 do
-            local now = os.clock()
-            for i = #tasks, 1, -1 do
-                if now >= tasks[i].time then
-                    local cb = tasks[i].cb
-                    table.remove(tasks, i)
-                    cb()
-                end
-            end
+            Promise.runner()
         end
     end)
 

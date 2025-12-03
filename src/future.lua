@@ -33,15 +33,15 @@
 -- - **READY**: The operation has completed successfully, and the result is available.
 -- - **ERROR**: The operation failed, and an error is available.
 --
--- You can chain operations on Futures using the `:athen()` and `:catch()` methods, which are inspired by JavaScript Promises.
+-- You can chain operations on Futures using the `:tthen()` and `:catch()` methods, which are inspired by JavaScript Promises.
 --
 -- **Library Components:**
 --
--- - **`Future`**: The base class for all future types. It provides the core interface (`:poll()`, `:is_ready()`, `:athen()`, `:catch()`).
+-- - **`Future`**: The base class for all future types. It provides the core interface (`:poll()`, `:is_ready()`, `:tthen()`, `:catch()`).
 -- - **`ValueFuture`**: A future that is immediately resolved with a given value.
 -- - **`ErrorFuture`**: A future that is immediately rejected with a given error.
 -- - **`TimerFuture`**: A future that resolves with a value after a specified delay in milliseconds.
--- - **`ThenFuture`**: A special future used internally by `:athen()` and `:catch()` to chain operations.
+-- - **`ThenFuture`**: A special future used internally by `:tthen()` and `:catch()` to chain operations.
 -- - **`AllFuture`**: A future that resolves when all futures in a given list have resolved. The result is a table of all the individual results.
 -- - **`RaceFuture`**: A future that resolves or rejects as soon as one of the futures in a given list resolves or rejects.
 -- - **`FutureExecutor`**: A simple executor to run one or more futures until they complete.
@@ -67,7 +67,7 @@
 -- local my_future = Future.delay(2000, "Hello")
 --
 -- -- Chain another operation to be executed when the first future is ready.
--- local then_future = my_future:athen(function(value)
+-- local then_future = my_future:tthen(function(value)
 --     print(value .. ", World!")
 --     return value .. ", World!"
 -- end)
@@ -84,7 +84,7 @@
 --
 -- local error_future = Future.error("Something went wrong!")
 --
--- local catch_future = error_future:athen(function(value)
+-- local catch_future = error_future:tthen(function(value)
 --     print("This will not be printed.")
 --     return "Success"
 -- end):catch(function(err)
@@ -107,11 +107,11 @@
 -- local executor = Future.FutureExecutor.new()
 --
 -- local chained_future = Future.delay(1000, 10)
---     :athen(function(val)
+--     :tthen(function(val)
 --         print("Step 1:", val)
 --         return Future.delay(1000, val * 2) -- Return a new future
 --     end)
---     :athen(function(val)
+--     :tthen(function(val)
 --         print("Step 2:", val)
 --         return val + 5
 --     end)
@@ -173,170 +173,340 @@
 
 local OOP = require("rmp.oop")
 
+-- Conditionally require Promise for interoperability
+local Promise = nil
+local ok, promise_module = pcall(require, "promises")
+if ok then
+    Promise = promise_module
+end
 
-local IFuture = OOP.interface("IFuture", "poll")
+local F = {}
+
+F.IFuture = OOP.interface("IFuture", "poll")
+
+F.PENDING = "pending"
+F.READY = "ready"
+F.ERROR = "error"
+
 
 
 -- base class
-local Future = OOP.class("Future", nil, IFuture)
+F.Future = OOP.class("Future", nil, F.IFuture)
 do
-    Future.PENDING = "pending"
-    Future.READY = "ready"
-    Future.ERROR = "error"
-
     -- poll method is not implemented by default
 
-    function Future:constructor()
+    function F.Future:constructor()
         -- base future is abstract
-        self._status = Future.PENDING
+        self._status = F.PENDING
     end
 
-    function Future:is_ready()
+    function F.Future:is_ready()
         local status, _ = self:poll()
-        return status == Future.READY
+        return status == F.READY
     end
 
-    function Future:athen(on_fulfilled, on_rejected)
-        return ThenFuture.new(self, on_fulfilled, on_rejected)
+    function F.Future:tthen(on_fulfilled, on_rejected)
+        return F.ThenFuture.new(self, on_fulfilled, on_rejected)
     end
 
-    function Future:catch(on_rejected)
-        return self:athen(nil, on_rejected)
+    function F.Future:catch(on_rejected)
+        return self:tthen(nil, on_rejected)
     end
 end
 
-local ValueFuture = OOP.class("ValueFuture", Future)
+F.ThenFuture = OOP.class("ThenFuture", F.Future)
 do
-    function ValueFuture:constructor(value)
+    function F.ThenFuture:constructor(future, on_fulfilled, on_rejected)
         self:super("constructor")
-        self._value = value
-        self._status = Future.READY
+        self._future = future
+        self._on_fulfilled = on_fulfilled
+        self._on_rejected = on_rejected
+        self._result = nil
+        self._status = F.PENDING
+        self._processed = false
+        self._nested_future = nil
     end
 
-    function ValueFuture:poll()
+    function F.ThenFuture:poll()
+        if self._status ~= F.PENDING then
+            return self._status, self._result
+        end
+
+        if self._nested_future then
+            local nested_status, nested_value = self._nested_future:poll()
+            if nested_status == F.READY then
+                self._result = nested_value
+                self._status = F.READY
+                return self._status, self._result
+            elseif nested_status == F.ERROR then
+                self._result = nested_value
+                self._status = F.ERROR
+                return self._status, self._result
+            else
+                return F.PENDING
+            end
+        end
+
+        if not self._processed then
+            local status, value = self._future:poll()
+
+            if status == F.READY and self._on_fulfilled then
+                local success, result = pcall(self._on_fulfilled, value)
+                if success then
+                    if type(result) == "table" and getmetatable(result) and result.poll then
+                        self._nested_future = result
+                        return F.PENDING
+                    else
+                        self._result = result
+                        self._status = F.READY
+                        self._processed = true
+                        return F.READY, self._result
+                    end
+                else
+                    self._result = result
+                    self._status = F.ERROR
+                    self._processed = true
+                    return F.ERROR, self._result
+                end
+            elseif status == F.ERROR and self._on_rejected then
+                local success, result = pcall(self._on_rejected, value)
+                if success then
+                    self._result = result
+                    self._status = F.READY
+                    self._processed = true
+                    return F.READY, self._result
+                else
+                    self._result = result
+                    self._status = F.ERROR
+                    self._processed = true
+                    return F.ERROR, self._result
+                end
+            elseif status ~= F.PENDING then
+                self._result = value
+                self._status = status
+                self._processed = true
+                return status, value
+            end
+        end
+
+        return F.PENDING
+    end
+end
+F.ValueFuture = OOP.class("ValueFuture", F.Future)
+do
+    function F.ValueFuture:constructor(value)
+        self:super("constructor")
+        self._value = value
+        self._status = F.READY
+    end
+
+    function F.ValueFuture:poll()
         return self._status, self._value
     end
 end
 
-local ErrorFuture = OOP.class("ErrorFuture", Future)
+F.ErrorFuture = OOP.class("ErrorFuture", F.Future)
 do
-    function ErrorFuture:constructor(error)
+    function F.ErrorFuture:constructor(error)
         self:super("constructor")
         self._error = error
-        self._status = Future.ERROR
+        self._status = F.ERROR
     end
 
-    function ErrorFuture:poll()
+    function F.ErrorFuture:poll()
         return self._status, self._error
     end
 end
 
-local TimerFuture = OOP.class("TimerFuture", Future)
+F.TimerFuture = OOP.class("TimerFuture", F.Future)
 do
-    function TimerFuture:constructor(delay_ms, value)
+    function F.TimerFuture:constructor(delay_ms, value)
         self:super("constructor")
         self._delay_ms = delay_ms
         self._value = value
         self._start_time = os.clock()
-        self._status = Future.PENDING
+        self._status = F.PENDING
     end
 
-    function TimerFuture:poll()
-        if self._status ~= Future.PENDING then
+    function F.TimerFuture:poll()
+        if self._status ~= F.PENDING then
             return self._status, self._value
         end
 
         local elapsed = (os.clock() - self._start_time) * 1000
         if elapsed >= self._delay_ms then
-            self._status = Future.READY
-            return Future.READY, self._value
+            self._status = F.READY
+            return F.READY, self._value
         else
-            return Future.PENDING
+            return F.PENDING
         end
     end
 end
 
-ThenFuture = OOP.class("ThenFuture", Future)
-
-function ThenFuture:constructor(future, on_fulfilled, on_rejected)
-    self:super("constructor")
-    self._future = future
-    self._on_fulfilled = on_fulfilled
-    self._on_rejected = on_rejected
-    self._result = nil
-    self._status = Future.PENDING
-    self._processed = false
-    self._nested_future = nil
-end
-
-function ThenFuture:poll()
-    if self._status ~= Future.PENDING then
-        return self._status, self._result
-    end
-
-    if self._nested_future then
-        local nested_status, nested_value = self._nested_future:poll()
-        if nested_status == Future.READY then
-            self._result = nested_value
-            self._status = Future.READY
-            return self._status, self._result
-        elseif nested_status == Future.ERROR then
-            self._result = nested_value
-            self._status = Future.ERROR
-            return self._status, self._result
-        else
-            return Future.PENDING
-        end
-    end
-
-    if not self._processed then
-        local status, value = self._future:poll()
-
-        if status == Future.READY and self._on_fulfilled then
-            local success, result = pcall(self._on_fulfilled, value)
-            if success then
-                if type(result) == "table" and getmetatable(result) and result.poll then
-                    self._nested_future = result
-                    return Future.PENDING
-                else
-                    self._result = result
-                    self._status = Future.READY
-                    self._processed = true
-                    return Future.READY, self._result
-                end
-            else
-                self._result = result
-                self._status = Future.ERROR
-                self._processed = true
-                return Future.ERROR, self._result
-            end
-        elseif status == Future.ERROR and self._on_rejected then
-            local success, result = pcall(self._on_rejected, value)
-            if success then
-                self._result = result
-                self._status = Future.READY
-                self._processed = true
-                return Future.READY, self._result
-            else
-                self._result = result
-                self._status = Future.ERROR
-                self._processed = true
-                return Future.ERROR, self._result
-            end
-        elseif status ~= Future.PENDING then
-            self._result = value
-            self._status = status
-            self._processed = true
-            return status, value
-        end
-    end
-
-    return Future.PENDING
-end
-
-local AllFuture = OOP.class("AllFuture", Future)
+-- New Future implementations
+F.AnyFuture = OOP.class("AnyFuture", F.Future)
 do
-    function AllFuture:constructor(futures)
+    function F.AnyFuture:constructor(futures)
+        self:super("constructor")
+        self._futures = futures
+        self._errors = {}
+        self._rejected_count = 0
+        self._result = nil
+        self._status = F.PENDING
+    end
+
+    function F.AnyFuture:poll()
+        if self._status ~= F.PENDING then
+            return self._status, self._result
+        end
+
+        for i, future in ipairs(self._futures) do
+            local status, value = future:poll()
+            if status == F.READY then
+                self._result = value
+                self._status = F.READY
+                return self._status, self._result
+            elseif status == F.ERROR then
+                if not self._errors[i] then
+                    self._errors[i] = value
+                    self._rejected_count = self._rejected_count + 1
+
+                    if self._rejected_count == #self._futures then
+                        self._result = "AggregateError: All promises were rejected"
+                        self._status = F.ERROR
+                        return self._status, self._result
+                    end
+                end
+            end
+        end
+
+        return F.PENDING
+    end
+end
+
+F.AllSettledFuture = OOP.class("AllSettledFuture", F.Future)
+do
+    function F.AllSettledFuture:constructor(futures)
+        self:super("constructor")
+        self._futures = futures
+        self._results = {}
+        self._completed_count = 0
+    end
+
+    function F.AllSettledFuture:poll()
+        if self._completed_count == #self._futures then
+            return F.READY, self._results
+        end
+
+        for i, future in ipairs(self._futures) do
+            if not self._results[i] then
+                local status, value = future:poll()
+                if status == F.READY then
+                    self._results[i] = { status = "fulfilled", value = value }
+                    self._completed_count = self._completed_count + 1
+                elseif status == F.ERROR then
+                    self._results[i] = { status = "rejected", reason = value }
+                    self._completed_count = self._completed_count + 1
+                end
+            end
+        end
+
+        if self._completed_count == #self._futures then
+            return F.READY, self._results
+        else
+            return F.PENDING
+        end
+    end
+end
+
+function F.newDeferred()
+    return F.Future.newDeferred()
+end
+
+-- Promise-like functions for Future
+function F.Future.newDeferred()
+    local DeferredFuture = OOP.class("DeferredFuture", F.Future)
+    do
+        function DeferredFuture:constructor()
+            self:super("constructor")
+            self._value = nil
+            self._error = nil
+            self._resolver = function(value)
+                if self._status == F.PENDING then
+                    self._value = value
+                    self._status = F.READY
+                end
+            end
+            self._rejector = function(error)
+                if self._status == F.PENDING then
+                    self._error = error
+                    self._status = F.ERROR
+                end
+            end
+        end
+
+        function DeferredFuture:resolve(value)
+            self._resolver(value)
+        end
+
+        function DeferredFuture:reject(error)
+            self._rejector(error)
+        end
+
+        function DeferredFuture:poll()
+            return self._status, self._value or self._error
+        end
+    end
+
+    local future = DeferredFuture.new()
+    return future, future._resolver, future._rejector
+end
+
+if Promise then
+    -- Convert a Promise to a Future
+    function F.Future.fromPromise(promise)
+        local PromiseFuture = OOP.class("PromiseFuture", F.Future)
+        do
+            function PromiseFuture:constructor(promise)
+                self:super("constructor")
+                self._promise = promise
+            end
+
+            function PromiseFuture:poll()
+                if self._promise.state == Promise.State.Fulfilled then
+                    return F.READY, self._promise.value
+                elseif self._promise.state == Promise.State.Rejected then
+                    return F.ERROR, self._promise.reason
+                else
+                    return F.PENDING
+                end
+            end
+        end
+
+        return PromiseFuture.new(promise)
+    end
+end
+
+-- Static methods for the new futures
+function F.Future.any(futures)
+    return F.AnyFuture.new(futures)
+end
+
+function F.Future.allSettled(futures)
+    return F.AllSettledFuture.new(futures)
+end
+
+function F.any(futs)
+    return F.Future.any(futs)
+end
+
+function F.allSettled(futs)
+    return F.Future.allSettled(futs)
+end
+
+F.AllFuture = OOP.class("AllFuture", F.Future)
+do
+    function F.AllFuture:constructor(futures)
         self:super("constructor")
         self._futures = futures
         self._results = {}
@@ -344,76 +514,76 @@ do
         self._error = nil
     end
 
-    function AllFuture:poll()
+    function F.AllFuture:poll()
         if self._error then
-            return Future.ERROR, self._error
+            return F.ERROR, self._error
         end
 
         if self._completed_count == #self._futures then
-            return Future.READY, self._results
+            return F.READY, self._results
         end
 
         for i, future in ipairs(self._futures) do
             if not self._results[i] then
                 local status, value = future:poll()
-                if status == Future.READY then
+                if status == F.READY then
                     self._results[i] = value
                     self._completed_count = self._completed_count + 1
-                elseif status == Future.ERROR then
+                elseif status == F.ERROR then
                     self._error = value
-                    return Future.ERROR, value
+                    return F.ERROR, value
                 end
             end
         end
 
         if self._completed_count == #self._futures then
-            return Future.READY, self._results
+            return F.READY, self._results
         else
-            return Future.PENDING
+            return F.PENDING
         end
     end
 end
 
-local RaceFuture = OOP.class("RaceFuture", Future)
+F.RaceFuture = OOP.class("RaceFuture", F.Future)
 do
-    function RaceFuture:constructor(futures)
+    function F.RaceFuture:constructor(futures)
         self:super("constructor")
         self._futures = futures
         self._result = nil
-        self._status = Future.PENDING
+        self._status = F.PENDING
     end
 
-    function RaceFuture:poll()
-        if self._status ~= Future.PENDING then
+    function F.RaceFuture:poll()
+        if self._status ~= F.PENDING then
             return self._status, self._result
         end
 
         for _, future in ipairs(self._futures) do
             local status, value = future:poll()
-            if status ~= Future.PENDING then
+            if status ~= F.PENDING then
                 self._status = status
                 self._result = value
                 return status, value
             end
         end
-        return Future.PENDING
+        return F.PENDING
     end
 end
 
 -- Future Executor
-local FutureExecutor = OOP.class("FutureExecutor")
+F.FutureExecutor = OOP.class("FutureExecutor")
 do
-    function FutureExecutor:constructor()
+    function F.FutureExecutor:constructor()
         self._futures = {}
         self._completed_futures = {}
     end
 
-    function FutureExecutor:spawn(future)
-        if not future:instanceOf(Future) then
+    function F.FutureExecutor:spawn(future)
+        if not future:instanceOf(F.Future) then
             error("Can only spawn Future objects")
         end
 
-        if not future:implements(IFuture) then
+        if not future:implements(F.IFuture) then
             error("Future must implement IFuture interface")
         end
 
@@ -428,7 +598,7 @@ do
         return future
     end
 
-    function FutureExecutor:run_until_complete(timeout_ms)
+    function F.FutureExecutor:run_until_complete(timeout_ms)
         self._coroutine = coroutine.create(function()
             local start_time = os.clock()
             local iterations = 0
@@ -452,7 +622,7 @@ do
                     if not future_info.completed then
                         local status, result = future_info.future:poll()
 
-                        if status ~= Future.PENDING then
+                        if status ~= F.PENDING then
                             future_info.completed = true
                             future_info.status = status
                             future_info.result = result
@@ -491,7 +661,7 @@ do
         return result1, result2
     end
 
-    function FutureExecutor:get_results()
+    function F.FutureExecutor:get_results()
         local results = {}
         for i, future_info in ipairs(self._completed_futures) do
             results[i] = {
@@ -503,59 +673,49 @@ do
         return results
     end
 
-    function FutureExecutor:has_pending()
+    function F.FutureExecutor:has_pending()
         return #self._futures > 0
     end
 end
 
-function Future.value(value)
-    return ValueFuture.new(value)
+function F.Future.value(value)
+    return F.ValueFuture.new(value)
 end
 
-function Future.error(err)
-    return ErrorFuture.new(err)
+function F.Future.error(err)
+    return F.ErrorFuture.new(err)
 end
 
-function Future.delay(ms, value)
-    return TimerFuture.new(ms, value)
+function F.Future.delay(ms, value)
+    return F.TimerFuture.new(ms, value)
 end
 
-function Future.all(futures)
-    return AllFuture.new(futures)
+function F.Future.all(futures)
+    return F.AllFuture.new(futures)
 end
 
-function Future.race(futures)
-    return RaceFuture.new(futures)
+function F.Future.race(futures)
+    return F.RaceFuture.new(futures)
 end
 
--- Export the module
-return {
-    -- Interfaces
-    IFuture = IFuture,
+function F.value(value)
+    return F.Future.value(value)
+end
 
-    -- Base class
-    Future = Future,
+function F.error(err)
+    return F.Future.error(err)
+end
 
-    -- Concrete implementations
-    ValueFuture = ValueFuture,
-    ErrorFuture = ErrorFuture,
-    TimerFuture = TimerFuture,
-    ThenFuture = ThenFuture,
-    AllFuture = AllFuture,
-    RaceFuture = RaceFuture,
+function F.race(futs)
+    return F.Future.race(futs)
+end
 
-    -- Executor
-    FutureExecutor = FutureExecutor,
+function F.all(futs)
+    return F.Future.all(futs)
+end
 
-    -- States
-    PENDING = Future.PENDING,
-    READY = Future.READY,
-    ERROR = Future.ERROR,
+function F.delay(ms, val)
+    return F.Future.delay(ms, val)
+end
 
-    -- Static methods
-    value = Future.value,
-    error = Future.error,
-    delay = Future.delay,
-    all = Future.all,
-    race = Future.race
-}
+return F
