@@ -26,50 +26,18 @@
 -- enhanced version of rmpv1 with better structure and modularity
 -- TODO: rewrote all engine to C for better performance and lower memory usage
 -- TODO: handle help
--- TODO: add script property in template returned table to run lua code in the context of the template
 
 local api = require("rmp.rmp")
 local utils = require("rmp.util")
 local OOP = require("rmp.oop")
+
+local joinPath = api.Path.joinPath
 
 local io = require("io")
 local os = require("os")
 
 local HashMap = utils.HashMap
 local Queue = utils.Queue
-
-local function detectPathSeparator()
-    local currentPath = require("rmp.directory").get_current_path()
-    if currentPath and currentPath:find("\\") then
-        return "\\"
-    else
-        return "/"
-    end
-end
-
-local PATH_SEP = detectPathSeparator()
-
-local function joinPath(...)
-    local parts = { ... }
-    if #parts == 0 then return "" end
-
-    local result = tostring(parts[1] or "")
-    for i = 2, #parts do
-        local part = tostring(parts[i] or "")
-        if part ~= "" then
-            -- Remove leading separator from part
-            if part:sub(1, 1) == "/" or part:sub(1, 1) == "\\" then
-                part = part:sub(2)
-            end
-            -- Add separator if needed
-            if result:sub(-1) ~= PATH_SEP and result ~= "" then
-                result = result .. PATH_SEP
-            end
-            result = result .. part
-        end
-    end
-    return result
-end
 
 local PlugManager = OOP.class("PlugManager")
 do
@@ -465,7 +433,6 @@ local function engine_render_help(frame, w, h, settings, soundCfg)
             return "<space>"
         elseif k == api.KEY_TAB then
             return "<tab>"
-
         elseif k == api.KEY_ALT_A then
             return "<A-a>"
         elseif k == api.KEY_ALT_B then
@@ -514,7 +481,6 @@ local function engine_render_help(frame, w, h, settings, soundCfg)
             return "<A-y>"
         elseif k == api.KEY_ALT_Z then
             return "<A-z>"
-
         elseif k == api.KEY_CTRL_A then
             return "<C-a>"
         elseif k == api.KEY_CTRL_B then
@@ -563,7 +529,6 @@ local function engine_render_help(frame, w, h, settings, soundCfg)
             return "<C-y>"
         elseif k == api.KEY_CTRL_Z then
             return "<C-z>"
-
         else
             return api.Input.new():keyToChar(k)
         end

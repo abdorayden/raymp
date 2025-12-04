@@ -3398,6 +3398,39 @@ end
 
 RMP.Path = OOP.class("Path")
 do -- Path
+    function RMP.Path.getPathSeparator()
+        local os_type = RMP.getOs()
+        if os_type == RMP.PlatformType.WINDOWS then
+            return "\\"
+        else
+            return "/"
+        end
+    end
+
+    function RMP.Path.joinPath(...)
+        local parts = { ... }
+        local sep = RMP.Path.getPathSeparator()
+        local result = parts[1] or ""
+
+        for i = 2, #parts do
+            if parts[i] and parts[i] ~= "" then
+                local part = tostring(parts[i])
+                -- Remove leading separator from part if present
+                if part:sub(1, 1) == "/" or part:sub(1, 1) == "\\" then
+                    part = part:sub(2)
+                end
+                -- Ensure separator between parts
+                if result:sub(-1) == "/" or result:sub(-1) == "\\" then
+                    result = result .. part
+                else
+                    result = result .. sep .. part
+                end
+            end
+        end
+
+        return result
+    end
+
     function RMP.Path:constructor(path)
         self.path = path or self:getCurrentPath()
     end
@@ -3529,41 +3562,6 @@ end
 -- Updated RMP.Config class with cross-platform support
 RMP.Config = OOP.class("Config")
 do -- Config
-    -- Cross-platform path separator detection
-    local function getPathSeparator()
-        local os_type = RMP.getOs()
-        if os_type == RMP.PlatformType.WINDOWS then
-            return "\\"
-        else
-            return "/"
-        end
-    end
-
-    -- Cross-platform path joining that works with your C directory module
-    local function joinPath(...)
-        local parts = { ... }
-        local sep = getPathSeparator()
-        local result = parts[1] or ""
-
-        for i = 2, #parts do
-            if parts[i] and parts[i] ~= "" then
-                local part = tostring(parts[i])
-                -- Remove leading separator from part if present
-                if part:sub(1, 1) == "/" or part:sub(1, 1) == "\\" then
-                    part = part:sub(2)
-                end
-                -- Ensure separator between parts
-                if result:sub(-1) == "/" or result:sub(-1) == "\\" then
-                    result = result .. part
-                else
-                    result = result .. sep .. part
-                end
-            end
-        end
-
-        return result
-    end
-
     -- Get cross-platform config directory name
     local function getConfigDirName()
         local os_type = RMP.getOs()
@@ -3579,7 +3577,7 @@ do -- Config
         self.isValidFile = false
         self.isError = nil
         self.os_type = RMP.getOs()
-        self.path_sep = getPathSeparator()
+        self.path_sep = RMP.Path.getPathSeparator()
 
         self.currentPath = RMP.Path.new()
         self.homePath = RMP.Path.new(self.currentPath:getHomePath())
@@ -3593,7 +3591,7 @@ do -- Config
         end
 
         -- Use cross-platform path joining
-        local configPath = joinPath(self.homePath:getPath(), configDirName)
+        local configPath = RMP.Path.joinPath(self.homePath:getPath(), configDirName)
         self.configurationPath = RMP.Path.new(configPath)
 
         if not self.configurationPath:find("init.lua", true) then
@@ -3602,7 +3600,7 @@ do -- Config
         end
 
         -- Cross-platform path for init.lua
-        local initPath = joinPath(configPath, "init.lua")
+        local initPath = RMP.Path.joinPath(configPath, "init.lua")
         self.initPath = RMP.Path.new(initPath)
         self.isValidFile = true
 
@@ -3640,7 +3638,7 @@ do -- Config
         end
 
         local configPath = self.configurationPath:getPath()
-        return joinPath(configPath, "themes", themeName .. ".lua")
+        return RMP.Path.joinPath(configPath, "themes", themeName .. ".lua")
     end
 
     -- Cross-platform plugin path resolution
@@ -3651,9 +3649,9 @@ do -- Config
 
         local configPath = self.configurationPath:getPath()
         -- Try single file first
-        local singleFile = joinPath(configPath, "plugins", pluginName .. ".lua")
+        local singleFile = RMP.Path.joinPath(configPath, "plugins", pluginName .. ".lua")
         -- Try folder with init.lua
-        local folderInit = joinPath(configPath, "plugins", pluginName, "init.lua")
+        local folderInit = RMP.Path.joinPath(configPath, "plugins", pluginName, "init.lua")
 
         return singleFile, folderInit
     end
@@ -3664,23 +3662,23 @@ do -- Config
 
         if self.os_type == RMP.PlatformType.WINDOWS then
             -- Windows installation paths
-            table.insert(paths, joinPath("C:", "Program Files", "RMP"))
-            table.insert(paths, joinPath("C:", "Program Files (x86)", "RMP"))
+            table.insert(paths, RMP.Path.joinPath("C:", "Program Files", "RMP"))
+            table.insert(paths, RMP.Path.joinPath("C:", "Program Files (x86)", "RMP"))
             -- User local installation
             local appdata = os.getenv("APPDATA")
             if appdata then
-                table.insert(paths, joinPath(appdata, "RMP"))
+                table.insert(paths, RMP.Path.joinPath(appdata, "RMP"))
             end
         elseif self.os_type == RMP.PlatformType.LINUX then
             -- Linux installation paths
             table.insert(paths, "/usr/local/share/rmp")
             table.insert(paths, "/usr/share/rmp")
-            table.insert(paths, joinPath(self.homePath:getPath(), ".local", "share", "rmp"))
+            table.insert(paths, RMP.Path.joinPath(self.homePath:getPath(), ".local", "share", "rmp"))
         elseif self.os_type == RMP.PlatformType.MAC then
             -- macOS installation paths
             table.insert(paths, "/usr/local/share/rmp")
             table.insert(paths, "/Applications/RMP.app/Contents/Resources")
-            table.insert(paths, joinPath(self.homePath:getPath(), "Library", "Application Support", "RMP"))
+            table.insert(paths, RMP.Path.joinPath(self.homePath:getPath(), "Library", "Application Support", "RMP"))
         end
 
         return paths
@@ -3763,20 +3761,12 @@ do -- Config
     function RMP.Config:getLoadError()
         return self.isError
     end
-
-    -- Helper method for cross-platform path operations
-    function RMP.Config:joinPath(...)
-        return joinPath(...)
-    end
-
-    function RMP.Config:getPathSeparator()
-        return self.path_sep
-    end
 end
 
 -- TODO: create wrapper for native socket library implementation
 -- TODO: make sure that every socket method works async
 -- TODO: handle SSL/TLS sockets
+
 RMP.Socket = OOP.class("Socket")
 do
     function RMP.Socket:constructor(host, port)
