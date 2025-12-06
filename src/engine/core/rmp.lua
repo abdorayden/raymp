@@ -227,17 +227,17 @@
 --
 -- ## Event Types
 --
--- | Event Category     | Enum                           | Description             |
--- |--------------------|--------------------------------|-------------------------|
--- | Keyboard           | RMP.EventType.Keyboard         | Keyboard input events   |
--- | Mouse              | RMP.EventType.Mouse            | Mouse input events      |
--- | Focus              | RMP.EventType.Focuse           | Focus/unfocus events    |
--- | Transform Data Get | RMP.EventType.TransformDataGet | Data retrieval events   |
--- | Transform Data Put | RMP.EventType.TransformDataPut | Data insertion events   |
--- | Sound              | RMP.EventType.Sound            | Audio-related events    |
--- | Configuration      | RMP.EventType.Configuration    | Configuration events    |
--- | Engine             | RMP.EventType.Engine           | Framework engine events |
--- |--------------------|--------------------------------|-------------------------|
+-- | Event Category     | Enum                           | Description              |
+-- |--------------------|--------------------------------|--------------------------|
+-- | Keyboard           | RMP.EventType.Keyboard         | Keyboard input events    |
+-- | Mouse              | RMP.EventType.Mouse            | Mouse input events       |
+-- | Focus              | RMP.EventType.Focuse           | Focus/unfocus events     |
+-- | Transform Data Get | RMP.EventType.TransformDataGet | Data retrieval events    |
+-- | Transform Data Put | RMP.EventType.TransformDataPut | Data insertion events    |
+-- | Sound              | RMP.EventType.Sound            | Audio-related events     |
+-- | Configuration      | RMP.EventType.Configuration    | Configuration events     |
+-- | Template           | RMP.EventType.Template         | Framework template events|
+-- |--------------------|--------------------------------|--------------------------|
 --
 -- ## Emoji/Symbol Icons
 --
@@ -1282,7 +1282,7 @@ RMP.EventType = {
     Sound = RMP.enum(),            -- plugins can add event for sound
     -- the callback function accept sound object so they can add or get informations like freqs , so they can create visualization
     Configuration = RMP.enum(),    -- get access to the configurations also save a new configuration (cfg for plugins)
-    Engine = RMP.enum()            -- Engine Event to apply a commands on the engine
+    Template = RMP.enum()          -- Template Event to apply changes to the template
 }
 
 local Event = OOP.interface("Event",
@@ -1311,6 +1311,8 @@ do
         self.events:put(RMP.EventType.Sound, Queue.new())
 
         self.events:put(RMP.EventType.Configuration, Queue.new())
+
+        self.events:put(RMP.EventType.Template, Queue.new())
 
         return self
     end
@@ -1353,11 +1355,24 @@ do
         return self:addEventListener(RMP.EventType.Configuration, callback)
     end
 
+    function RMP.EventListener:onTemplate(callback)
+        return self:addEventListener(RMP.EventType.Template, callback)
+    end
+
     -- @param key : RMP.EventType value
     -- @return : self
     -- rename it to handleEvent
     -- TODO: add sound
-    function RMP.EventListener:handleEvent(key, mouse, sound, config)
+
+    function RMP.EventListener:handleEvent(key, mouse, sound, config, template)
+        local _template = self.events:get(RMP.EventType.Template)
+        while not _template:isEmpty() do
+            local template_callback = _template:pop()
+            if template_callback and type(template_callback) == 'function' then
+                template_callback(template)
+            end
+        end
+
         local cfgs_queue = self.events:get(RMP.EventType.Configuration)
         while not cfgs_queue:isEmpty() do
             local cfg_callback = cfgs_queue:pop()
@@ -1614,6 +1629,10 @@ do                                                          -- VirtualTerminal
 
                 while not event:get(RMP.EventType.Configuration):isEmpty() do
                     myevent:get(RMP.EventType.Configuration):push(event:get(RMP.EventType.Configuration):pop())
+                end
+
+                while not event:get(RMP.EventType.Template):isEmpty() do
+                    myevent:get(RMP.EventType.Template):push(event:get(RMP.EventType.Template):pop())
                 end
             end
         else
@@ -2482,7 +2501,9 @@ do
         self.marked_table[self.pos] = not self.marked_table[self.pos]
         -- i think i delete this helper function
         -- TODO: implement cleanTextLocal
-        return cleanTextLocal(self.options[self.pos])
+        -- return cleanTextLocal(self.options[self.pos])
+        --
+        return self.options[self.pos]
     end
 
     -- Returns a table of strings suitable for rendering.
@@ -3888,20 +3909,22 @@ do -- Config
 
                     local ok, res = pcall(function()
                         -- Try single file first
-                        local file = io.open(singleFile, "r")
-                        if file then
-                            file:close()
-                            return dofile(singleFile)
-                        end
+                        if singleFile and folderInit and type(singleFile) == "string" and type(folderInit) == "string" then
+                            local file = io.open(singleFile, "r")
+                            if file then
+                                file:close()
+                                return dofile(singleFile)
+                            end
 
-                        -- Try folder with init.lua
-                        file = io.open(folderInit, "r")
-                        if file then
-                            file:close()
-                            return dofile(folderInit)
-                        end
+                            -- Try folder with init.lua
+                            file = io.open(folderInit, "r")
+                            if file then
+                                file:close()
+                                return dofile(folderInit)
+                            end
 
-                        return nil
+                            return nil
+                        end
                     end)
 
                     if ok and res then
@@ -4155,8 +4178,8 @@ do
         self:super("addEventListener", key, callback)
     end
 
-    function RMP.Frame:run(key, mouse, sound, config)
-        self:super("handleEvent", key, mouse, sound, config)
+    function RMP.Frame:run(key, mouse, sound, config, template)
+        self:super("handleEvent", key, mouse, sound, config, template)
         self:super("render")
         self:super("clear")
         RMP.sleep(math.floor(RMP.Duration.new(self:getDeltaTime()):fromSec()))

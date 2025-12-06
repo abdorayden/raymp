@@ -336,10 +336,18 @@ do
         return window
     end
 
-    function TemplateParser:parseTemplate()
-        if not self.template or type(self.template) ~= "table" then
-            return {}
+    function TemplateParser:getTemplate()
+        return self.template
+    end
+
+    function TemplateParser:parseTemplate(template)
+        if not template then
+            if not self.template or type(self.template) ~= "table" then
+                return {}
+            end
         end
+
+        self.template = template
 
         local context = self:createContext()
         local windows = {}
@@ -694,6 +702,8 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
     local oq = otherPlugs
     local restart = false
 
+    local template = parser:getTemplate()
+
     while not quit do
         mainFrame:clear()
         local key = api.Terminal:handleKey()
@@ -831,7 +841,8 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
 
         sound:update()
 
-        local windows, context = parser:parseTemplate()
+        -- To work with the same table
+        local windows, _ = parser:parseTemplate(template)
 
         for _, window in ipairs(windows) do
             mainFrame:add(window)
@@ -860,7 +871,9 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             key,
             nil, -- TODO: add mouse support later
             sound,
-            pl_cfgs
+            pl_cfgs,
+            -- windows is just table of windows tables
+            template
         )
 
         if restart then
