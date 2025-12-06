@@ -146,10 +146,28 @@ ALWAYS_INT lua_init(STATE) {
 	int width = luaL_optinteger(L , 1 , 150);
 	int height = luaL_optinteger(L , 2 , 1);
 
+	if (width <= 0 || height <= 0) {
+		lua_pushnil(L);
+		lua_pushstring(L, "Invalid dimensions: width and height must be positive");
+		return 2;
+	}
+
+	if (width > SIZE_MAX / height / sizeof(Cell)) {
+		lua_pushnil(L);
+		lua_pushstring(L, "Dimensions too large: potential overflow");
+		return 2;
+	}
+
 	init_locale();
 
 	size_t vt_size = sizeof(VirtualTerminal);
 	VirtualTerminal* vt = (VirtualTerminal*)lua_newuserdata(L , vt_size);
+	if (!vt) {
+		lua_pushnil(L);
+		lua_pushstring(L, "Failed to create virtual terminal userdata");
+		return 2;
+	}
+
 	vt->width = width;
 	vt->height = height;
 	vt->cursor_x = 1;
@@ -158,6 +176,11 @@ ALWAYS_INT lua_init(STATE) {
 
 	size_t buffer_vt_size = width*height*sizeof(Cell);
 	vt->buffer = (Cell*)malloc(buffer_vt_size);
+	if (vt->buffer == NULL) {
+		lua_pushnil(L);
+		lua_pushstring(L, "Failed to allocate memory for virtual terminal buffer");
+		return 2;
+	}
 
 	luaL_getmetatable(L, VT_MT);
 	lua_setmetatable(L, -2);
@@ -180,11 +203,20 @@ ALWAYS_INT vt_lua_gc(STATE) {
 
 ALWAYS_INT lua_clear(STATE) {
 	VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
-	for (int i = 0; i < vt->width * vt->height; i++) {
-		strcpy(vt->buffer[i].ch, " ");
-		strcpy(vt->buffer[i].fg, "");
-		strcpy(vt->buffer[i].bg, "");
-		strcpy(vt->buffer[i].style, "");
+
+	if (!vt || !vt->buffer) {
+		return 0;
+	}
+
+	size_t total_size = vt->width * vt->height;
+
+	for (size_t i = 0; i < total_size; i++) {
+		Cell* cell = &vt->buffer[i];
+		cell->ch[0] = ' ';
+		cell->ch[1] = '\0';
+		cell->fg[0] = '\0';
+		cell->bg[0] = '\0';
+		cell->style[0] = '\0';
 	}
 	vt->is_dirty = true;
 	return 0;
@@ -271,7 +303,7 @@ ALWAYS_INT lua_writetext_clipped(STATE) {
             while (base_x >= start_x) {
                 Cell* base = get_cell(vt, base_x, y);
                 if (!base) { base_x--; continue; }
-                if (base->ch[0] == '\0') { base_x--; continue; } // continuation cell
+                if (base->ch[0] == '\0') { base_x--; continue; } 
                 size_t existing = strlen(base->ch);
                 int can_copy = CH_UTF8_SIZE - 1 - (int)existing;
                 if (can_copy > 0) {
@@ -446,8 +478,32 @@ ALWAYS_INT lua_merge(STATE) {
 	int offset_x = luaL_optinteger(L, 3, 0);
 	int offset_y = luaL_optinteger(L, 4, 0);
 
-	for (int src_y = 1; src_y <= src_vt->height; src_y++) {
-		for (int src_x = 1; src_x <= src_vt->width; src_x++) {
+	if (!dest_vt || !dest_vt->buffer || !src_vt || !src_vt->buffer) {
+		return 0;
+	}
+
+	int start_src_y = 1;
+	int end_src_y = src_vt->height;
+	int start_src_x = 1;
+	int end_src_x = src_vt->width;
+
+	int start_dest_y = 1 + offset_y;
+	int end_dest_y = src_vt->height + offset_y;
+	int start_dest_x = 1 + offset_x;
+	int end_dest_x = src_vt->width + offset_x;
+
+	if (start_dest_y < 1) start_src_y = 1 - offset_y;
+	if (end_dest_y > dest_vt->height) end_src_y = dest_vt->height - offset_y;
+	if (start_dest_x < 1) start_src_x = 1 - offset_x;
+	if (end_dest_x > dest_vt->width) end_src_x = dest_vt->width - offset_x;
+
+	if (start_src_y > end_src_y || start_src_x > end_src_x) {
+		dest_vt->is_dirty = true;
+		return 0;
+	}
+
+	for (int src_y = start_src_y; src_y <= end_src_y && src_y <= src_vt->height; src_y++) {
+		for (int src_x = start_src_x; src_x <= end_src_x && src_x <= src_vt->width; src_x++) {
 			int dest_x = src_x + offset_x;
 			int dest_y = src_y + offset_y;
 
@@ -456,9 +512,9 @@ ALWAYS_INT lua_merge(STATE) {
 				Cell* dest_cell = get_cell(dest_vt, dest_x, dest_y);
 
 				if (src_cell && dest_cell) {
-					if (strcmp(src_cell->ch, " ") != 0 || 
-							src_cell->fg[0] != '\0' || 
-							src_cell->bg[0] != '\0' || 
+					if (strcmp(src_cell->ch, " ") != 0 ||
+							src_cell->fg[0] != '\0' ||
+							src_cell->bg[0] != '\0' ||
 							src_cell->style[0] != '\0') {
 						memcpy(dest_cell, src_cell, sizeof(Cell));
 					}
@@ -473,9 +529,10 @@ ALWAYS_INT lua_merge(STATE) {
 
 ALWAYS_INT lua_render(STATE) {
 	VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
-	if (!vt->is_dirty) {
+	if (!vt->is_dirty || !vt->buffer) {
 		return 0;
 	}
+
 	luaL_Buffer B;
 	luaL_buffinit(L, &B);
 	char sequence_buf[128];
@@ -484,6 +541,7 @@ ALWAYS_INT lua_render(STATE) {
 	char current_style[8] = "";
 	int saved_cursor_x = vt->cursor_x;
 	int saved_cursor_y = vt->cursor_y;
+
 	for (int y = 1; y <= vt->height; y++) {
 		snprintf(sequence_buf, sizeof(sequence_buf), "\x1b[%d;%dH", y, 1);
 		luaL_addstring(&B, sequence_buf);
@@ -491,10 +549,11 @@ ALWAYS_INT lua_render(STATE) {
 		current_style[0] = '\0';
 		current_fg[0] = '\0';
 		current_bg[0] = '\0';
+
 		for (int x = 1; x <= vt->width; x++) {
 			Cell* cell = get_cell(vt, x, y);
 
-			if (cell->ch[0] == '\0') {
+			if (!cell || cell->ch[0] == '\0') {
 				continue;
 			}
 
@@ -503,9 +562,12 @@ ALWAYS_INT lua_render(STATE) {
 			int bg_changed = strcmp(cell->bg, current_bg) != 0;
 			if (style_changed || fg_changed || bg_changed) {
 				luaL_addstring(&B, "\x1b[0m");
-				strcpy(current_style, cell->style);
-				strcpy(current_fg, cell->fg);
-				strcpy(current_bg, cell->bg);
+				strncpy(current_style, cell->style, sizeof(current_style) - 1);
+				current_style[sizeof(current_style) - 1] = '\0';
+				strncpy(current_fg, cell->fg, sizeof(current_fg) - 1);
+				current_fg[sizeof(current_fg) - 1] = '\0';
+				strncpy(current_bg, cell->bg, sizeof(current_bg) - 1);
+				current_bg[sizeof(current_bg) - 1] = '\0';
 				if (current_style[0] != '\0') luaL_addstring(&B, current_style);
 				if (current_fg[0] != '\0') luaL_addstring(&B, current_fg);
 				if (current_bg[0] != '\0') luaL_addstring(&B, current_bg);
@@ -518,7 +580,7 @@ ALWAYS_INT lua_render(STATE) {
 	luaL_pushresult(&B);
 	const char* output = lua_tostring(L, -1);
 	size_t output_len = lua_rawlen(L, -1);
-	
+
 #ifdef PLATFORM_WINDOWS
 	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	if (hConsole != INVALID_HANDLE_VALUE) {
@@ -555,14 +617,34 @@ ALWAYS_INT lua_resize(STATE) {
 	VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
 	int new_width = luaL_checkinteger(L, 2);
 	int new_height = luaL_checkinteger(L, 3);
+
+	if (new_width <= 0 || new_height <= 0) {
+		lua_pushboolean(L, 0);
+		lua_pushstring(L, "Invalid dimensions: width and height must be positive");
+		return 2;
+	}
+
+	if (new_width > SIZE_MAX / new_height / sizeof(Cell)) {
+		lua_pushboolean(L, 0);
+		lua_pushstring(L, "Dimensions too large: potential overflow");
+		return 2;
+	}
+
 	size_t new_buffer_size = new_width * new_height * sizeof(Cell);
 	Cell* new_buffer = (Cell*)malloc(new_buffer_size);
+	if (new_buffer == NULL) {
+		lua_pushboolean(L, 0);
+		lua_pushstring(L, "Failed to allocate memory for resized buffer");
+		return 2;
+	}
+
 	for (int i = 0; i < new_width * new_height; i++) {
 		strcpy(new_buffer[i].ch, " ");
 		strcpy(new_buffer[i].fg, "");
 		strcpy(new_buffer[i].bg, "");
 		strcpy(new_buffer[i].style, "");
 	}
+
 	int copy_width = (new_width < vt->width) ? new_width : vt->width;
 	int copy_height = (new_height < vt->height) ? new_height : vt->height;
 	for (int y = 0; y < copy_height; y++) {
@@ -572,14 +654,18 @@ ALWAYS_INT lua_resize(STATE) {
 			memcpy(new_cell, old_cell, sizeof(Cell));
 		}
 	}
+
 	free(vt->buffer);
 	vt->buffer = new_buffer;
 	vt->width = new_width;
 	vt->height = new_height;
+
 	if (vt->cursor_x > new_width) vt->cursor_x = new_width;
 	if (vt->cursor_y > new_height) vt->cursor_y = new_height;
+
 	vt->is_dirty = true;
-	return 0;
+	lua_pushboolean(L, 1);
+	return 1;
 }
 
 ALWAYS_INT lua_moveup(STATE) {
@@ -612,15 +698,42 @@ ALWAYS_INT lua_moveright(STATE) {
 
 ALWAYS_INT vt_lua_copy(STATE) {
 	VirtualTerminal* src_vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
+
+	if (!src_vt || !src_vt->buffer) {
+		lua_pushnil(L);
+		lua_pushstring(L, "Invalid source virtual terminal");
+		return 2;
+	}
+
+	if (src_vt->width > SIZE_MAX / src_vt->height / sizeof(Cell)) {
+		lua_pushnil(L);
+		lua_pushstring(L, "Source virtual terminal too large: potential overflow");
+		return 2;
+	}
+
+	size_t buffer_size = src_vt->width * src_vt->height * sizeof(Cell);
 	VirtualTerminal* dest_vt = (VirtualTerminal*)lua_newuserdata(L, sizeof(VirtualTerminal));
+	if (!dest_vt) {
+		lua_pushnil(L);
+		lua_pushstring(L, "Failed to create destination virtual terminal");
+		return 2;
+	}
+
 	dest_vt->width = src_vt->width;
 	dest_vt->height = src_vt->height;
 	dest_vt->cursor_x = src_vt->cursor_x;
 	dest_vt->cursor_y = src_vt->cursor_y;
 	dest_vt->is_dirty = 1;
-	size_t buffer_size = src_vt->width * src_vt->height * sizeof(Cell);
+
 	dest_vt->buffer = (Cell*)malloc(buffer_size);
+	if (dest_vt->buffer == NULL) {
+		lua_pushnil(L);
+		lua_pushstring(L, "Failed to allocate memory for copied buffer");
+		return 2;
+	}
+
 	memcpy(dest_vt->buffer, src_vt->buffer, buffer_size);
+
 	luaL_getmetatable(L, VT_MT);
 	lua_setmetatable(L, -2);
 	return 1;

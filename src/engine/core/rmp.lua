@@ -1611,6 +1611,10 @@ do                                                          -- VirtualTerminal
                 while not event:get(RMP.EventType.Sound):isEmpty() do
                     myevent:get(RMP.EventType.Sound):push(event:get(RMP.EventType.Sound):pop())
                 end
+
+                while not event:get(RMP.EventType.Configuration):isEmpty() do
+                    myevent:get(RMP.EventType.Configuration):push(event:get(RMP.EventType.Configuration):pop())
+                end
             end
         else
             if thatTerm:implements(RMP.Renderable) then
