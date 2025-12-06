@@ -39,6 +39,9 @@ local os = require("os")
 local HashMap = utils.HashMap
 local Queue = utils.Queue
 
+-- the mainFrame global frame for the rendrer
+local mainFrame = api.Frame.new()
+
 local PlugManager = OOP.class("PlugManager")
 do
     function PlugManager:constructor(cfgObj)
@@ -84,8 +87,8 @@ end
 -- like adding methods to update component data or validate it
 -- also for simplifying the access to component data on script property in the template
 --
--- wrapper for component table that parsed from template
 -- TODO: came back
+-- TODO: wrap all table templates with this Component class
 local Component = OOP.class("Component")
 do
     function Component:constructor(component)
@@ -257,7 +260,8 @@ do
             value,
             textConfig.style,
             textConfig.foregroundColor,
-            textConfig.backgroundColor
+            textConfig.backgroundColor,
+            mainFrame
         )
     end
 
@@ -293,12 +297,12 @@ do
         end
 
         local callback = function(innerX, innerY, innerXX, innerYY)
-            local childVterm = api.VirtualTerminal.new()
+            -- local childVterm = api.VirtualTerminal.new()
 
             if currentPlugin and type(currentPlugin) == "function" then
                 local pluginResult = currentPlugin(innerX, innerY, innerXX, innerYY)
                 if pluginResult then
-                    childVterm:merge(pluginResult)
+                    mainFrame:merge(pluginResult)
                 end
             end
 
@@ -306,7 +310,7 @@ do
                 for _, childConfig in ipairs(windowConfig.children) do
                     local childWindow = self:createWindow(childConfig, context, mainFrame)
                     if childWindow then
-                        childVterm:merge(childWindow)
+                        mainFrame:merge(childWindow)
                     end
                 end
             end
@@ -314,14 +318,15 @@ do
             if windowConfig.content and type(windowConfig.content) == "function" then
                 local contentResult = windowConfig.content(innerX, innerY, innerXX, innerYY, context)
                 if contentResult then
-                    childVterm:merge(contentResult)
+                    mainFrame:merge(contentResult)
                 end
             end
 
-            return childVterm
+            return nil
         end
 
-        local window = api.Window.new(windowConfig.id):createWindow(
+        -- adding mainFrame just for not creating another buffer
+        local window = api.Window.new(windowConfig.id, mainFrame):createWindow(
             title,
             width,
             height,
@@ -574,7 +579,8 @@ local function engine_render_help(frame, w, h, settings, soundCfg)
 
     -- Create a box using the VirtualTerminal's drawBox method
     frame:drawBox(
-        api.Text.new("Help", api.TextStyle.Bold, api.FGColors.Brights.Yellow, api.BGColors.NoBrights.Black),
+    -- NOTE: rayden was here
+        api.Text.new("Help", api.TextStyle.Bold, api.FGColors.Brights.Yellow, api.BGColors.NoBrights.Black, mainFrame),
         boxX, boxY, boxWidth, boxHeight,
         api.BoxDrawing.LightBorder,
         api.FGColors.Brights.Yellow, -- border color
@@ -591,7 +597,6 @@ end
 
 local function runRMPApplication(plugManager, template, settings, otherPlugs, soundCfg, pl_cfgs)
     local h, w = api.Terminal:getSize()
-    local mainFrame = api.Frame.new()
 
     -- check the settings first and then the keymap
     local sound = api.Sound.new() -- empty playlist
@@ -603,7 +608,6 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
     local help_fn = nil
     local exit = nil
 
-    -- TODO: handle the mode playback from configuration
     if settings then
         if settings.fps and type(settings.fps) == "number" and settings.fps > 0 and settings.fps <= 120 then
             mainFrame:setFps(settings.fps)
@@ -647,7 +651,6 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         if settings.help_key and type(settings.help_key) == "number" then
             help_fn = settings.help_key
         else
-            -- TODO: implement F1-10 and alt keys and replace help with F2
             settings.help_key = api.KEY_H
             help_fn = api.KEY_H
         end
@@ -711,7 +714,6 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             end)
         end
 
-        -- TODO: handle the exit key from configuration
         mainFrame:addEventListener(api.EventType.Keyboard, function(inputKey)
             if inputKey == exit then
                 quit = true
