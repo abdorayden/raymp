@@ -18,100 +18,254 @@
 -- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 -- THE SOFTWARE.
 
+---
+-- # RMP Framework Documentation
+--
 -- This Lua module (rmp.lua) provides a comprehensive terminal-based UI framework
 -- with audio playback capabilities.
 -- It's designed to create rich terminal applications with features like:
+--
+-- ## Framework Overview
+--
+-- **RMP api v1.0.0**
+--
+-- **Note:** This API works with Lua version 5.4
+--
+-- ## Core Feature Categories
+--
+-- | Category              | Subcategory           | Feature    | Description                                                            |
+-- |-----------------------|-----------------------|------------|------------------------------------------------------------------------|
+-- | Terminal UI Framework | Window Management     | Window     | Creates bordered terminal windows with titles and customizable styling |
+-- | Text Styling          |                       | Text       | Text styling with ANSI color codes, formatting, and Unicode symbols    |
+-- | UI Elements           |                       | Popup      | Pre-styled dialog boxes (error, info, warning, message)                |
+-- | Drawing               |                       | Draw       | Drawing primitives (rectangles, circles, triangles, lines)             |
+-- | Content Management    |                       | Scroller   | Content scrolling mechanism for large datasets                         |
+-- | Navigation            |                       | Options    | Interactive menu system with selection capabilities                    |
+-- | Audio Playback        | File Management       | Sound      | Audio file loading and playback control                                |
+-- | Control               |                       | Playback   | Volume, speed, and position control                                    |
+-- | Monitoring            |                       | Status     | Playback status monitoring and metadata access                         |
+-- | Playlist              |                       | Management | Playlist management with different loop modes                          |
+-- | Cross-Platform Support| Environment Detection | Platform   | OS detection (Windows, Linux, macOS)                                   |
+-- | Terminal              |                       | Utilities  | Terminal size detection, cursor control, keyboard input handling       |
+-- |-----------------------|-----------------------|------------|------------------------------------------------------------------------|
+--
+-- ## Key Component Classes
+--
+-- | Component           | Purpose                    | Main Methods                                    |
+-- |---------------------|----------------------------|-------------------------------------------------|
+-- | RMP.Window          | Terminal window management | createWindow(), setId(), getId()                |
+-- | RMP.Text            | Text styling and formatting| setPosition(), render(), getColoredText()       |
+-- | RMP.VirtualTerminal | Virtual terminal buffer    | writeText(), setChar(), render(), merge()       |
+-- | RMP.Frame           | Main application frame     | run(), add(), addMany(), setLayout()            |
+-- | RMP.Sound           | Audio playback system      | play(), pause(), stop(), setVolume(), addTrack()|
+-- | RMP.Popup           | Modal dialog boxes         | run()                                           |
+-- | RMP.Options         | Interactive option menus   | setOptions(), next(), prev(), getSelected()     |
+-- | RMP.Scroller        | Content scrolling          | nextLine(), prevLine(), getVisible()            |
+-- | RMP.Draw            | Drawing primitives         | rectangle(), circle(), triangle(), line()       |
+-- | RMP.Input           | Text input handling        | handleKey(), render(), getText()                |
+-- | RMP.Path            | File system operations     | listDir(), makeDir(), removeDir()               |
+-- | RMP.Socket          | Network communication      | connect(), send(), recv()                       |
+-- | RMP.Config          | Configuration management   | load(), getThemesAsObject()                     |
+-- | RMP.Table           | Data tables                | setDataAt(), render()                           |
+-- | RMP.Code            | Syntax highlighting        | highlight(), setSyntax()                        |
+-- | RMP.StatusBar       | Status bar components      | addComponent(), render()                        |
+-- | RMP.Menu            | Menu systems               | addOption(), getSelectedOption()                |
+-- | RMP.LoadingSpinner  | Progress indicators        | nextFrame(), setPattern()                       |
+-- | RMP.Mouse           | Mouse event handling       | getX(), getY()                                  |
+-- | RMP.Notify          | Notification system        | error(), info(), message()                      |
+-- | RMP.Grid            | Layout management          | setRows(), setCols()                            |
+-- | RMP.FlowLayout      | Flow-based layouts         | setRows(), setCols()                            |
+-- | RMP.EventListener   | Event handling             | addEventListener(), handleEvent()               |
+-- | RMP.SimpleInput     | High-level input           | render(), focus(), getValue()                   |
+-- |---------------------|----------------------------|-------------------------------------------------|
+--
+-- ## Supported Platforms and Keyboard Keys
+--
+-- | Platform | Enum Value               | Description             |
+-- |----------|--------------------------|-------------------------|
+-- | Linux    | RMP.PlatformType.LINUX   | Linux operating systems |
+-- | Windows  | RMP.PlatformType.WINDOWS | Microsoft Windows       |
+-- | macOS    | RMP.PlatformType.MAC     | Apple macOS             |
+-- | Unknown  | RMP.PlatformType.UNKOW   | Other/unknown platform  |
+-- |----------|--------------------------|-------------------------|
+--
+-- ## Keyboard Keys Mapping
+--
+-- | Key Category  | Enum                                                  | Description                     |
+-- |---------------|-------------------------------------------------------|---------------------------------|
+-- | Control Keys  | RMP.KEY_CTRL_A - RMP.KEY_CTRL_Z                       | Ctrl + letter combinations      |
+-- | Alt Keys      | RMP.KEY_ALT_A - RMP.KEY_ALT_Z                         | Alt + letter combinations       |
+-- | Special Keys  | RMP.KEY_ENTER, RMP.KEY_SPACE, RMP.KEY_ESCAPE          | Enter, space, escape keys       |
+-- | Arrow Keys    | RMP.KEY_UP, RMP.KEY_DOWN, RMP.KEY_LEFT, RMP.KEY_RIGHT | Directional arrow keys          |
+-- | Function Keys | RMP.KEY_F1 - RMP.KEY_F12                              | Function keys F1 through F12    |
+-- | Digits        | RMP.KEY_0 - RMP.KEY_9                                 | Number keys 0 through 9         |
+-- | Alphabet      | RMP.KEY_A - RMP.KEY_Z                                 | Lowercase letter keys           |
+-- | Shift Keys    | RMP.KEY_SHIFT_A - RMP.KEY_SHIFT_Z                     | Uppercase/shifted letter keys   |
+-- | Special Chars | RMP.KEY_PLUS, RMP.KEY_MINUS, RMP.KEY_GT, etc.         | Various special character keys  |
+-- |---------------|-------------------------------------------------------|---------------------------------|
+--
+-- ## Color Support
+--
+-- | Color Type | Brightness | Colors Available                                      |
+-- |------------|------------|-------------------------------------------------------|
+-- | Foreground | Non-Bright | Black, Red, Green, Yellow, Blue, Magenta, Cyan, White |
+-- | Foreground | Bright     | Black, Red, Green, Yellow, Blue, Magenta, Cyan, White |
+-- | Background | Non-Bright | Black, Red, Green, Yellow, Blue, Magenta, Cyan, White |
+-- | Background | Bright     | Black, Red, Green, Yellow, Blue, Magenta, Cyan, White |
+-- |------------|------------|-------------------------------------------------------|
+--
+-- ## Text Styling Options
+--
+-- | Style            | Description                           | Enum Value                    |
+-- |------------------|---------------------------------------|-------------------------------|
+-- | Strike           | Strikethrough text                    | RMP.TextStyle.Strike          |
+-- | Hide             | Hidden/invisible text                 | RMP.TextStyle.Hide            |
+-- | Underline        | Single underline                      | RMP.TextStyle.Underline       |
+-- | Double Underline | Double underline                      | RMP.TextStyle.DoubleUnderline |
+-- | Bold             | Bold text                             | RMP.TextStyle.Bold            |
+-- | Italic           | Italic text                           | RMP.TextStyle.Italic          |
+-- | Reverse          | Reversed background/foreground colors | RMP.TextStyle.Reverse         |
+-- | Overline         | Overline text                         | RMP.TextStyle.Overline        |
+-- | Regular          | Reset to normal text                  | RMP.TextStyle.Regular         |
+-- |------------------|---------------------------------------|-------------------------------|
+--
+-- ## Border Styles
+--
+-- | Style Name     | Type                       | Description |
+-- |----------------|----------------------------|------------------------------------|
+-- | NoBorder       | No borders                 | No visual borders                  |
+-- | LightBorder    | Single-line                | Thin, single-line borders          |
+-- | HeavyBorder    | Double-line                | Thick, double-line borders         |
+-- | RoundedCorners | Light with rounded corners | Light borders with rounded corners |
+-- |----------------|----------------------------|------------------------------------|
+--
+-- ## Animation Patterns
+--
+-- | Category     | Pattern Name                     | Description                         |
+-- |--------------|----------------------------------|-------------------------------------|
+-- | Spinners     | Spinner, BraillePattern          | Various spinning animation patterns |
+-- | Dots         | Dots, Dots2, Dots3               | Dot-based animations                |
+-- | Lines        | Line                             | Simple line rotation                |
+-- | Arrows       | Arrow                            | Arrow rotation patterns             |
+-- | Clocks       | Clock, Moon                      | Time-based animations               |
+-- | Blocks       | Block, GrowingBar                | Block-based animations              |
+-- | Shapes       | SquareCorners, Triangle          | Geometric shape animations          |
+-- | Weather      | Weather, Fire, WaterFlow         | Nature-themed animations            |
+-- | Tech         | Binary, Signal, Download, Upload | Technology-themed patterns          |
+-- | Faces        | Happy, Thinking, Sleeping        | Emotion-based animations            |
+-- | Animals      | Cat, Dog, Bird, Fish             | Animal-themed animations            |
+-- | Food         | Coffee, Cooking, Eating          | Food-themed animations              |
+-- | Vehicles     | Car, Plane, Rocket               | Vehicle-themed patterns             |
+-- | Music        | Music, Dance, Painting           | Creative arts patterns              |
+-- | Sports       | Ball, Chess, Dice                | Sports and games patterns           |
+-- | Time         | Hourglass, Calendar              | Time-related animations             |
+-- | Hearts       | Hearts, Stars, Geometric         | Symbol and geometric patterns       |
+-- | Tools        | Tools, Writing, Science          | Working tool patterns               |
+-- | Fantasy      | Magic, Dragon, Unicorn           | Fantasy-themed animations           |
+-- | Professional | Loading, Progress, Working       | Business-themed patterns            |
+-- |--------------|----------------------------------|-------------------------------------|
+--
+-- ## Audio Playback Modes
+--
+-- | Mode          | Enum                           | Description                 |
+-- |---------------|--------------------------------|-----------------------------|
+-- | Once          | RMP.PlaybackMode.ONCE          | Play once, then stop        |
+-- | Loop Single   | RMP.PlaybackMode.LOOP_SINGLE   | Loop the current track      |
+-- | Loop Playlist | RMP.PlaybackMode.LOOP_PLAYLIST | Loop the entire playlist    |
+-- | Shuffle       | RMP.PlaybackMode.SHUFFLE       | Play tracks in random order |
+-- |---------------|--------------------------------|-----------------------------|
+--
+-- ## Audio States
+--
+-- | State   | Enum              | Description                    |
+-- |---------|-------------------|--------------------------------|
+-- | Stopped | RMP.State.STOPPED | Audio is stopped               |
+-- | Playing | RMP.State.PLAYING | Audio is currently playing     |
+-- | Paused  | RMP.State.PAUSED  | Audio is paused                |
+-- | Loading | RMP.State.LOADING | Audio file is loading          |
+-- | Error   | RMP.State.ERROR   | Error occurred during playback |
+-- |---------|-------------------|--------------------------------|
+--
+-- ## Popup Positioning
+--
+-- | Position     | Enum                           | Description            |
+-- |--------------|--------------------------------|------------------------|
+-- | Center       | RMP.PopupPosition.CENTER       | Center of the terminal |
+-- | Top Left     | RMP.PopupPosition.TOP_LEFT     | Top-left corner        |
+-- | Top Right    | RMP.PopupPosition.TOP_RIGHT    | Top-right corner       |
+-- | Bottom Left  | RMP.PopupPosition.BUTTOM_LEFT  | Bottom-left corner     |
+-- | Bottom Right | RMP.PopupPosition.BUTTOM_RIGHT | Bottom-right corner    |
+-- |--------------|--------------------------------|------------------------|
+--
+-- ## Socket Protocol Support
+--
+-- | Protocol | Enum   | Description                       |
+-- |----------|--------|-----------------------------------|
+-- | TCP      | "tcp"  | Transmission Control Protocol     |
+-- | UDP      | "udp"  | User Datagram Protocol            |
+-- | ICMP     | "icmp" | Internet Control Message Protocol |
+-- | Raw      | "raw"  | Raw socket access                 |
+-- |----------|--------|-----------------------------------|
+--
+-- ## Status Bar Alignment Options
+--
+-- | Alignment | Enum                         | Description             |
+-- |-----------|------------------------------|-------------------------|
+-- | Left      | RMP.StatusBarPosition.LEFT   | Left-aligned content    |
+-- | Right     | RMP.StatusBarPosition.RIGHT  | Right-aligned content   |
+-- | Center    | RMP.StatusBarPosition.CENTER | Center-aligned content  |
+-- |-----------|------------------------------|-------------------------|
+--
+-- ## Code Syntax Highlighting Support
+--
+-- | Language | Enum                  | Keywords Highlighted                |
+-- |----------|-----------------------|-------------------------------------|
+-- | Lua      | RMP.CodeSyntax.LUA    | Lua keywords, comments, literals    |
+-- | C        | RMP.CodeSyntax.C      | C keywords, comments, data types    |
+-- | Python   | RMP.CodeSyntax.PYTHON | Python keywords, comments, literals |
+-- |----------|-----------------------|-------------------------------------|
+--
+-- ## Event Types
+--
+-- | Event Category     | Enum                           | Description             |
+-- |--------------------|--------------------------------|-------------------------|
+-- | Keyboard           | RMP.EventType.Keyboard         | Keyboard input events   |
+-- | Mouse              | RMP.EventType.Mouse            | Mouse input events      |
+-- | Focus              | RMP.EventType.Focuse           | Focus/unfocus events    |
+-- | Transform Data Get | RMP.EventType.TransformDataGet | Data retrieval events   |
+-- | Transform Data Put | RMP.EventType.TransformDataPut | Data insertion events   |
+-- | Sound              | RMP.EventType.Sound            | Audio-related events    |
+-- | Configuration      | RMP.EventType.Configuration    | Configuration events    |
+-- | Engine             | RMP.EventType.Engine           | Framework engine events |
+-- |--------------------|--------------------------------|-------------------------|
+--
+-- ## Emoji/Symbol Icons
+--
+-- | Icon Type           | Variable                                                        | Symbol              |
+-- |---------------------|-----------------------------------------------------------------|---------------------|
+-- | Music               | RMP.Pause_start                                                 | ⏯                   |
+-- | Navigation          | RMP.Next, RMP.Prev                                              | ⏵, ⏴                |
+-- | Playback            | RMP.Pause                                                       | ⏸                   |
+-- | Volume              | RMP.Volume_max, RMP.Volume_mute, RMP.Volume_low, RMP.Volume_med | 🔊, 🔇, 🔈, 🔉      |
+-- | Loops               | RMP.Single_loop, RMP.Playlist_loop                              | 🔂, 🔁              |
+-- | Weather             | RMP.Snow, RMP.Stars                                             | ❆, ✨               |
+-- | UI Elements         | RMP.Search_emo                                                  | 🔎                  |
+-- | Song Characters     | RMP.Song_char_1-5                                               | 💕, 💞, 🎵, 🎶, 💖  |
+-- | Progress Bars       | RMP.Bar_1, RMP.Bar_2, RMP.Bar_3                                 | ❚, ❙, ❘             |
+-- | Progress Fill       | RMP.Bar_100_per                                                 | █                   |
+-- | Progress Shading    | RMP.Bar_Shading_00_per-75_per                                   | (space), ░, ▒, ▓    |
+-- | Progress Indicators | RMP.Bar_l_to_r_12_5_per-87_5_per                                | ▏, ▎, ▍, ▌, ▋, ▊, ▉ |
+-- | Progress Height     | RMP.Bar_b_to_u_12_5_per-87_5_per                                | ▇, ▆, ▅, ▄, ▃, ▂, ▁ |
+-- | Error/Warning       | RMP.IError, RMP.IWarning, RMP.IMessage, RMP.IInfo               | ❌, ⚠️, 💬, ℹ️      |
+-- |---------------------|-----------------------------------------------------------------|---------------------|
 
---
---  RMP api v1.0.0
---
---  NOTE: this api works with lua version 5.4
---
--- I- Core Features
---
---     1- Terminal UI Framework:
---
---         - Window management with borders and titles
---
---         - Text styling with ANSI color codes and formatting
---
---         - Popup dialogs (error, info, warning, message)
---
---         - Drawing primitives (rectangles, circles, triangles, lines)
---
---         - Scrolling content views
---
---         - Interactive option menus
---
---     2- Audio Playback:
---
---         - Audio file loading and playback control
---
---         - Volume, speed, and position control
---
---         - Playback status monitoring
---
---         - Playlist management with different loop modes
---
---     3- Cross-Platform Support:
---
---         - OS detection (Windows, Linux, MacOS)
---
---         - Terminal size detection
---
---         - Cursor control
---
---         - Keyboard input handling
---
--- II- Key Components
---
---     1- Text Styling:
---
---         - Extensive ANSI escape code support for colors (foreground/background, normal/bright)
---
---         - Text styles (bold, italic, underline, etc.)
---
---         - Unicode symbols and emojis for UI elements
---
---     2- UI Elements:
---
---         - Window: Creates bordered terminal windows
---
---         - Popup: Pre-styled dialog boxes
---
---         - Options: Interactive menu system
---
---         - Scroller: Content scrolling mechanism
---
---         - Draw: Primitive drawing functions
---
---     3- Audio System:
---
---         - Sound class for audio file management
---
---         - Playback control (play/pause/stop)
---
---         - Playlist navigation (next/previous)
---
---         - Volume and playback position control
---
---         - Metadata access
---
---     4- Utility Functions:
---
---         - Terminal manipulation (cursor control, clearing)
---
---         - Keyboard input handling
---
---         - OS detection
---
---         - Color conversion (hex to ANSI)
---
-
--- TODO: add layout manager to Frame class
 -- TODO: add re to syntax Code class for better code highlighting
 -- TODO: make some functions async
 -- TODO: create binding for raylib
+-- TODO: Notify
+-- TODO: Popup
+-- TODO: Layout
+-- TODO: Menu
 
 RMP = {}
 
