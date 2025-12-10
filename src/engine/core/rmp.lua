@@ -1140,7 +1140,7 @@ do -- creating window
             local lvt = callback(math.floor(x + 1), math.floor(y + 1), math.floor(x + width - 1),
                 math.floor(y + height - 1))
             if lvt ~= nil then
-                vterm:merge(lvt) -- handle async
+                vterm:merge(lvt, true) -- handle async
             end
         end
 
@@ -1665,7 +1665,7 @@ do                                                          -- VirtualTerminal
     end
 
     function RMP.VirtualTerminal:distroy()
-        vt_rmp.distroy()
+        vt_rmp.distroy(self.native_vt_rmp)
     end
 end
 
