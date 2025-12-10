@@ -194,11 +194,15 @@ ALWAYS_INT lua_init(STATE) {
 	return 1;
 }
 
-ALWAYS_INT vt_lua_gc(STATE) {
+ALWAYS_INT lua_distroy(STATE){
 	VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
 	free(vt->buffer);
 	vt->buffer = NULL;
 	return 0;
+}
+
+ALWAYS_INT vt_lua_gc(STATE) {
+    return lua_distroy(L);
 }
 
 ALWAYS_INT lua_clear(STATE) {
@@ -756,6 +760,7 @@ static const luaL_Reg lib[] = {
 	{"moveleft" , lua_moveleft},
 	{"moveright" , lua_moveright},
 	{"copy" , vt_lua_copy},
+	{"distroy" , lua_distroy},
 	{NULL, NULL}
 };
 

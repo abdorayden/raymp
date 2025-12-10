@@ -12,19 +12,21 @@
 - [X] Add events for sound engine and engine it self to make it restarted and ...
 - [-] Create repos for build-in plugins
 - [ ] Start creating the default page and introduce the first version of raymp after add engine to C
-- [ ] Make sure that all plugins are stable
+- [-] Make sure that all plugins are stable
 - [ ] Edit relations between components and classes inside rmp framework
-- [ ] Introduce Focuse and fix event to work with them
+- [X] Introduce Focuse and fix event to work with them
 - [ ] Write waves music animation with works sound frames
-- [ ] Introduce Table and Bar , SearchAnimations , TextField , TextArea , as a hight level components and fix Text class bugs
-- [ ] Socket support with TCP,UDP implementations (optional maybe we use external libs) with asyncio support
-- [ ] Implements Albome plugin and 2 diffrent themes
+- [-] Introduce Table and Bar , SearchAnimations , TextField , TextArea , as a hight level components and fix Text class bugs
+- [X] Socket support with TCP,UDP implementations (optional maybe we use external libs) with asyncio support
+- [X] Implements Albome plugin and 2 diffrent themes
 - [ ] Implement a full main and rewrite RmpManager to C with default lua codes
 - [ ] With complete configuration management
-- [ ] Prepare the default interface for new users or who they doesn't have configurations (simple animations , help)
-- [ ] Move all plugins to external repos and implement PlugManager as plugin to manage others
-- [ ] Create docuumentation and link it to my port folio implemented using js only (challenge) , and the potentiel error or problem as documentation
+- [-] Prepare the default interface for new users or who they doesn't have configurations (simple animations , help)
+- [-] Move all plugins to external repos and implement PlugManager as plugin to manage others
+- [-] Create docuumentation and link it to my port folio implemented using js only (challenge) , and the potentiel error or problem as documentation
 - [ ] Create simple help with beautiful animations to displayed and create repo for plugin manager to download and install plugins and themes
-- [ ] Create a simple default template with a simple plugins to manage the audio player
+- [X] Create a simple default template with a simple plugins to manage the audio player
 - [ ] Make it renderable for web and GUI applications (using raylib)
 - [ ] make engine handle loop runner of async functions so plugins can write async fns 
+- [ ] create C api for creating plugins (better plugins performance)
+- [ ] drag and drop event

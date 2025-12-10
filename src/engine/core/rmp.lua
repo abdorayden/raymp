@@ -266,6 +266,7 @@
 -- TODO: Popup
 -- TODO: Layout
 -- TODO: Menu
+-- FIXME: check the backend framework management memorys
 
 RMP = {}
 
@@ -291,9 +292,9 @@ local Queue = Util.Queue
 
 local global_count_enum = -1
 function RMP.enum(reset, value, start)
-    reset = reset or false
-    value = value or 1
-    start = start or -1
+    local reset = reset or false
+    local value = value or 1
+    local start = start or -1
 
     if reset then
         global_count_enum = start
@@ -344,6 +345,7 @@ RMP.TextStyle           = {
 
 -- colors
 -- TODO: handle colors using ColorFromHex
+
 -- ForeGround
 RMP.FGColors            = {
     NoBrights = {
@@ -1559,7 +1561,9 @@ do                                                          -- VirtualTerminal
     end
 
     function RMP.VirtualTerminal:moveCursor(x, y)
-        vt_rmp.movecursor(self.native_vt_rmp, x, y)
+        if x and y then
+            vt_rmp.movecursor(self.native_vt_rmp, x, y)
+        end
     end
 
     function RMP.VirtualTerminal:moveUp(y)
@@ -1595,7 +1599,7 @@ do                                                          -- VirtualTerminal
     -- these methods are used to merge two virtual terminal
     -- if there is no way to pass vterm object to function parameters
     -- so you can merge the other virtual terminal to the main object
-    function RMP.VirtualTerminal:merge(thatTerm, offsetX, offsetY)
+    function RMP.VirtualTerminal:merge(thatTerm, distroy, offsetX, offsetY)
         if thatTerm and thatTerm:instanceOf(RMP.VirtualTerminal) then
             vt_rmp.merge(self.native_vt_rmp, thatTerm:getVT(), offsetX or 0, offsetY or 0)
 
@@ -1643,11 +1647,14 @@ do                                                          -- VirtualTerminal
                 end
             end
         end
+        if distroy then
+            thatTerm:distroy()
+        end
     end
 
-    function RMP.VirtualTerminal:mergeAll(thoseTerms)
+    function RMP.VirtualTerminal:mergeAll(thoseTerms, distroy)
         for i = 1, #thoseTerms do
-            self:merge(thoseTerms[i].thatTerm, thoseTerms[i].offsetX, thoseTerms[i].offsetY)
+            self:merge(thoseTerms[i].thatTerm, distroy, thoseTerms[i].offsetX, thoseTerms[i].offsetY)
         end
     end
 
@@ -1656,10 +1663,15 @@ do                                                          -- VirtualTerminal
         copy.native_vt_rmp = vt_rmp.copy(self.native_vt_rmp)
         return copy
     end
+
+    function RMP.VirtualTerminal:distroy()
+        vt_rmp.distroy()
+    end
 end
 
 -- NOTE: Terminal class uses ansii escape code i need to create shared library to handle terminal for each platform
 -- Terminal class used to handle terminal operations
+
 RMP.Terminal = OOP.class("Terminal")
 do -- Terminal
     function RMP.Terminal:clearWindow()
@@ -2608,11 +2620,12 @@ do -- Draw
 
     function RMP.Draw:line(x, y, width, color, vterm)
         vterm = vterm or RMP.VirtualTerminal.new()
-        vterm:moveCursor(x, y)
-        for i = x, width + x do
-            vterm:setChar(i, y, " ", nil, color, nil)
+        if width then
+            vterm:moveCursor(x, y)
+            for i = x, width + x do
+                vterm:setChar(i, y, " ", nil, color, nil)
+            end
         end
-
         return vterm
     end
 
@@ -3719,6 +3732,7 @@ do -- Path
                     (is_file_pattern and info.is_file) or
                     (not is_file_pattern and not info.is_file)
 
+                -- TODO: check match_func
                 if should_check and match_func(info.name, info.is_file, full_path) then
                     table.insert(results, {
                         path = full_path,
@@ -4162,16 +4176,16 @@ do
         self:super("moveCursor", x, y)
     end
 
-    function RMP.Frame:add(component)
+    function RMP.Frame:add(component, distroy)
         if self.layout == nil then
-            self:super("merge", component)
+            self:super("merge", component, distroy)
         elseif self.layout:instanceOf(RMP.Grid) then
             -- manage the layout
         end
     end
 
-    function RMP.Frame:addMany(components)
-        self:super("mergeAll", components)
+    function RMP.Frame:addMany(components, distroy)
+        self:super("mergeAll", components, distroy)
     end
 
     function RMP.Frame:addEventListener(key, callback)
