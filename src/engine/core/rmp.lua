@@ -4461,7 +4461,7 @@ do
         for _, comp in ipairs(leftComps) do
             local text = RMP.Text.new(comp.text, comp.style, comp.fg, comp.bg)
             text:setPosition(x, self._y)
-            vterm:merge(text:render())
+            vterm:merge(text:render(), true)
             x = x + #comp.text
         end
 
@@ -4472,14 +4472,14 @@ do
             if leftPad > 0 then
                 local pad = RMP.Text.new(string.rep(" ", leftPad), nil, nil, nil)
                 pad:setPosition(x, self._y)
-                vterm:merge(pad:render())
+                vterm:merge(pad:render(), true)
                 x = x + leftPad
             end
 
             for _, comp in ipairs(centerComps) do
                 local text = RMP.Text.new(comp.text, comp.style, comp.fg, comp.bg)
                 text:setPosition(x, self._y)
-                vterm:merge(text:render())
+                vterm:merge(text:render(), true)
                 x = x + #comp.text
             end
 
@@ -4487,14 +4487,14 @@ do
             if rightPad > 0 then
                 local pad = RMP.Text.new(string.rep(" ", rightPad), nil, nil, nil)
                 pad:setPosition(x, self._y)
-                vterm:merge(pad:render())
+                vterm:merge(pad:render(), true)
                 x = x + rightPad
             end
         else
             if remaining > 0 then
                 local pad = RMP.Text.new(string.rep(" ", remaining), nil, nil, nil)
                 pad:setPosition(x, self._y)
-                vterm:merge(pad:render())
+                vterm:merge(pad:render(), true)
                 x = x + remaining
             end
         end
@@ -4502,7 +4502,7 @@ do
         for _, comp in ipairs(rightComps) do
             local text = RMP.Text.new(comp.text, comp.style, comp.fg, comp.bg)
             text:setPosition(x, self._y)
-            vterm:merge(text:render())
+            vterm:merge(text:render(), true)
             x = x + #comp.text
         end
 
