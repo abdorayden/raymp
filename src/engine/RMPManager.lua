@@ -24,8 +24,9 @@
 --
 -- complete rmp engine with error handling , plugin management , template parsing and layout engine
 -- enhanced version of rmpv1 with better structure and modularity
+
 -- TODO: rewrote all engine to C for better performance and lower memory usage
--- TODO: handle help
+-- NOTE: plugins should create VirtualTerminal inside returned function
 
 local api = require("rmp.rmp")
 local utils = require("rmp.util")
@@ -82,45 +83,92 @@ end
 
 -- TODO: wrap all tables from template to class for better management and future extensions
 -- like adding methods to update component data or validate it
--- also for simplifying the access to component data on script property in the template
+-- also for simplifying the access to the component data on script property in the template
 --
 -- wrapper for component table that parsed from template
 -- TODO: came back
+
+-- TODO: add more components type
+
+local ComponentType = {
+    Window = "Window",
+    Title = "Text"
+}
+
+-- represent a single component
 local Component = OOP.class("Component")
 do
-    function Component:constructor(component)
-        self.component = component
-    end
+    function Component:constructor(comp)
+        -- it can be nil
+        self.x = comp.x
+        self.y = comp.y
+        self.width = comp.width
+        self.height = comp.height
+        self.foregroundColor = comp.foregroundColor
+        self.backgroundColor = comp.backgroundColor
+        self.type = comp.type
+        self.title = comp.title
 
-    function Component:get()
-        return self.component
-    end
+        self.children = comp.children
 
-    function Component:set(newComponent)
-        self.component = newComponent
-    end
+        if self.children and type(self.children) == "table" then
+            -- work with children
+            return self
+        end
 
-    function Component:update(updaterFunc)
-        if type(updaterFunc) == "function" then
-            local updatedComponent = updaterFunc(self.component)
-            if updatedComponent then
-                self.component = updatedComponent
-            end
+        if type(self.title) == "string" then
+            return self
+        elseif type(self.title) == "table" and self.title:instanceOf(api.Text) then
+            return self
+        end
+
+        if self.type == ComponentType.Window then
+            -- handle functions (dynamic, condition)
+            return self
+        elseif self.type == ComponentType.Text then
+            -- handle functions (dynamic, condition)
+            return self
+        else
+            -- unreachable
+            return self
         end
     end
 end
 
+-- TODO: came back
 -- manager for all components in the application
 local Components = OOP.class("Components")
 do
-    function Components:constructor()
-        -- use a hash map to store components by id
+    function Components:constructor(templeArray)
+        self.templeArray = templeArray
+        -- Use a hash map to store components by id
+        -- key id
+        -- value Component
         self.components = HashMap.new()
+        self:_fillHashMap()
+    end
+
+    function Components:toArray()
+        return self.templeArray
+    end
+
+    function Components:save()
+        -- Move from HashMap to templeArray
+        -- after the modifications that applied on the hash map we have to save it back to templeArray
+        return self
+    end
+
+    function Components:_fillHashMap()
+        for _, component in ipairs(self.templeArray) do
+            if component.id then
+                self.components:put(component.id, Component.new(component))
+            end
+        end
     end
 
     -- @param id: string - unique identifier for the component
     -- @param component: table - the component data
-    function Components:add(id, component)
+    function Components:createComponent(id, component)
         if id and component then
             self.components:put(id, Component.new(component))
         end
@@ -128,37 +176,23 @@ do
 
     -- @param id: string - unique identifier for the component
     -- @return: table or nil - the component data or nil if not found
-    function Components:get(id)
+    function Components:getComponent(id)
         if id and self.components[id] then
             return self.components:get(id)
         end
         return nil
     end
 
-    function Components:set(id, newComponent)
+    function Components:updateComponent(id, newComponent)
         if id and self.components[id] then
             self.components:get(id):set(newComponent)
         end
     end
 
-    function Components:update(id, updaterFunc)
-        if id and self.components[id] then
-            self.components[id]:update(updaterFunc)
-        end
-    end
-
-    function Components:remove(id)
+    function Components:removeComponent(id)
         if id and self.components[id] then
             self.components[id] = nil
         end
-    end
-
-    function Components:getAll()
-        local allComponents = {}
-        for id, comp in self.components:entrySet() do
-            allComponents[id] = comp:get()
-        end
-        return allComponents
     end
 end
 
@@ -298,7 +332,7 @@ do
             if currentPlugin and type(currentPlugin) == "function" then
                 local pluginResult = currentPlugin(innerX, innerY, innerXX, innerYY)
                 if pluginResult then
-                    childVterm:merge(pluginResult)
+                    childVterm:merge(pluginResult, true)
                 end
             end
 
@@ -306,7 +340,7 @@ do
                 for _, childConfig in ipairs(windowConfig.children) do
                     local childWindow = self:createWindow(childConfig, context, mainFrame)
                     if childWindow then
-                        childVterm:merge(childWindow)
+                        childVterm:merge(childWindow, true)
                     end
                 end
             end
@@ -314,7 +348,7 @@ do
             if windowConfig.content and type(windowConfig.content) == "function" then
                 local contentResult = windowConfig.content(innerX, innerY, innerXX, innerYY, context)
                 if contentResult then
-                    childVterm:merge(contentResult)
+                    childVterm:merge(contentResult, true)
                 end
             end
 
@@ -582,7 +616,7 @@ local function engine_render_help(frame, w, h, settings, soundCfg)
 
     -- Create a box using the VirtualTerminal's drawBox method
     frame:drawBox(
-        api.Text.new("Help", api.TextStyle.Bold, api.FGColors.Brights.Yellow, api.BGColors.NoBrights.Black),
+        api.Text.new("Help", api.TextStyle.Bold, api.FGColors.Brights.White, api.BGColors.NoBrights.Black),
         boxX, boxY, boxWidth, boxHeight,
         api.BoxDrawing.LightBorder,
         api.FGColors.Brights.Yellow, -- border color
@@ -611,7 +645,6 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
     local help_fn = nil
     local exit = nil
 
-    -- TODO: handle the mode playback from configuration
     if settings then
         if settings.fps and type(settings.fps) == "number" and settings.fps > 0 and settings.fps <= 120 then
             mainFrame:setFps(settings.fps)
@@ -655,9 +688,9 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         if settings.help_key and type(settings.help_key) == "number" then
             help_fn = settings.help_key
         else
-            -- TODO: implement F1-10 and alt keys and replace help with F2
-            settings.help_key = api.KEY_H
-            help_fn = api.KEY_H
+            -- NOTE: if help key is not configured it will be disabled so no default
+            -- TODO: create help plugin
+            help_fn = nil
         end
 
         if settings.inc_speed and type(settings.inc_speed) == "number" and settings.inc_speed > 0 and settings.inc_speed <= 50 then
@@ -845,7 +878,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         local windows, _ = parser:parseTemplate(template)
 
         for _, window in ipairs(windows) do
-            mainFrame:add(window)
+            mainFrame:add(window, true)
         end
 
         local qq = Queue.new()
@@ -853,7 +886,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         while not oq:isEmpty() do
             local plug = oq:pop()
             if plug and type(plug) == "function" then
-                mainFrame:add(plug())
+                mainFrame:add(plug(), true)
                 qq:push(plug)
             end
         end
@@ -863,7 +896,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             engine_render_help(mainFrame, w, h, settings, soundCfg)
         end
 
-        if key == help_fn then
+        if help_fn and key == help_fn then
             render_help = not render_help
         end
 
@@ -1174,6 +1207,8 @@ local function main()
     end
 
     local plugManager, otherPlugs, plugs_cfgs = setupPlugins(configObj, is_userconfig)
+    -- TODO: add settings and soundCfg keys to plugins values table configurations
+    -- plugs_cfgs:put()
 
     if not plugManager and not otherPlugs then
         logerror("Failed to setup plugins. Exiting.")
