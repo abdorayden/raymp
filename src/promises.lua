@@ -92,7 +92,7 @@ end
 
 function Promise:tthen(onFulfilled, onRejected)
     local nextPromise = Promise.new(function(resolve, reject)
-        local function handleCallback(callback, value)
+        local function handleCallback(callback, value, isRejection)
             if type(callback) == "function" then
                 local success, result = pcall(callback, value)
                 if success then
@@ -105,22 +105,26 @@ function Promise:tthen(onFulfilled, onRejected)
                     reject(result)
                 end
             else
-                resolve(value)
+                if isRejection then
+                    reject(value)
+                else
+                    resolve(value)
+                end
             end
         end
 
         local function handleFulfilled(value)
-            handleCallback(onFulfilled, value)
+            handleCallback(onFulfilled, value, false)
         end
 
         local function handleRejected(reason)
-            handleCallback(onRejected, reason)
+            handleCallback(onRejected, reason, true)
         end
 
         if self.state == Promise.State.Fulfilled then
-            handleFulfilled(self.value)
+            schedule(0, function() handleFulfilled(self.value) end)
         elseif self.state == Promise.State.Rejected then
-            handleRejected(self.reason)
+            schedule(0, function() handleRejected(self.reason) end)
         else
             table.insert(self.fulfilledCallbacks, handleFulfilled)
             table.insert(self.rejectedCallbacks, handleRejected)
@@ -137,13 +141,22 @@ end
 function Promise:finally(onFinally)
     return self:tthen(
         function(value)
-            return Promise.resolve(type(onFinally) == 'function' and onFinally() or nil):tthen(function() return value end)
+            if type(onFinally) == 'function' then
+                return Promise.resolve(onFinally()):tthen(function()
+                    return value
+                end)
+            else
+                return value
+            end
         end,
         function(reason)
-            return Promise.resolve(type(onFinally) == 'function' and onFinally() or nil):tthen(function()
-                return Promise
-                    .reject(reason)
-            end)
+            if type(onFinally) == 'function' then
+                return Promise.resolve(onFinally()):tthen(function()
+                    return Promise.reject(reason)
+                end)
+            else
+                return Promise.reject(reason)
+            end
         end
     )
 end
@@ -206,7 +219,7 @@ function Promise.async(generator)
 
             local function step(...)
                 local results = { ... }
-                local success, value = coroutine.resume(co, unpack(results))
+                local success, value = coroutine.resume(co, table.unpack(results))
 
                 if not success then
                     reject(value)
@@ -228,7 +241,7 @@ function Promise.async(generator)
                 end
             end
 
-            step(unpack(args))
+            step(table.unpack(args))
         end)
     end
 end
@@ -241,28 +254,41 @@ function Promise.await(promise)
     end
 end
 
--- runner used to invoke run inside other event loop
 function Promise.runner()
     local now = os.clock()
+    local executed = false
     for i = #tasks, 1, -1 do
         if now >= tasks[i].time then
             local cb = tasks[i].cb
             table.remove(tasks, i)
-            cb()
+            local success, err = pcall(cb)
+            if not success then
+                print("Error in scheduled task: " .. tostring(err))
+            end
+            executed = true
         end
     end
+    return executed
 end
 
--- run the event loop
 function Promise.run()
-    -- i use pcall to manage errors in lua to not stop the program
     local ok, err = pcall(function()
         while #tasks > 0 do
-            Promise.runner()
+            local executed = Promise.runner()
+            if not executed then
+                local minTime = math.huge
+                for _, task in ipairs(tasks) do
+                    minTime = math.min(minTime, task.time)
+                end
+                local waitTime = math.max(0, minTime - os.clock())
+                if waitTime > 0 and waitTime < 0.1 then
+                    local target = os.clock() + waitTime
+                    while os.clock() < target do end
+                end
+            end
         end
     end)
 
-    -- handle the error
     if not ok then
         if tostring(err):match("interrupted") then
             print("\n [PROMISE] execution interrupted by user CTRL+C")
