@@ -1,16 +1,16 @@
 -- /*********************************************************************************************/
 -- /*  Copyright (c) 2025 Ray Den 								*/
--- /*  												*/ 
+-- /*  												*/
 -- /*  Permission is hereby granted, free of charge, to any person obtaining a copy 		*/
 -- /*  of this software and associated documentation files (the "Software"), to deal 		*/
 -- /*  in the Software without restriction, including without limitation the rights 		*/
 -- /*  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 		*/
 -- /*  copies of the Software, and to permit persons to whom the Software is 			*/
 -- /*  furnished to do so, subject to the following conditions: 				*/
--- /*  												*/ 
+-- /*  												*/
 -- /*  The above copyright notice and this permission notice shall be included in 		*/
 -- /*  all copies or substantial portions of the Software. 					*/
--- /*  												*/ 
+-- /*  												*/
 -- /*  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 		*/
 -- /*  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 		*/
 -- /*  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 		*/
@@ -18,13 +18,13 @@
 -- /*  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 		*/
 -- /*  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN 		*/
 -- /*  THE SOFTWARE. 										*/
--- /*  												*/ 
+-- /*  												*/
 -- /*********************************************************************************************/
 
 -- Fixed: multi-level inheritance 'super' resolution to avoid stack overflow
 --
 -- this is an java oop syntax implemented in lua
--- the goal is make the code more readable to define interfaces and class so the programmer and even me i can understand that 
+-- the goal is make the code more readable to define interfaces and class so the programmer and even me i can understand that
 -- this is an interface and what's the methods that i shoul implements
 --
 -- Example:
@@ -95,7 +95,7 @@
 -- 			end
 
 -- 			function Circle:draw()
--- 			    print(string.format("Drawing circle at (%d, %d) with radius: %.2f", 
+-- 			    print(string.format("Drawing circle at (%d, %d) with radius: %.2f",
 -- 			        self.x, self.y, self.radius * self.scale))
 -- 			end
 
@@ -261,153 +261,159 @@
 --			local result = db:query("SELECT * FROM users")
 --			db:close()
 
+--- @module 'rmp.oop'
 local OOP = {}
 
+--- @param name string
+--- @return table
 function OOP.interface(name, ...)
-	local methods = {...}
-	local interface = {
-		name = name,
-		methods = methods,
-		__type = "interface"
-	}
+    local methods = { ... }
+    local interface = {
+        name = name,
+        methods = methods,
+        __type = "interface"
+    }
 
-	function interface:validateImplementation(class, className)
-		local missingMethods = {}
+    function interface:validateImplementation(class, className)
+        local missingMethods = {}
 
-		for _, method in ipairs(self.methods) do
-			if type(class[method]) ~= "function" then
-				table.insert(missingMethods, method)
-			end
-		end
+        for _, method in ipairs(self.methods) do
+            if type(class[method]) ~= "function" then
+                table.insert(missingMethods, method)
+            end
+        end
 
-		if #missingMethods > 0 then
-			error(string.format("Class '%s' must implement interface '%s'. Missing methods: %s",
-			className, self.name, table.concat(missingMethods, ", ")))
-		end
-	end
+        if #missingMethods > 0 then
+            error(string.format("Class '%s' must implement interface '%s'. Missing methods: %s",
+                className, self.name, table.concat(missingMethods, ", ")))
+        end
+    end
 
-	return interface
+    return interface
 end
 
+--- @param name string
+--- @param superClass table
+--- @return table
 function OOP.class(name, superClass, ...)
-	local interfaces = {...}
-	local class = {
-		__name = name,
-		__super = superClass,
-		__interfaces = interfaces,
-		__type = "class"
-	}
+    local interfaces = { ... }
+    local class = {
+        __name = name,
+        __super = superClass,
+        __interfaces = interfaces,
+        __type = "class"
+    }
 
-	if superClass then
-		setmetatable(class, {__index = superClass})
-	end
+    if superClass then
+        setmetatable(class, { __index = superClass })
+    end
 
-	class.__index = class
+    class.__index = class
 
-	local function find_class_by_function(startClass, func)
-		local c = startClass
-		while c do
-			for k, v in pairs(c) do
-				if type(v) == "function" and v == func then
-					return c
-				end
-			end
-			c = c.__super
-		end
-		return nil
-	end
+    local function find_class_by_function(startClass, func)
+        local c = startClass
+        while c do
+            for k, v in pairs(c) do
+                if type(v) == "function" and v == func then
+                    return c
+                end
+            end
+            c = c.__super
+        end
+        return nil
+    end
 
-	function class.new(...)
-		local self = setmetatable({}, class)
+    function class.new(...)
+        local self = setmetatable({}, class)
 
-		for _, interface in ipairs(interfaces) do
-			interface:validateImplementation(class, name)
-		end
+        for _, interface in ipairs(interfaces) do
+            interface:validateImplementation(class, name)
+        end
 
-		if self.constructor then
-			self:constructor(...)
-		end
+        if self.constructor then
+            self:constructor(...)
+        end
 
-		return self
-	end
+        return self
+    end
 
-	function class:implements(interface)
-		for _, iface in ipairs(self.__interfaces) do
-			if iface == interface then
-				return true
-			end
-		end
+    function class:implements(interface)
+        for _, iface in ipairs(self.__interfaces) do
+            if iface == interface then
+                return true
+            end
+        end
 
-		if self.__super and self.__super.implements then
-			return self.__super:implements(interface)
-		end
+        if self.__super and self.__super.implements then
+            return self.__super:implements(interface)
+        end
 
-		return false
-	end
+        return false
+    end
 
-	function class:instanceOf(targetClass)
-		local currentClass = getmetatable(self).__index
-		if currentClass == targetClass then
-			return true
-		end
-		local parent = currentClass.__super
-		while parent do
-			if parent == targetClass then
-				return true
-			end
-			parent = parent.__super
-		end
+    function class:instanceOf(targetClass)
+        local currentClass = getmetatable(self).__index
+        if currentClass == targetClass then
+            return true
+        end
+        local parent = currentClass.__super
+        while parent do
+            if parent == targetClass then
+                return true
+            end
+            parent = parent.__super
+        end
 
-		return false
-	end
+        return false
+    end
 
-	-- robust 'super' implementation: detect the class whose method called 'super',
-	-- then call the next superclass *above* that class that actually implements the requested method.
-	function class:super(methodName, ...)
-		local instanceClass = getmetatable(self).__index
+    -- robust 'super' implementation: detect the class whose method called 'super',
+    -- then call the next superclass *above* that class that actually implements the requested method.
+    function class:super(methodName, ...)
+        local instanceClass = getmetatable(self).__index
 
-		local callerFunc
-		if debug and debug.getinfo then
-			local info = debug.getinfo(2, "f")
-			callerFunc = info and info.func
-		end
+        local callerFunc
+        if debug and debug.getinfo then
+            local info = debug.getinfo(2, "f")
+            callerFunc = info and info.func
+        end
 
-		local callerClass
-		if callerFunc then
-			callerClass = find_class_by_function(instanceClass, callerFunc)
-		end
+        local callerClass
+        if callerFunc then
+            callerClass = find_class_by_function(instanceClass, callerFunc)
+        end
 
-		-- if we couldn't find the caller class by looking for the function,
-		-- fallback to finding the class that defines 'methodName' first (closest to instance),
-		-- and treat that as the caller class. This makes calling super("constructor") work when
-		-- constructors are defined at different levels.
-		if not callerClass then
-			local c = instanceClass
-			while c do
-				if type(c[methodName]) == "function" then
-					callerClass = c
-					break
-				end
-				c = c.__super
-			end
-		end
+        -- if we couldn't find the caller class by looking for the function,
+        -- fallback to finding the class that defines 'methodName' first (closest to instance),
+        -- and treat that as the caller class. This makes calling super("constructor") work when
+        -- constructors are defined at different levels.
+        if not callerClass then
+            local c = instanceClass
+            while c do
+                if type(c[methodName]) == "function" then
+                    callerClass = c
+                    break
+                end
+                c = c.__super
+            end
+        end
 
-		if not callerClass then
-			error("Method '" .. methodName .. "' not found in inheritance chain")
-		end
+        if not callerClass then
+            error("Method '" .. methodName .. "' not found in inheritance chain")
+        end
 
-		local parent = callerClass.__super
-		while parent do
-			if type(parent[methodName]) == "function" then
-				return parent[methodName](self, ...)
-			end
-			parent = parent.__super
-		end
+        local parent = callerClass.__super
+        while parent do
+            if type(parent[methodName]) == "function" then
+                return parent[methodName](self, ...)
+            end
+            parent = parent.__super
+        end
 
-		error("No superclass implements method '" .. methodName .. "' above caller class")
-	end
+        error("No superclass implements method '" .. methodName .. "' above caller class")
+    end
 
-	return class
+    return class
 end
 
 return OOP
