@@ -191,6 +191,7 @@ F.ERROR = "error"
 
 
 -- base class
+---@class Future
 F.Future = OOP.class("Future", nil, F.IFuture)
 do
     -- poll method is not implemented by default
@@ -200,20 +201,27 @@ do
         self._status = F.PENDING
     end
 
+    ---@return boolean
     function F.Future:is_ready()
-        local status, _ = self:poll()
-        return status == F.READY
+        -- local status, _ = self:poll()
+        return self._status == F.READY
     end
 
+    ---@param on_fulfilled function
+    ---@param on_rejected function
+    ---@return table
     function F.Future:tthen(on_fulfilled, on_rejected)
         return F.ThenFuture.new(self, on_fulfilled, on_rejected)
     end
 
+    ---@param on_rejected function
+    ---@return table
     function F.Future:catch(on_rejected)
         return self:tthen(nil, on_rejected)
     end
 end
 
+---@class ThenFuture
 F.ThenFuture = OOP.class("ThenFuture", F.Future)
 do
     function F.ThenFuture:constructor(future, on_fulfilled, on_rejected)

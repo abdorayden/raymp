@@ -27,6 +27,7 @@
 
 // untested and buggable code below
 // this is a new implementation of the RMP engine in C using Lua API
+// TODO: move engine to share libs require("rmp.RMPManger")
 
 #include "lua.h"
 #include "lauxlib.h"

@@ -27,6 +27,7 @@
 
 -- TODO: rewrote all engine to C for better performance and lower memory usage
 -- NOTE: plugins should create VirtualTerminal inside returned function
+-- BUG:  program stop if lua access nil obj or something (add system logs)
 
 local api = require("rmp.rmp")
 local utils = require("rmp.util")
@@ -734,8 +735,10 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
     local quit = false
     local oq = otherPlugs
     local restart = false
+    local render_help = false
 
     local template = parser:getTemplate()
+
 
     while not quit do
         mainFrame:clear()
@@ -885,12 +888,31 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
 
         while not oq:isEmpty() do
             local plug = oq:pop()
-            if plug and type(plug) == "function" then
-                mainFrame:add(plug(), true)
-                qq:push(plug)
+            if plug then
+                if type(plug) == "function" then
+                    mainFrame:add(plug(), true)
+                    qq:push(plug)
+                elseif type(plug) == "table" then
+                    -- TODO: other plugins are configured , add thier configurations to Config event
+
+                    mainFrame:add(plug[1](), true)
+                    qq:push(plug)
+                end
             end
         end
         oq = qq
+
+        ---
+        -- TODO: add other plugins that are not intergrated to spesific window id template to event
+        -- TODO: rayden was here
+
+        if pl_cfgs then
+            -- TODO: add settings and soundCfg keys to plugins values table configurations
+
+            pl_cfgs:put("soundCfg", soundCfg)
+            pl_cfgs:put("settings", settings)
+        end
+        ---
 
         if render_help then
             engine_render_help(mainFrame, w, h, settings, soundCfg)
@@ -914,7 +936,6 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         end
     end
 
-    local render_help = false
 
     sound:cleanup()
 
@@ -1207,8 +1228,7 @@ local function main()
     end
 
     local plugManager, otherPlugs, plugs_cfgs = setupPlugins(configObj, is_userconfig)
-    -- TODO: add settings and soundCfg keys to plugins values table configurations
-    -- plugs_cfgs:put()
+
 
     if not plugManager and not otherPlugs then
         logerror("Failed to setup plugins. Exiting.")

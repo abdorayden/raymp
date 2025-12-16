@@ -86,7 +86,7 @@
 -- | Linux    | RMP.PlatformType.LINUX   | Linux operating systems |
 -- | Windows  | RMP.PlatformType.WINDOWS | Microsoft Windows       |
 -- | macOS    | RMP.PlatformType.MAC     | Apple macOS             |
--- | Unknown  | RMP.PlatformType.UNKOW   | Other/unknown platform  |
+-- | Unknown  | RMP.PlatformType.UNKNOWN | Other/unknown platform  |
 -- |----------|--------------------------|-------------------------|
 --
 -- ## Keyboard Keys Mapping
@@ -287,12 +287,20 @@ local Promise = require("rmp.promises")
 local FutureLib = require("rmp.future")
 local Util = require("rmp.util")
 
+--- @alias HashMap table
 local HashMap = Util.HashMap
 local Queue = Util.Queue
 
+--- @type integer
 local global_count_enum = -1
+
+--- @param reset boolean | nil
+--- @param value integer | nil
+--- @param start integer | nil
+--- @return integer
 function RMP.enum(reset, value, start)
     local reset = reset or false
+    --- @type integer
     local value = value or 1
     local start = start or -1
 
@@ -304,13 +312,15 @@ function RMP.enum(reset, value, start)
 end
 
 do -- os detection
+    --- @enum PlatformType
     RMP.PlatformType = {
         LINUX   = RMP.enum(true),
         WINDOWS = RMP.enum(),
         MAC     = RMP.enum(),
-        UNKOW   = RMP.enum()
+        UNKNOWN = RMP.enum()
     }
 
+    --- @return PlatformType
     function RMP.getOs() -- it will return enum value
         return platform.platform()
     end
@@ -322,6 +332,7 @@ end
 
 -- check ansi escape code : https://en.wikipedia.org/wiki/ANSI_escape_code
 -- line style
+--- @enum TextStyle
 RMP.TextStyle           = {
     Strike              = "\27[9m",
     Hide                = "\27[8m",
@@ -347,7 +358,9 @@ RMP.TextStyle           = {
 -- TODO: handle colors using ColorFromHex
 
 -- ForeGround
+--- @enum FGColors
 RMP.FGColors            = {
+    --- @type table
     NoBrights = {
         Black   = "\27[30m",
         Red     = "\27[31m",
@@ -358,6 +371,7 @@ RMP.FGColors            = {
         Cyan    = "\27[36m",
         White   = "\27[37m"
     },
+    --- @type table
     Brights = {
         -- ForeGround bright
         Black   = "\27[90m",
@@ -372,7 +386,9 @@ RMP.FGColors            = {
 }
 
 -- BackGround
+--- @enum BGColors
 RMP.BGColors            = {
+    --- @type table
     NoBrights = {
         Black   = "\27[40m",
         Red     = "\27[41m",
@@ -383,6 +399,7 @@ RMP.BGColors            = {
         Cyan    = "\27[46m",
         White   = "\27[47m"
     },
+    --- @type table
     Brights = {
         -- BackGround bright
         Black   = "\27[100m",
@@ -459,6 +476,7 @@ RMP.IWarning            = "⚠️"
 RMP.IMessage            = "💬"
 RMP.IInfo               = "ℹ️"
 
+--- @interface Renderable
 RMP.Renderable          = OOP.interface("Renderable",
     -- @return : virtual terminal frame
     "render")
@@ -467,8 +485,14 @@ RMP.Renderable          = OOP.interface("Renderable",
 -- TODO: Add scrolling for large tables
 -- TODO: Add support for different data types and formatting
 -- TODO: add colors
+--- @class Table
 RMP.Table               = OOP.class("Table", nil, RMP.Renderable)
 do
+    --- @param x integer
+    --- @param y integer
+    --- @param headers table
+    --- @param rows table
+    --- @return self
     function RMP.Table:constructor(x, y, headers, rows)
         self.x = x or 1
         self.y = y or 1
@@ -479,14 +503,17 @@ do
         return self
     end
 
+    --- @param x integer
     function RMP.Table:setX(x)
         self.x = x
     end
 
+    --- @param y integer
     function RMP.Table:setY(y)
         self.y = y
     end
 
+    --- @private
     function RMP.Table:_calculateColumnWidths()
         for i, header in ipairs(self._headers) do
             self._colWidths[i] = #header
@@ -508,15 +535,20 @@ do
         end
     end
 
+    --- @return table
     function RMP.Table:getColumnWidths()
         return self._colWidths
     end
 
+    --- @param headers table
     function RMP.Table:setHeaders(headers)
         self._headers = headers or {}
         self:_calculateColumnWidths()
     end
 
+    --- @param rowIndex integer
+    --- @param colIndex integer
+    --- @param value integer
     function RMP.Table:setDataAt(rowIndex, colIndex, value)
         if self._rows[rowIndex] then
             self._rows[rowIndex][colIndex] = value
@@ -524,6 +556,9 @@ do
         end
     end
 
+    --- @param rowIndex integer
+    --- @param colIndex integer
+    --- @return integer | nil
     function RMP.Table:getDataAt(rowIndex, colIndex)
         if self._rows[rowIndex] then
             return self._rows[rowIndex][colIndex]
@@ -531,15 +566,20 @@ do
         return nil
     end
 
+    --- @param row integer
     function RMP.Table:addRow(row)
         table.insert(self._rows, row)
         self:_calculateColumnWidths()
     end
 
-    function RMP.Table:render()
+    --- @param vterm VirtualTerminal
+    --- @return VirtualTerminal
+    --- @overload fun(param:VirtualTerminal) : VirtualTerminal
+    function RMP.Table:render(vterm)
         local x = self.x
         local y = self.y
-        local vterm = RMP.VirtualTerminal.new()
+        --- @diagnostic disable-next-line
+        local vterm = vterm or RMP.VirtualTerminal.new()
         local currentY = y
 
         local topBorder = "┌"
@@ -590,7 +630,9 @@ do
 end
 
 -- TODO: handle this border table later to let plugin developers change the border
+--- @enum BoxDrawing
 RMP.BoxDrawing = {
+    --- @type table
     NoBorder = {
         " ",
         " ",
@@ -604,6 +646,7 @@ RMP.BoxDrawing = {
         " ",
         " ",
     },
+    --- @type table
     LightBorder = {
         -- Light border set (single-line)
         "─", -- Light horizontal line (U+2500)
@@ -618,6 +661,7 @@ RMP.BoxDrawing = {
         "┴", -- Light up and horizontal tee (U+2534)
         "┼", -- Light vertical and horizontal cross (U+253C)
     },
+    --- @type table
     HeavyBorder = {
         -- Heavy border set (double-line)
         "═", -- Heavy horizontal line (U+2550)
@@ -632,6 +676,7 @@ RMP.BoxDrawing = {
         "╩", -- Heavy up and horizontal tee (U+2569)
         "╬", -- Heavy vertical and horizontal cross (U+256C)
     },
+    --- @type table
     RoundedCorners = {
         "─", -- Light horizontal line (U+2500)
         "│", -- Light vertical line (U+2502)
@@ -648,148 +693,227 @@ RMP.BoxDrawing = {
 }
 
 -- Animation patterns
+--- @enum AnimationPatterns
 RMP.AnimationPatterns = {
+    --- @enum BraillePattern
     BraillePattern = {
         "⠁", "⠃", "⠇", "⠏", "⠟", "⠿", "⣿", "⡿",
         "⣟", "⣯", "⣷", "⣾", "⣿"
     },
 
+    --- @enum Spinner
     Spinner = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" },
+    --- @enum Dots
     Dots = { "⠁", "⠂", "⠄", "⡀", "⢀", "⠠", "⠐", "⠈" },
+    --- @enum Line
     Line = { "-", "\\", "|", "/" },
+    --- @enum Arrow
     Arrow = { "←", "↖", "↑", "↗", "→", "↘", "↓", "↙" },
+    --- @enum BouncingBall
     BouncingBall = { "⠁", "⠂", "⠄", "⡀", "⢀", "⠠", "⠐", "⠈" },
+    --- @enum Clock
     Clock = { "🕐", "🕑", "🕒", "🕓", "🕔", "🕕", "🕖", "🕗", "🕘", "🕙", "🕚", "🕛" },
+    --- @enum Moon
     Moon = { "🌑", "🌒", "🌓", "🌔", "🌕", "🌖", "🌗", "🌘" },
+    --- @enum Block
     Block = { "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█", "▇", "▆", "▅", "▄", "▃", "▂" },
+    --- @enum Circle
     Circle = { "◐", "◓", "◑", "◒" },
+    --- @enum SquareCorners
     SquareCorners = { "◰", "◳", "◲", "◱" },
+    --- @enum Dots2
     Dots2 = { "⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷" },
+    --- @enum Dots3
     Dots3 = { "⠋", "⠙", "⠚", "⠞", "⠖", "⠦", "⠴", "⠲", "⠳", "⠓" },
+    --- @enum BoxBounce
     BoxBounce = { "▖", "▘", "▝", "▗" },
+    --- @enum Triangle
     Triangle = { "◢", "◣", "◤", "◥" },
+    --- @enum GrowingBar
     GrowingBar = { "▁", "▃", "▄", "▅", "▆", "▇", "█" },
 
     -- NEW ANIMATION PATTERNS:
 
     -- Braille Variations
+    --- @enum BrailleClockwise
     BrailleClockwise = {
         "⠁", "⠃", "⠇", "⠏", "⠟", "⠯", "⠾", "⣾",
         "⣷", "⣯", "⣟", "⣏", "⡋", "⠍", "⠎", "⠞"
     },
+    --- @enum BrailleCounterClockwise
     BrailleCounterClockwise = {
         "⠁", "⠂", "⠄", "⠈", "⠐", "⠠", "⠡", "⠢",
         "⠤", "⠦", "⠶", "⠞", "⠎", "⠍", "⡋", "⣏"
     },
+    --- @enum BrailleDotSpin
     BrailleDotSpin = {
         "⠁", "⠂", "⠄", "⠈", "⠐", "⠠", "⡀", "⢀",
         "⢈", "⢐", "⢠", "⡠", "⠤", "⠢", "⠡", "⠠"
     },
+    --- @enum BrailleSpiral
     BrailleSpiral = {
         "⠁", "⠃", "⠋", "⠛", "⠟", "⠿", "⡿", "⣿",
         "⣻", "⣹", "⣸", "⣴", "⣲", "⣱", "⣰", "⣮"
     },
 
     -- Weather & Nature
+    --- @enum Weather
     Weather = { "☀️", "⛅", "☁️", "🌧️", "⛈️", "🌦️" },
+    --- @enum GrowingPlant
     GrowingPlant = { "🌱", "🌿", "🪴", "🌲", "🌳" },
+    --- @enum WaterFlow
     WaterFlow = { "💧", "🌊", "💦", "🌀", "🌫️" },
+    --- @enum Fire
     Fire = { "🔥", "🌪️", "💥", "✨", "🌟" },
 
     -- Technology & Loading
+    --- @enum Binary
     Binary = { "0", "1", "0", "1", "0", "1" },
+    --- @enum Signal
     Signal = { "📶", "📶", "📶", "📶", "📶", " " },
+    --- @enum Download
     Download = { "📥", "⏬", "⬇️", "🔽", "📥" },
+    --- @enum Upload
     Upload = { "📤", "⏫", "⬆️", "🔼", "📤" },
 
     -- Faces & Emotions
+    --- @enum Happy
     Happy = { "😊", "😄", "😃", "😀", "😁", "😆" },
+    --- @enum Thinking
     Thinking = { "🤔", "💭", "🧠", "💡", "🌟" },
+    --- @enum Sleeping
     Sleeping = { "😴", "💤", "😪", "🌙", "🛌" },
 
     -- Animals & Creatures
+    --- @enum Cat
     Cat = { "😺", "😸", "😹", "😻", "😼", "😽" },
+    --- @enum Dog
     Dog = { "🐶", "🐕", "🦮", "🐩", "🐕‍🦺" },
+    --- @enum Bird
     Bird = { "🐦", "🦅", "🦆", "🦉", "🐧" },
+    --- @enum Fish
     Fish = { "🐠", "🐟", "🐡", "🦈", "🐋" },
 
     -- Food & Drink
+    --- @enum Coffee
     Coffee = { "☕", "🌱", "🔥", "💧", "☕" },
+    --- @enum Cooking
     Cooking = { "🍳", "🥘", "🍲", "🥣", "🍜" },
+    --- @enum Eating
     Eating = { "🍎", "🍕", "🍦", "🍩", "🍰" },
 
     -- Vehicles & Travel
+    --- @enum Car
     Car = { "🚗", "🚙", "🚐", "🚛", "🚒" },
+    --- @enum Plane
     Plane = { "✈️", "🛫", "🛬", "🛩️", "💺" },
+    --- @enum Rocket
     Rocket = { "🚀", "🛸", "👽", "🌟", "🌕" },
 
     -- Music & Arts
+    --- @enum Music
     Music = { "🎵", "🎶", "🎼", "🎹", "🎷", "🎺" },
+    --- @enum Dance
     Dance = { "💃", "🕺", "👯", "🎭", "🎪" },
+    --- @enum Painting
     Painting = { "🎨", "🖼️", "🖌️", "👨‍🎨", "🖍️" },
 
     -- Sports & Games
+    --- @enum Ball
     Ball = { "⚽", "🏀", "🏈", "⚾", "🎾", "🏐" },
+    --- @enum Chess
     Chess = { "♟️", "♜", "♞", "♝", "♛", "♚" },
+    --- @enum Dice
     Dice = { "⚀", "⚁", "⚂", "⚃", "⚄", "⚅" },
 
     -- Time & Calendar
+    --- @enum Hourglass
     Hourglass = { "⏳", "⌛", "⏰", "🕰️", "📅" },
+    --- @enum Calendar
     Calendar = { "📅", "📆", "🗓️", "⏱️", "⌚" },
 
     -- Shapes & Symbols
+    --- @enum Hearts
     Hearts = { "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎" },
+    --- @enum Stars
     Stars = { "⭐", "🌟", "✨", "💫", "🌠" },
+    --- @enum Geometric
     Geometric = { "⬜", "⬛", "🔴", "🟢", "🔵", "🟡", "🟣" },
 
     -- Tools & Objects
+    --- @enum Tools
     Tools = { "🛠️", "🔧", "🔨", "⚒️", "🪚", "⛏️" },
+    --- @enum Writing
     Writing = { "📝", "✏️", "🖊️", "🖋️", "📄", "📖" },
+    --- @enum Science
     Science = { "🔬", "🧪", "⚗️", "🧫", "🦠", "🧬" },
 
     -- Advanced Braille Patterns
+    --- @enum BrailleWave
     BrailleWave = {
         "⠁", "⠃", "⠇", "⠏", "⠟", "⠿", "⡿", "⣿",
         "⣻", "⣹", "⣸", "⣴", "⣲", "⣱", "⣰", "⣮"
     },
+    --- @enum BraillePulse
     BraillePulse = {
         "⠁", "⠉", "⠍", "⠝", "⠟", "⠿", "⡿", "⣿",
         "⡿", "⠿", "⠟", "⠝", "⠍", "⠉", "⠁", "⠀"
     },
+    --- @enum BrailleExpand
     BrailleExpand = {
         "⠁", "⠃", "⠋", "⠛", "⠟", "⠿", "⡿", "⣿",
         "⣿", "⡿", "⠿", "⠟", "⠛", "⠋", "⠃", "⠁"
     },
 
     -- Minimalist
+    --- @enum MinimalDot
     MinimalDot = { ".", "..", "...", "....", ".....", "......" },
+    --- @enum MinimalBar
     MinimalBar = { "[    ]", "[=   ]", "[==  ]", "[=== ]", "[====]" },
+    --- @enum MinimalSpin
     MinimalSpin = { "|", "/", "-", "\\" },
 
     -- Retro & Pixel
+    --- @enum PixelMan
     PixelMan = { "ᕕ( ᐛ )ᕗ", "ᕕ( ◕3◕ )ᕗ", "ᕕ( ◔3◔ )ᕗ", "ᕕ( ◕‿◕ )ᕗ" },
+    --- @enum RetroGame
     RetroGame = { "▰", "▱", "◼", "◻", "■", "□" },
+    --- @enum Arcade
     Arcade = { "🕹️", "👾", "🤖", "🎮", "💾", "📺" },
 
     -- Fantasy & Magic
+    --- @enum Magic
     Magic = { "🔮", "✨", "🌟", "💫", "🪄", "🧙" },
+    --- @enum Dragon
     Dragon = { "🐲", "🔥", "🌪️", "💨", "⚡" },
+    --- @enum Unicorn
     Unicorn = { "🦄", "🌈", "🌟", "✨", "💫" },
 
     -- Professional
+    --- @enum Loading
     Loading = { "⏳", "⌛", "⏰", "🕐", "🕑", "🕒" },
+    --- @enum Progress
     Progress = { "▱▱▱", "▰▱▱", "▰▰▱", "▰▰▰" },
+    --- @enum Working
     Working = { "💼", "📊", "📈", "📉", "📋" }
 }
 
 -- LoadingSpinner class for handling different loading animations
+--- @class LoadingSpinner
 RMP.LoadingSpinner = OOP.class("LoadingSpinner", nil, RMP.Renderable)
 do
+    --- @param x integer
+    --- @param y integer
+    --- @param fg FGColors
+    --- @param bg BGColors
+    --- @param vterm VirtualTerminal
+    --- @return self
     function RMP.LoadingSpinner:constructor(x, y, fg, bg, vterm)
         self.x = x or 2
         self.y = y or 2
         self.fg = fg or RMP.FGColors.Brights.White
         self.bg = bg or RMP.BGColors.NoBrights.Black
+        --- @diagnostic disable-next-line
         self.vterm = vterm or RMP.VirtualTerminal.new()
         self.frameIndex = 1
         self.pattern = RMP.AnimationPatterns.Spinner
@@ -798,24 +922,34 @@ do
         return self
     end
 
+    --- @generic T
+    --- @param patternName T
+    --- @return self
     function RMP.LoadingSpinner:setPattern(patternName)
         self.pattern = patternName
         self.frameIndex = 1
         return self
     end
 
+    --- @param prefix string
+    --- @param suffix string
+    --- @return self
     function RMP.LoadingSpinner:setText(prefix, suffix)
         self.prefix = prefix or ""
         self.suffix = suffix or ""
         return self
     end
 
+    --- @param fg FGColors
+    --- @param bg BGColors
+    --- @return self
     function RMP.LoadingSpinner:setColors(fg, bg)
         self.fg = fg or self.fg
         self.bg = bg or self.bg
         return self
     end
 
+    --- @return self
     function RMP.LoadingSpinner:nextFrame()
         local char = self.pattern[self.frameIndex]
         local text = self.prefix .. char .. self.suffix
@@ -827,24 +961,32 @@ do
         return self
     end
 
+    --- @return self
     function RMP.LoadingSpinner:reset()
         self.frameIndex = 1
         return self
     end
 
+    --- @overload fun() : VirtualTerminal
     function RMP.LoadingSpinner:render()
         return self.vterm
     end
 
+    --- @return table
     function RMP.LoadingSpinner:getPatterns()
-        return RMP.AnimationPatterns
+        return self.pattern
     end
 end
 
 do -- color from hex
+    --- @type string
     RMP.FG = "38"
+    --- @type string
     RMP.BG = "48"
 
+    --- @param hex string
+    --- @param fg_or_bg string
+    --- @return string
     function RMP.colorFromHex(hex, fg_or_bg)
         local fb = fg_or_bg or "38"
         local r, g, b = tonumber(hex:sub(1, 2), 16), tonumber(hex:sub(3, 4), 16), tonumber(hex:sub(5, 6), 16)
@@ -855,8 +997,9 @@ end
 RMP.Default = "\27[0m"
 
 -- TODO: for a moment
+--- @deprecated
 local function moveto(x, y, ret)
-    ret = ret or false
+    local ret = ret or false
     if ret then
         return "\27[" .. y .. ";" .. x .. "H"
     else
@@ -864,32 +1007,47 @@ local function moveto(x, y, ret)
     end
 end
 
+--- @class Duration
 RMP.Duration = OOP.class("Duration")
 do
+    --- @param time integer
+    --- @return self
     function RMP.Duration:constructor(time)
+        --- @type integer
         self.time = time or 1
         return self
     end
 
+    --- @return integer
     function RMP.Duration:fromSec()
         return self.time * 1000
     end
 
+    --- @return integer
     function RMP.Duration:fromMilsec()
         return self.time
     end
 end
 
+--- @param time integer
 function RMP.sleep(time)
     sleep.sleep(time)
 end
 
 -- Text class used to work with texts
+--- @class Text
 RMP.Text = OOP.class("Text", nil, RMP.Renderable)
 do -- text
     -- constructor
     -- TODO: fix the error
+    --- @param text string
+    --- @param style TextStyle
+    --- @param fg FGColors
+    --- @param bg BGColors
+    --- @param vterm VirtualTerminal
+    --- @return self
     function RMP.Text:constructor(text, style, fg, bg, vterm)
+        --- @diagnostic disable-next-line
         self.vterm = vterm or RMP.VirtualTerminal.new()
         self.text = text or ""
         self.fg = fg or RMP.Default
@@ -901,39 +1059,47 @@ do -- text
     end
 
     -- -- method Position in lua used to controle position of the text
+    --- @param x integer
+    --- @param y integer
+    --- @return self
     function RMP.Text:setPosition(x, y)
         self.x = tonumber(x or 1)
         self.y = tonumber(y or 1)
         return self
     end
 
-    -- @deprecated
     function RMP.Text:asVTerm()
         self.vterm:writeText(self.x, self.y, self.text, self.fg, self.bg, self.style)
         return self.vterm
     end
 
+    --- @return VirtualTerminal
     function RMP.Text:render()
         return self:asVTerm()
     end
 
     -- ColoredText accept text and color and return colored text
+    --- @return string
     function RMP.Text:getColoredText()
         return self.style .. self.bg .. self.fg .. self.text .. RMP.Default
     end
 
+    --- @return string
     function RMP.Text:getText()
         return self.text
     end
 
+    --- @return TextStyle
     function RMP.Text:getStyle()
         return self.style
     end
 
+    --- @return FGColors
     function RMP.Text:getFGColor()
         return self.fg
     end
 
+    --- @return BGColors
     function RMP.Text:getBGColor()
         return self.bg
     end
@@ -1108,29 +1274,61 @@ RMP.KEY_CLPAREN       = RMP.enum()
 RMP.KEY_EQUAL         = RMP.enum()
 RMP.NONE              = RMP.enum()
 
+--- @class Window
 RMP.Window            = OOP.class("Window")
 do -- creating window
     -- callback function accept 4 agrs
 
+    --- @generic T
+    --- @param id T
+    --- @param vterm VirtualTerminal
+    --- @return self
     function RMP.Window:constructor(id, vterm)
-        self.id = id or nil
+        self.id = id
+        --- @diagnostic disable-next-line
         self.vterm = vterm or RMP.VirtualTerminal.new()
         return self
     end
 
+    --- @generic T
+    --- @param id T
+    --- @return self
     function RMP.Window:setId(id)
         self.id = id
+        return self
     end
 
+    --- @generic T
+    --- @return T
     function RMP.Window:getId()
         return self.id
     end
 
-    function RMP.Window:createWindow(title, width, height, x, y, border_color, background_color, border_style, callback)
+    --- @generic T
+    --- @param title Text | string
+    --- @param width integer
+    --- @param height integer
+    --- @param x integer
+    --- @param y integer
+    --- @param border_color FGColors
+    --- @param background_color BGColors
+    --- @param border_style T
+    --- @param callback function
+    --- @return VirtualTerminal | nil
+    function RMP.Window:createWindow(
+        title
+        , width
+        , height
+        , x
+        , y
+        , border_color
+        , background_color
+        , border_style
+        , callback)
         local vterm = self.vterm
 
         if not width and not height and not x and not y then
-            return
+            return nil
         end
 
         vterm:drawBox(title, math.floor(x), math.floor(y), math.floor(width), math.floor(height), border_style,
@@ -1263,14 +1461,18 @@ end
 -- EventType used to define the type of event
 -- each plugin can add event listener for a specific event type
 -- and when the event is triggered the callback function is called
+--- @enum EventType
 RMP.EventType = {
     -- TODO: add event special for audio engine , for better controle
+    --- @type integer
     Keyboard = RMP.enum(true), -- this Keyboard event's for actions
 
     -- Input Event lazem tkon kayn condition to add the Event each time we called a plugin wich means ida makanch kayen had event
     -- nkmlo fl events lokhrin and that't it
     -- also this Input Event should used it in Input class Only so when we initialize the Input and start read from user we add this event to the EventListener
+    --- @type integer
     Focuse = RMP.enum(), -- Input event disbale listinnig other Events because the user is writing something
+    --- @type integer
     Mouse = RMP.enum(),  -- mouse event
     -- transform data event is the way to handle data transformation between two plugins
     -- TODO: factor Get and Put
@@ -1278,19 +1480,22 @@ RMP.EventType = {
     --	Get = RMP.enum(),
     --	Put = RMP.enum()
     -- }
+    --- @type integer
     TransformDataGet = RMP.enum(), -- Get data event is used to get data from another plugin
+    --- @type integer
     TransformDataPut = RMP.enum(), -- Put data event is used to put data to another plugin
     -- sound
-    Sound = RMP.enum(),            -- plugins can add event for sound
+    --- @type integer
+    Sound = RMP.enum(), -- plugins can add event for sound
     -- the callback function accept sound object so they can add or get informations like freqs , so they can create visualization
-    Configuration = RMP.enum(),    -- get access to the configurations also save a new configuration (cfg for plugins)
-    Template = RMP.enum()          -- Template Event to apply changes to the template
+    --- @type integer
+    Configuration = RMP.enum(), -- get access to the configurations also save a new configuration (cfg for plugins)
+    --- @type integer
+    Template = RMP.enum()       -- Template Event to apply changes to the template
 }
 
+--- @interface Event
 local Event = OOP.interface("Event",
-    -- @param key : RMP.EventType value
-    -- @callback : function to call when the event is triggered
-    -- @return : self
     "addEventListener"
 )
 
@@ -1299,8 +1504,10 @@ local Event = OOP.interface("Event",
 -- so when the plugin is initialized it create his own EventListener object
 -- and add event listener for the events he want to listen to
 -- when the event is triggered the callback function is called
+--- @class EventListener
 RMP.EventListener = OOP.class("EventListener", nil, Event)
 do
+    --- @return self
     function RMP.EventListener:constructor()
         self.events = HashMap.new()
         self.events:put(RMP.EventType.Keyboard, Queue.new())
@@ -1319,10 +1526,7 @@ do
         return self
     end
 
-    -- Override method
-    -- @param key : RMP.EventType value
-    -- @callback : function to call when the event is triggered
-    -- @return : self
+    --- @overload fun(p1 : integer , p2 : function ) : EventListener | nil
     function RMP.EventListener:addEventListener(event, callback)
         if event == nil then
             return nil
@@ -1337,35 +1541,48 @@ do
         return self
     end
 
+    --- @param callback function
     function RMP.EventListener:onSound(callback)
+        --- @diagnostic disable-next-line
         return self:addEventListener(RMP.EventType.Sound, callback)
     end
 
+    --- @param callback function
     function RMP.EventListener:onKeyboard(callback)
+        --- @diagnostic disable-next-line
         return self:addEventListener(RMP.EventType.Keyboard, callback)
     end
 
+    --- @param callback function
     function RMP.EventListener:onMouse(callback)
+        --- @diagnostic disable-next-line
         return self:addEventListener(RMP.EventType.Mouse, callback)
     end
 
+    --- @param callback function
     function RMP.EventListener:onFocuse(callback)
+        --- @diagnostic disable-next-line
         return self:addEventListener(RMP.EventType.Focuse, callback)
     end
 
+    --- @param callback function
     function RMP.EventListener:onConfiguration(callback)
+        --- @diagnostic disable-next-line
         return self:addEventListener(RMP.EventType.Configuration, callback)
     end
 
+    --- @param callback function
     function RMP.EventListener:onTemplate(callback)
+        --- @diagnostic disable-next-line
         return self:addEventListener(RMP.EventType.Template, callback)
     end
 
-    -- @param key : RMP.EventType value
-    -- @return : self
-    -- rename it to handleEvent
-    -- TODO: add sound
-
+    --- @param key integer
+    --- @param mouse nil
+    --- @param sound Sound
+    --- @param config HashMap
+    --- @param template table
+    --- @return EventListener | nil
     function RMP.EventListener:handleEvent(key, mouse, sound, config, template)
         local _template = self.events:get(RMP.EventType.Template)
         while not _template:isEmpty() do
@@ -1391,6 +1608,7 @@ do
             local put_callback = put_queue:pop()
             local get_callback = get_queue:pop()
 
+            --- @diagnostic disable-next-line
             if put_callback and type(put_callback) == 'function' and
                 get_callback and type(get_callback) == 'function' then
                 local data = put_callback()
@@ -1406,6 +1624,7 @@ do
             end
         end
 
+        --- @diagnostic disable-next-line
         if key then
             if not self.events:get(RMP.EventType.Focuse):isEmpty() then
                 while not self.events:get(RMP.EventType.Focuse):isEmpty() do
@@ -1425,6 +1644,7 @@ do
             return self
         end
 
+        --- @diagnostic disable-next-line
         if mouse then
             while not self.events:get(RMP.EventType.Mouse):isEmpty() do
                 local callback = self.events:get(RMP.EventType.Mouse):pop()
@@ -1438,6 +1658,7 @@ do
         return nil
     end
 
+    --- @return HashMap
     function RMP.EventListener:getEvent()
         return self.events
     end
@@ -1448,9 +1669,16 @@ end
 -- each plugin should have his own VirtualTerminal object
 -- so when the plugin is initialized it create his own VirtualTerminal object
 -- and draw on it
+--- @class VirtualTerminal
 RMP.VirtualTerminal = OOP.class("VirtualTerminal", RMP.EventListener, RMP.Renderable)
-do                                                          -- VirtualTerminal
+do -- VirtualTerminal
+    --- @param width integer
+    --- @param height integer
+    --- @return  self
     function RMP.VirtualTerminal:constructor(width, height) -- constructor
+        -- super method is coming from the class it self
+        -- and it used to access the methods from mother class
+        --- @diagnostic disable-next-line
         self:super("constructor")
         local h, w = window.get_size()
 
@@ -1468,6 +1696,13 @@ do                                                          -- VirtualTerminal
         vt_rmp.clear(self.native_vt_rmp)
     end
 
+    --- @param x integer | nil
+    --- @param y integer | nil
+    --- @param char string | nil
+    --- @param fg FGColors | nil
+    --- @param bg BGColors | nil
+    --- @param style TextStyle | nil
+    --- @return self
     function RMP.VirtualTerminal:setChar(x, y, char, fg, bg, style)
         x = x or self.cursor.x
         y = y or self.cursor.y
@@ -1475,9 +1710,17 @@ do                                                          -- VirtualTerminal
         return self
     end
 
+    --- @param x integer
+    --- @param y integer
+    --- @param text string
+    --- @param width integer
+    --- @param fg FGColors
+    --- @param bg BGColors
+    --- @param style TextStyle
+    --- @return VirtualTerminal | nil
     function RMP.VirtualTerminal:writeTextClipped(x, y, text, width, fg, bg, style)
         if not text then
-            return
+            return nil
         end
         x = math.floor(x or self.cursor.x)
         y = math.floor(y or self.cursor.y)
@@ -1485,9 +1728,16 @@ do                                                          -- VirtualTerminal
         return self
     end
 
+    --- @param x integer
+    --- @param y integer
+    --- @param text string | nil
+    --- @param fg FGColors | nil
+    --- @param bg BGColors | nil
+    --- @param style TextStyle | nil
+    --- @return VirtualTerminal | nil
     function RMP.VirtualTerminal:writeText(x, y, text, fg, bg, style)
         if not text then
-            return
+            return nil
         end
         x = math.floor(x or self.cursor.x)
         y = math.floor(y or self.cursor.y)
@@ -1495,11 +1745,26 @@ do                                                          -- VirtualTerminal
         return self
     end
 
+    --- @param title string | Text
+    --- @param x integer
+    --- @param y integer
+    --- @param width integer
+    --- @param height integer
+    --- @param border_style BoxDrawing
+    --- @param fg FGColors
+    --- @param bg BGColors
     function RMP.VirtualTerminal:drawBox(title, x, y, width, height, border_style, fg, bg)
-        x = math.floor(x or 1)
-        y = math.floor(y or 1)
-        width = math.floor(width or 80)
-        height = math.floor(height or 24)
+        x        = math.floor(x or 1)
+        y        = math.floor(y or 1)
+        width    = math.floor(width or 80)
+        height   = math.floor(height or 24)
+
+        local TL = nil
+        local TR = nil
+        local BL = nil
+        local BR = nil
+        local H  = nil
+        local V  = nil
 
         if border_style == nil or type(border_style) ~= 'table' or border_style[1] == nil then
             TL = RMP.BoxDrawing.LightBorder[3] -- "┌" Top-left corner
@@ -1542,7 +1807,9 @@ do                                                          -- VirtualTerminal
             end
         end
 
+        --- @diagnostic disable-next-line
         if title and title ~= "" and title:instanceOf(RMP.Text) then
+            --- @diagnostic disable-next-line
             local title_text = title:getText()
             local available_width = width - 2
             if #title_text > available_width then
@@ -1550,6 +1817,7 @@ do                                                          -- VirtualTerminal
             end
             local title_x = x + 1 + math.floor((available_width - #title_text) / 2)
             local title_y = y
+            --- @diagnostic disable-next-line
             self:writeText(title_x, title_y, title_text, title:getFGColor(), title:getBGColor(), title:getStyle())
         end
 
@@ -1560,38 +1828,49 @@ do                                                          -- VirtualTerminal
         vt_rmp.render(self.native_vt_rmp)
     end
 
+    --- @param x integer
+    --- @param y integer
     function RMP.VirtualTerminal:moveCursor(x, y)
+        --- @diagnostic disable-next-line
         if x and y then
             vt_rmp.movecursor(self.native_vt_rmp, x, y)
         end
     end
 
+    --- @param y integer
     function RMP.VirtualTerminal:moveUp(y)
         vt_rmp.moveup(self.native_vt_rmp, y or 1)
     end
 
+    --- @param y integer
     function RMP.VirtualTerminal:moveDown(y)
         vt_rmp.movedown(self.native_vt_rmp, y or 1)
     end
 
+    --- @param x integer
     function RMP.VirtualTerminal:moveRight(x)
         vt_rmp.moveright(self.native_vt_rmp, x or 1)
     end
 
+    --- @param x integer
     function RMP.VirtualTerminal:moveLeft(x)
         vt_rmp.moveleft(self.native_vt_rmp, x or 1)
     end
 
+    --- @return integer integer
     function RMP.VirtualTerminal:getSize()
         return vt_rmp.getsize(self.native_vt_rmp)
     end
 
+    --- @param width integer
+    --- @param height integer
     function RMP.VirtualTerminal:resize(width, height)
         if width ~= w or height ~= h then
             vt_rmp.resize(self.native_vt_rmp, width, height)
         end
     end
 
+    --- @return VirtualTerminal
     function RMP.VirtualTerminal:getVT()
         return self.native_vt_rmp
     end
@@ -1599,12 +1878,19 @@ do                                                          -- VirtualTerminal
     -- these methods are used to merge two virtual terminal
     -- if there is no way to pass vterm object to function parameters
     -- so you can merge the other virtual terminal to the main object
+    --- @param thatTerm VirtualTerminal
+    --- @param distroy boolean | nil
+    --- @param offsetX integer | nil
+    --- @param offsetY integer | nil
     function RMP.VirtualTerminal:merge(thatTerm, distroy, offsetX, offsetY)
+        --- @diagnostic disable-next-line
         if thatTerm and thatTerm:instanceOf(RMP.VirtualTerminal) then
             vt_rmp.merge(self.native_vt_rmp, thatTerm:getVT(), offsetX or 0, offsetY or 0)
 
+            --- @diagnostic disable-next-line
             local event = thatTerm:getEvent()
             if event:instanceOf(HashMap) then
+                --- @diagnostic disable-next-line
                 local myevent = self:getEvent()
 
                 while not event:get(RMP.EventType.Focuse):isEmpty() do
@@ -1640,8 +1926,10 @@ do                                                          -- VirtualTerminal
                 end
             end
         else
+            --- @diagnostic disable-next-line
             if thatTerm:implements(RMP.Renderable) then
                 local vterm = thatTerm:render()
+                --- @diagnostic disable-next-line
                 if vterm and vterm:instanceOf(RMP.VirtualTerminal) then
                     vt_rmp.merge(self.native_vt_rmp, vterm:getVT(), offsetX or 0, offsetY or 0)
                 end
@@ -1652,6 +1940,8 @@ do                                                          -- VirtualTerminal
         end
     end
 
+    --- @param thoseTerms table
+    --- @param distroy boolean
     function RMP.VirtualTerminal:mergeAll(thoseTerms, distroy)
         for i = 1, #thoseTerms do
             self:merge(thoseTerms[i].thatTerm, distroy, thoseTerms[i].offsetX, thoseTerms[i].offsetY)
@@ -1659,6 +1949,7 @@ do                                                          -- VirtualTerminal
     end
 
     function RMP.VirtualTerminal:copy()
+        --- @diagnostic disable-next-line
         local copy = RMP.VirtualTerminal.new()
         copy.native_vt_rmp = vt_rmp.copy(self.native_vt_rmp)
         return copy
@@ -1672,12 +1963,14 @@ end
 -- NOTE: Terminal class uses ansii escape code i need to create shared library to handle terminal for each platform
 -- Terminal class used to handle terminal operations
 
+--- @class Terminal
 RMP.Terminal = OOP.class("Terminal")
 do -- Terminal
     function RMP.Terminal:clearWindow()
         io.write("\27[2J")
     end
 
+    --- @deprecated
     function RMP.Terminal:moveTo(x, y)
         if x < 1 then
             x = 1
@@ -1687,6 +1980,7 @@ do -- Terminal
         moveto(x, y)
     end
 
+    --- @deprecated
     function RMP.Terminal:moveUp(x)
         if x < 1 or x == nil then
             x = 1
@@ -1694,6 +1988,7 @@ do -- Terminal
         io.write("\27[" .. x .. "A");
     end
 
+    --- @deprecated
     function RMP.Terminal:moveDown(x)
         if x == nil or x < 1 then
             x = 1
@@ -1701,6 +1996,7 @@ do -- Terminal
         io.write("\27[" .. x .. "B");
     end
 
+    --- @deprecated
     function RMP.Terminal:moveLeft(x)
         if x < 1 or x == nil then
             x = 1
@@ -1708,6 +2004,7 @@ do -- Terminal
         io.write("\27[" .. x .. "D");
     end
 
+    --- @deprecated
     function RMP.Terminal:moveRight(x)
         if x < 1 or x == nil then
             x = 1
@@ -1723,10 +2020,12 @@ do -- Terminal
         io.write("\27[?25h");
     end
 
+    --- @param enable boolean
     function RMP.Terminal:rawMode(enable)
         window.raw_mode(enable)
     end
 
+    --- @return integer, integer
     function RMP.Terminal:getSize() -- h,w
         local h, w = window.get_size()
         h = tonumber(h) or 24
@@ -1736,50 +2035,70 @@ do -- Terminal
 
     -- TODO: make sure that function works on windows
     -- TODO: add this two function to Input class to add more operations to make it easy
+    --- @return any
     function RMP.Terminal:handleKey()
         return keyboard.get()
     end
 
+    --- @return any
     function RMP.Terminal:closeKey()
         return keyboard.close()
     end
 end
 
 -- Input class used to handle user input
-RMP.Input = OOP.class("Input")
+--- @class Input
+RMP.Input = OOP.class("Input", nil, RMP.Renderable)
 do
+    --- @param label string
+    --- @param x integer
+    --- @param y integer
+    --- @param width number
+    --- @param defaultText string
+    --- @param cancelKey integer
     function RMP.Input:constructor(label, x, y, width, defaultText, cancelKey)
         self.label = label or ""
         self.x = math.max(1, tonumber(x) or 1)
         self.y = math.max(1, tonumber(y) or 1)
+        --- @type number
         self.width = math.max(1, tonumber(width) or 10)
         self.text = tostring(defaultText or "")
+        --- @type integer
         self.cursor_pos = #self.text + 1
         self.cancelKey = cancelKey or RMP.KEY_ESCAPE
+        --- @diagnostic disable-next-line
         self.vterm = RMP.VirtualTerminal.new()
         self.active = false
         self.submitted = false
+        --- @type number
         self.scroll_offset = 0
+        --- @type number
         self.max_visible_chars = self.width - #self.label - 3
     end
 
+    --- @param key integer
     function RMP.Input:setCancelKey(key)
         self.cancelKey = key
     end
 
+    --- @return boolean
     function RMP.Input:adjustScroll()
         local visible_width = self.max_visible_chars
         if visible_width <= 0 then
-            return
+            return false
         end
 
         if self.cursor_pos - self.scroll_offset > visible_width then
+            --- @cast visible_width number
             self.scroll_offset = self.cursor_pos - visible_width
         elseif self.cursor_pos <= self.scroll_offset then
             self.scroll_offset = math.max(0, self.cursor_pos - 1)
         end
+        return true
     end
 
+    --- @param key integer
+    --- @return string
     function RMP.Input:keyToChar(key)
         local keyMap = {
             [RMP.KEY_A]             = "a",
@@ -1881,6 +2200,7 @@ do
         return shiftMap[key] or keyMap[key]
     end
 
+    --- @param key integer
     function RMP.Input:handleKey(key)
         if key == RMP.KEY_ENTER then
             self.submitted = true
@@ -1927,19 +2247,24 @@ do
         end
     end
 
+    --- @overload fun()
     function RMP.Input:render()
         self.vterm:clear()
         self.vterm:writeText(self.x, self.y, self.label, RMP.FGColors.Brights.White, RMP.BGColors.NoBrights.Blue)
 
         local visible_width = self.max_visible_chars
+
         local displayText = self.text
         if visible_width > 0 and #displayText > visible_width then
+            --- @cast visible_width integer
             displayText = displayText:sub(self.scroll_offset + 1, self.scroll_offset + visible_width)
         end
+        --- @diagnostic disable-next-line
         displayText = displayText .. string.rep(" ", math.max(0, visible_width - #displayText))
 
         self.vterm:writeText(self.x + #self.label, self.y, displayText, RMP.FGColors.Brights.White,
             RMP.BGColors.NoBrights.Blue)
+        --- @diagnostic disable-next-line
         if self.active then
             local cursor_screen_pos = self.cursor_pos - self.scroll_offset
             if cursor_screen_pos > 0 and cursor_screen_pos <= visible_width then
@@ -1966,6 +2291,7 @@ do
     end
 
     function RMP.Input:processKey(key)
+        --- @diagnostic disable-next-line
         if not self.active then
             return false
         end
@@ -2037,11 +2363,13 @@ do
 
     function RMP.Input:setCursorPos(pos)
         pos = tonumber(pos) or 1
+
         self.cursor_pos = math.max(1, math.min(#self.text + 1, pos))
         self:adjustScroll()
         self:render()
     end
 
+    --- @return integer
     function RMP.Input:getCursorPos()
         return self.cursor_pos
     end
@@ -2055,10 +2383,12 @@ do
         self:render()
     end
 
+    --- @return boolean
     function RMP.Input:isActive()
         return self.active
     end
 
+    --- @return boolean
     function RMP.Input:wasSubmitted()
         return self.submitted
     end
@@ -2077,8 +2407,11 @@ end
 -- if input:isActive() then ... end -- to check if input is active
 -- if input:hasError() then ... end -- to check if there is an error
 -- local error_msg = input:getError() -- to get the error message
+--- @class SimpleInput
 RMP.SimpleInput = OOP.class("SimpleInput")
 do
+    --- @param options table
+    --- @return self
     function RMP.SimpleInput:constructor(options)
         options = options or {}
 
@@ -2108,6 +2441,7 @@ do
     end
 
     function RMP.SimpleInput:render(vterm)
+        --- @diagnostic disable-next-line
         if self.active then
             vterm:addEventListener(RMP.EventType.Focuse, function(key)
                 self:_handleKey(key)
@@ -2120,27 +2454,33 @@ do
         return self
     end
 
+    --- @return self
     function RMP.SimpleInput:focus()
         self.active = true
         self.show_error = false
         return self
     end
 
+    --- @return self
     function RMP.SimpleInput:blur()
         self.active = false
         return self
     end
 
+    --- @return string
     function RMP.SimpleInput:getValue()
         return self.value
     end
 
+    --- @param value string
+    --- @return self
     function RMP.SimpleInput:setValue(value)
         self.value = tostring(value or "")
         self.cursor_pos = #self.value + 1
         return self
     end
 
+    --- @return self
     function RMP.SimpleInput:clear()
         self.value = ""
         self.cursor_pos = 1
@@ -2148,18 +2488,23 @@ do
         return self
     end
 
+    --- @return boolean
     function RMP.SimpleInput:isActive()
         return self.active
     end
 
+    --- @return boolean
     function RMP.SimpleInput:hasError()
         return self.show_error
     end
 
+    --- @return string
     function RMP.SimpleInput:getError()
         return self.error_message
     end
 
+    --- @private
+    --- @param key integer
     function RMP.SimpleInput:_handleKey(key)
         if key == RMP.KEY_ENTER then
             self:_submit()
@@ -2185,7 +2530,10 @@ do
         end
     end
 
+    --- @private
+    --- @return boolean
     function RMP.SimpleInput:_submit()
+        --- @diagnostic disable-next-line
         if self.validator then
             local valid, error_msg = self.validator(self.value)
             if not valid then
@@ -2200,12 +2548,15 @@ do
         return true
     end
 
+    --- @private
+    --- @param char string
     function RMP.SimpleInput:_insertChar(char)
         self.value = self.value:sub(1, self.cursor_pos - 1) .. char .. self.value:sub(self.cursor_pos)
         self.cursor_pos = self.cursor_pos + 1
         self.show_error = false
     end
 
+    --- @private
     function RMP.SimpleInput:_backspace()
         if self.cursor_pos > 1 then
             self.value = self.value:sub(1, self.cursor_pos - 2) .. self.value:sub(self.cursor_pos)
@@ -2214,6 +2565,7 @@ do
         end
     end
 
+    --- @private
     function RMP.SimpleInput:_delete()
         if self.cursor_pos <= #self.value then
             self.value = self.value:sub(1, self.cursor_pos - 1) .. self.value:sub(self.cursor_pos + 1)
@@ -2221,18 +2573,23 @@ do
         end
     end
 
+    --- @private
     function RMP.SimpleInput:_moveCursorLeft()
         if self.cursor_pos > 1 then
             self.cursor_pos = self.cursor_pos - 1
         end
     end
 
+    --- @private
     function RMP.SimpleInput:_moveCursorRight()
         if self.cursor_pos <= #self.value then
             self.cursor_pos = self.cursor_pos + 1
         end
     end
 
+    --- @private
+    --- @param key integer
+    --- @return string
     function RMP.SimpleInput:_keyToChar(key)
         local keyMap = {
             [RMP.KEY_A]             = "a",
@@ -2335,6 +2692,7 @@ do
     end
 
     function RMP.SimpleInput:_renderField(vterm)
+        --- @diagnostic disable-next-line
         if self.label ~= "" then
             vterm:writeText(self.x, self.y, self.label, self.fg_normal, self.bg_normal)
         end
@@ -2343,12 +2701,14 @@ do
         local fg = self.active and self.fg_active or self.fg_normal
         local bg = self.active and self.bg_active or self.bg_normal
 
+        --- @diagnostic disable-next-line
         if self.show_error then
             fg = self.fg_error
         end
 
 
         local display_value = self.value
+        --- @diagnostic disable-next-line
         if display_value == "" and not self.active and self.placeholder ~= "" then
             display_value = self.placeholder
             fg = RMP.FGColors.NoBrights.White
@@ -2361,18 +2721,21 @@ do
         vterm:writeText(field_x, self.y, field_content, fg, bg)
 
 
+        --- @diagnostic disable-next-line
         if self.active then
             local cursor_x = field_x + self.cursor_pos - 1
             vterm:writeText(cursor_x, self.y, "_", RMP.FGColors.Brights.Yellow, bg)
         end
 
 
+        --- @diagnostic disable-next-line
         if self.show_error and self.error_message ~= "" then
             vterm:writeText(self.x, self.y + 1, self.error_message, self.fg_error, self.bg_normal)
         end
     end
 end
 
+--- @param options table
 function RMP.input(options)
     options = options or {}
     local message = options.message or "Enter value:"
@@ -2381,6 +2744,7 @@ function RMP.input(options)
 
     -- This would be implemented as a blocking dialog
     -- For now, return a simple input component
+    --- @diagnostic disable-next-line
     return RMP.SimpleInput.new({
         label = message,
         value = default,
@@ -2391,8 +2755,11 @@ end
 
 -- TODO: handle Tables
 -- TODO: handle Animation  [loading bar , spinner , progress bar ]
+--- @class Options
 RMP.Options = OOP.class("Options")
 do
+    --- @param options table
+    --- @return self
     function RMP.Options:constructor(options)
         self.options = options or {}
         self.color = RMP.Default
@@ -2411,11 +2778,16 @@ do
         return self
     end
 
+    --- @param value boolean
+    --- @return self
     function RMP.Options:setCounter(value)
         self.counter = value
         return self
     end
 
+    --- @param selected string
+    --- @param unselected string
+    --- @return self
     function RMP.Options:setMark(selected, unselected)
         self.selected = selected or ""
         self.unselected = unselected or ""
@@ -2428,22 +2800,29 @@ do
         return self
     end
 
+    --- @param color BGColors
+    --- @return self
     function RMP.Options:setColorFocus(color)
         self.color = color or RMP.Default
         return self
     end
 
+    --- @param symbl string
+    --- @return self
     function RMP.Options:setSymblFocus(symbl)
         self.symbl = symbl or ""
         return self
     end
 
+    --- @param options table
+    --- @return self
     function RMP.Options:setOptions(options)
         self.options = options or {}
         -- clamp pos
         if #self.options == 0 then
             self.pos = 1
         else
+            --- @diagnostic disable-next-line
             if self.pos < 1 then self.pos = 1 end
             if self.pos > #self.options then self.pos = #self.options end
         end
@@ -2455,23 +2834,30 @@ do
         return self
     end
 
+    --- @return table
     function RMP.Options:getOptions()
         return self.options or {}
     end
 
     -- set visible focus position (absolute index in options array)
+    --- @param position integer
+    --- @return self
     function RMP.Options:focusPos(position)
         local p = tonumber(position) or 1
         if p < 1 then p = 1 end
         if p > #self.options and #self.options > 0 then p = #self.options end
+        --- @cast p integer
         self.pos = p
         return self
     end
 
+    --- @param block boolean
+    --- @return self
     function RMP.Options:next(block)
         block = block or false
         if #self.options == 0 then return self end
         if self.pos == #self.options then
+            --- @diagnostic disable-next-line
             if block then
                 self.pos = #self.options
             else
@@ -2483,20 +2869,26 @@ do
         return self
     end
 
+    --- @return self
     function RMP.Options:first()
         self.pos = 1
         return self
     end
 
+    --- @return self
     function RMP.Options:last()
         self.pos = math.max(1, #self.options)
         return self
     end
 
+    --- @param block boolean
+    --- @return self
     function RMP.Options:prev(block)
         block = block or false
         if #self.options == 0 then return self end
+        --- @diagnostic disable-next-line
         if self.pos == 1 then
+            --- @diagnostic disable-next-line
             if block then
                 self.pos = 1
             else
@@ -2508,6 +2900,7 @@ do
         return self
     end
 
+    --- @return string | nil
     function RMP.Options:getSelected()
         if #self.options == 0 then return nil end
         self.marked_table[self.pos] = not self.marked_table[self.pos]
@@ -2521,6 +2914,7 @@ do
     -- Returns a table of strings suitable for rendering.
     -- It DOES NOT modify self.options in-place.
     -- inside RMP.Options (replace existing parse)
+    --- @return table
     function RMP.Options:parse()
         local forRet = {}
         for i = 1, #self.options do
@@ -2529,6 +2923,7 @@ do
 
             -- prefix (mark/unmark) shown before the item text (kept plain)
             local prefix = ""
+            --- @diagnostic disable-next-line
             if self.mark then
                 prefix = (marked and (self.selected or "") or (self.unselected or "")) .. " "
             end
@@ -2552,6 +2947,7 @@ do
     end
 end
 
+--- @class Draw
 RMP.Draw = OOP.class("Draw")
 do -- Draw
     -- TODO: draw something based on table of boolean
@@ -2559,6 +2955,13 @@ do -- Draw
 
     end
 
+    --- @param x integer
+    --- @param y integer
+    --- @param width integer
+    --- @param height integer
+    --- @param color BGColors
+    --- @param vterm VirtualTerminal
+    --- @return VirtualTerminal | nil
     function RMP.Draw:rectangle(x, y, width, height, color, vterm)
         x = x or 0
         x = math.floor(x)
@@ -2567,12 +2970,13 @@ do -- Draw
         y = math.floor(y)
 
         if not width or not height then
-            return
+            return nil
         end
 
         width = math.floor(width)
         height = math.floor(height)
 
+        --- @diagnostic disable-next-line
         vterm = vterm or RMP.VirtualTerminal.new()
         vterm:moveCursor(x, y)
 
@@ -2585,6 +2989,12 @@ do -- Draw
         return vterm
     end
 
+    --- @param centerX integer
+    --- @param centerY integer
+    --- @param r integer
+    --- @param color BGColors
+    --- @param vterm VirtualTerminal
+    --- @return VirtualTerminal | nil
     function RMP.Draw:circle(centerX, centerY, r, color, vterm)
         r = math.floor(math.floor(r) or 5)
         if r <= 0 then return nil end
@@ -2592,6 +3002,7 @@ do -- Draw
         local centerX = math.floor(centerX or 0)
         local centerY = math.floor(centerY or 0)
 
+        --- @diagnostic disable-next-line
         vterm = vterm or RMP.VirtualTerminal.new()
         for y = -r, r do
             for x = -r, r do
@@ -2605,7 +3016,14 @@ do -- Draw
         return vterm
     end
 
+    --- @param height integer
+    --- @param pos_x integer
+    --- @param pos_y integer
+    --- @param color BGColors
+    --- @param vterm VirtualTerminal
+    --- @return VirtualTerminal
     function RMP.Draw:triangle(height, pos_x, pos_y, color, vterm)
+        --- @diagnostic disable-next-line
         vterm = vterm or RMP.VirtualTerminal.new()
         local char = " "
         local height = math.floor(height)
@@ -2618,8 +3036,16 @@ do -- Draw
         return vterm
     end
 
+    --- @param x integer
+    --- @param y integer
+    --- @param width integer
+    --- @param color BGColors
+    --- @param vterm VirtualTerminal
+    --- @return VirtualTerminal
     function RMP.Draw:line(x, y, width, color, vterm)
+        --- @diagnostic disable-next-line
         vterm = vterm or RMP.VirtualTerminal.new()
+        --- @diagnostic disable-next-line
         if width then
             vterm:moveCursor(x, y)
             for i = x, width + x do
@@ -2629,7 +3055,14 @@ do -- Draw
         return vterm
     end
 
+    --- @param x integer
+    --- @param y integer
+    --- @param height integer
+    --- @param color BGColors
+    --- @param vterm VirtualTerminal
+    --- @return VirtualTerminal
     function RMP.Draw:column(x, y, height, color, vterm)
+        --- @diagnostic disable-next-line
         vterm = vterm or RMP.VirtualTerminal.new()
         for i = y, height + y do
             vterm:setChar(x, i, " ", nil, color, nil)
@@ -2639,6 +3072,7 @@ do -- Draw
 end
 
 -- Position Layout
+--- @enum PopupPosition
 RMP.PopupPosition = {
     CENTER       = RMP.enum(true),
     TOP_LEFT     = RMP.enum(),
@@ -2666,8 +3100,10 @@ do -- Popups
             x, y = (cols / 2) - (cols / 8), (rows / 2) - (rows / 8)
         end
 
+        --- @diagnostic disable-next-line
         vterm = vterm or RMP.VirtualTerminal.new()
 
+        --- @diagnostic disable-next-line
         return RMP.Window.new(99, vterm):createWindow(
             title,
             -- 		cols / 2 ,
@@ -2681,6 +3117,7 @@ do -- Popups
             RMP.BoxDrawing.LightBorder,
             function(lx, ly, xx, yy)
                 -- TODO: fix message inside box
+                --- @diagnostic disable-next-line
                 vterm = RMP.VirtualTerminal.new()
                 vterm:moveCursor(lx + 1, ly + 1)
                 -- i think i delete this helper function
@@ -2722,6 +3159,7 @@ do
         self.time = time
         self.counter = 0
         self.fps = fps
+        --- @diagnostic disable-next-line
         self.vterm = vterm or RMP.VirtualTerminal.new()
     end
 
@@ -2741,6 +3179,7 @@ do
             return self:super(
                 "run",
                 self.message,
+                --- @diagnostic disable-next-line
                 RMP.Text.new(
                     "[ " .. "ERROR" .. " ]",
                     RMP.TextStyle.Bold,
@@ -2763,6 +3202,7 @@ do
             return self:super(
                 "run",
                 self.message,
+                --- @diagnostic disable-next-line
                 RMP.Text.new(
                     "[ " .. "INFO" .. " ]",
                     RMP.TextStyle.Bold,
@@ -2785,6 +3225,7 @@ do
             return self:super(
                 "run",
                 self.message,
+                --- @diagnostic disable-next-line
                 RMP.Text.new(
                     "[ " .. "Message" .. " ]",
                     RMP.TextStyle.Bold,
@@ -2807,6 +3248,7 @@ do
             return self:super(
                 "run",
                 self.message,
+                --- @diagnostic disable-next-line
                 RMP.Text.new(
                     "[ " .. "Warning" .. " ]",
                     RMP.TextStyle.Bold,
@@ -2827,6 +3269,7 @@ RMP.Scroller = OOP.class("Scroller")
 do
     function RMP.Scroller:constructor(visible_height, options_obj)
         self.visible_height = math.max(1, tonumber(visible_height) or 10)
+        --- @diagnostic disable-next-line
         self.options = options_obj or RMP.Options.new({})
         self.scroll_offset = 0
 
@@ -2847,6 +3290,7 @@ do
     end
 
     function RMP.Scroller:setOptionsObj(options_obj)
+        --- @diagnostic disable-next-line
         self.options = options_obj or RMP.Options.new({})
         local data = self.options:getOptions() or {}
 
@@ -3065,6 +3509,7 @@ RMP.State = {
     ERROR   = RMP.enum()
 }
 
+--- @class Sound
 RMP.Sound = OOP.class("Sound")
 do
     function RMP.Sound:constructor(files)
@@ -3714,7 +4159,7 @@ do -- Path
                 return
             end
 
-            local temp_path = RMP.Path:new(current_path)
+            local temp_path = RMP.Path.new(current_path)
             local lst = temp_path:listDir()
             if not lst then
                 return
@@ -3733,6 +4178,7 @@ do -- Path
                     (not is_file_pattern and not info.is_file)
 
                 -- TODO: check match_func
+                --- @diagnostic disable-next-line
                 if should_check and match_func(info.name, info.is_file, full_path) then
                     table.insert(results, {
                         path = full_path,
@@ -3753,9 +4199,11 @@ do -- Path
 end
 
 -- Updated RMP.Config class with cross-platform support
+--- @class Config
 RMP.Config = OOP.class("Config")
 do -- Config
     -- Get cross-platform config directory name
+    --- @return string
     local function getConfigDirName()
         local os_type = RMP.getOs()
         if os_type == RMP.PlatformType.WINDOWS then
@@ -3765,7 +4213,8 @@ do -- Config
         end
     end
 
-    function RMP.Config:constructor(confPath)
+    --- @return self | nil
+    function RMP.Config:constructor()
         self.cfgObj = nil
         self.isValidFile = false
         self.isError = nil
@@ -3780,7 +4229,7 @@ do -- Config
 
         if not self.homePath:find(configDirName, false) then
             self.isError = configDirName .. " directory not found in home dir"
-            return
+            return nil
         end
 
         -- Use cross-platform path joining
@@ -3789,7 +4238,7 @@ do -- Config
 
         if not self.configurationPath:find("init.lua", true) then
             self.isError = "init.lua not found in " .. configDirName .. " dir"
-            return
+            return nil
         end
 
         -- Cross-platform path for init.lua
@@ -3800,7 +4249,9 @@ do -- Config
         return self
     end
 
+    --- @return boolean , string | nil
     function RMP.Config:load() -- (boolean , Error)
+        --- @diagnostic disable-next-line
         if not self.isValidFile then
             return false, self.isError
         end
@@ -3825,9 +4276,10 @@ do -- Config
     end
 
     -- Cross-platform theme path resolution
+    --- @param themeName string
     function RMP.Config:getThemePath(themeName)
         if not themeName or type(themeName) ~= "string" then
-            return nil
+            return nil, nil
         end
 
         local configPath = self.configurationPath:getPath()
@@ -3835,9 +4287,11 @@ do -- Config
     end
 
     -- Cross-platform plugin path resolution
+    --- @param pluginName string
+    --- @return string | nil , string | nil
     function RMP.Config:getPluginPath(pluginName)
         if not pluginName or type(pluginName) ~= "string" then
-            return nil
+            return nil, nil
         end
 
         local configPath = self.configurationPath:getPath()
@@ -3850,6 +4304,7 @@ do -- Config
     end
 
     -- Helper method to get installation paths
+    --- @return table
     function RMP.Config:getInstallationPaths()
         local paths = {}
 
@@ -3877,31 +4332,39 @@ do -- Config
         return paths
     end
 
+    --- @return boolean
     function RMP.Config:isValidConfig()
         return self.isValidFile
     end
 
+    --- @return table | nil
     function RMP.Config:getInitFileAsObject()
+        --- @diagnostic disable-next-line
         if self.cfgObj and type(self.cfgObj) == "table" then
             return self.cfgObj
         end
         return nil
     end
 
+    --- @return string | nil
     function RMP.Config:getThemesAsObject()
+        --- @diagnostic disable-next-line
         if self.cfgObj and self.cfgObj.template and type(self.cfgObj.template) == "string" then
             return self.cfgObj.template
         end
         return nil
     end
 
+    --- @return table | nil
     function RMP.Config:getSoundKeyMaps()
+        --- @diagnostic disable-next-line
         if self.cfgObj and self.cfgObj.soundMap and type(self.cfgObj.soundMap) == "table" then
             return self.cfgObj.soundMap
         end
         return {}
     end
 
+    --- @return table | nil
     function RMP.Config:getAllPlugins()
         if not self.cfgObj or not self.cfgObj.plugins or type(self.cfgObj.plugins) ~= "table" then
             return {}
@@ -3909,6 +4372,8 @@ do -- Config
         return self.cfgObj.plugins
     end
 
+    --- @param id integer
+    --- @return table | string | nil , string | nil
     function RMP.Config:getPluginFromThemeWindowId(id)
         if not self.cfgObj or not self.cfgObj.plugins or type(self.cfgObj.plugins) ~= "table" then
             return nil
@@ -3927,14 +4392,14 @@ do -- Config
                             local file = io.open(singleFile, "r")
                             if file then
                                 file:close()
-                                return dofile(singleFile)
+                                return dofile(singleFile), nil
                             end
 
                             -- Try folder with init.lua
                             file = io.open(folderInit, "r")
                             if file then
                                 file:close()
-                                return dofile(folderInit)
+                                return dofile(folderInit), nil
                             end
 
                             return nil
@@ -3950,9 +4415,10 @@ do -- Config
             end
         end
 
-        return nil
+        return nil, nil
     end
 
+    --- @return string | nil
     function RMP.Config:getLoadError()
         return self.isError
     end
@@ -3962,8 +4428,12 @@ end
 -- TODO: make sure that every socket method works async
 -- TODO: handle SSL/TLS sockets
 
+--- @class Socket
 RMP.Socket = OOP.class("Socket")
 do
+    --- @param host string  | nil
+    --- @param port integer  | nil
+    --- @return self
     function RMP.Socket:constructor(host, port)
         self.host = host or "localhost"
         self.port = port or 8080
@@ -3971,52 +4441,64 @@ do
         return self
     end
 
+    --- @return boolean | nil , string | nil
     function RMP.Socket:connect()
         return self.socket:connect(self.host, self.port)
     end
 
+    --- @return boolean | nil , string | nil
     function RMP.Socket:bind()
         return self.socket:bind(self.host, self.port)
     end
 
+    --- @return boolean | nil , string | nil
     function RMP.Socket:listen(backlog)
         backlog = backlog or 5
         return self.socket:listen(backlog)
     end
 
     -- returns another socket objetc
+    --- @return string | integer | nil , string | nil
     function RMP.Socket:accept()
         return self.socket:accept()
     end
 
+    --- @return integer | nil , string | nil
     function RMP.Socket:send(data)
         return self.socket:send(data)
     end
 
+    --- @return string | nil , string | nil
     function RMP.Socket:recv(size)
         return self.socket:recv(size)
     end
 
+    --- @return boolean
     function RMP.Socket:close()
         return self.socket:close()
     end
 
+    --- @return boolean | nil , string | nil
     function RMP.Socket:setnonblock(non_blocking)
         return self.socket:setnonblock(non_blocking)
     end
 
+    --- @return boolean | nil , string | nil
     function RMP.Socket:setnodelay(no_delay)
         return self.socket:setnodelay(no_delay)
     end
 
+    --- @return boolean | nil , string | nil
     function RMP.Socket:setbroadcast(istrue)
         return self.socket:setbroadcast(istrue)
     end
 
+    --- @return string
     function RMP.Socket:getprotocol()
         return self.socket:getprotocol()
     end
 
+    --- @return integer | nil , string | nil
     function RMP.Socket:sendto(packet, host, port)
         -- TODO: check if the packet is instace of Packet
         if packet:instanceOf(RMP.Packet) then
@@ -4025,11 +4507,13 @@ do
         return self.socket:sendto(packet, host, port)
     end
 
+    --- @return string | nil , string | nil , integer | string | nil
     function RMP.Socket:recvfrom(size)
         return self.socket:recvfrom(size)
     end
 end
 
+--- @class Packet
 RMP.Packet = OOP.class("Packet")
 do
     function RMP.Packet:constructor()
@@ -4040,9 +4524,11 @@ do
     end
 end
 
+--- @class TCPSocket
 RMP.TCPSocket = OOP.class("TCPSocket", RMP.Socket)
 do
     function RMP.TCPSocket:constructor(host, port)
+        --- @diagnostic disable-next-line
         self:super("constructor", host, port)
         self.port = port
         return self
@@ -4050,15 +4536,18 @@ do
 end
 
 -- TODO: make sure that the socket native library support UDP sockets
+--- @class UDPSocket
 RMP.UDPSocket = OOP.class("UDPSocket", RMP.Socket)
 do
     function RMP.UDPSocket:constructor(host, port)
+        --- @diagnostic disable-next-line
         self:super("constructor", host, port)
         self.port = port
         return self
     end
 end
 
+--- @class FTPClient
 RMP.FTPClient = OOP.class("FTPClient", RMP.TCPSocket)
 do
     function RMP.FTPClient:constructor()
@@ -4066,6 +4555,7 @@ do
     end
 end
 
+--- @class HTTPServer
 RMP.HTTPServer = OOP.class("HTTPServer", RMP.TCPSocket)
 do
     function RMP.HTTPServer:constructor(port)
@@ -4074,6 +4564,7 @@ do
     end
 end
 
+--- @class HTTPClient
 RMP.HTTPClient = OOP.class("HTTPClient", RMP.TCPSocket)
 do
     function RMP.HTTPClient:constructor()
@@ -4134,12 +4625,18 @@ do
     end
 end
 
+--- @class Frame
 RMP.Frame = OOP.class("Frame", RMP.VirtualTerminal)
 do
+    --- @param width integer
+    --- @param heigth integer
+    --- @return self
     function RMP.Frame:constructor(width, heigth)
+        --- @diagnostic disable-next-line
         self:super("constructor", width, heigth)
         self.layout = nil
         self.fps = 30
+        return self
     end
 
     function RMP.Frame:setLayout(layout)
@@ -4158,49 +4655,78 @@ do
         RMP.Terminal:clearWindow()
     end
 
+    --- @param fps integer
     function RMP.Frame:setFps(fps)
         self.fps = fps
     end
 
+    --- @return integer
     function RMP.Frame:getFps()
         return self.fps
     end
 
+    --- @return number
     function RMP.Frame:getDeltaTime()
         return 1 / self.fps -- second
     end
 
+    --- @param x integer
+    --- @param y integer
     function RMP.Frame:positionedFrame(x, y)
         x = x or 1
         y = y or 1
+        --- @diagnostic disable-next-line
         self:super("moveCursor", x, y)
     end
 
+    --- @param component VirtualTerminal | Frame
+    --- @param distroy boolean
+    --- @return self
     function RMP.Frame:add(component, distroy)
         if self.layout == nil then
+            --- @diagnostic disable-next-line
             self:super("merge", component, distroy)
+            --- @diagnostic disable-next-line
         elseif self.layout:instanceOf(RMP.Grid) then
             -- manage the layout
         end
+        return self
     end
 
+    --- @param components table
+    --- @param distroy boolean
+    --- @return self
     function RMP.Frame:addMany(components, distroy)
+        --- @diagnostic disable-next-line
         self:super("mergeAll", components, distroy)
+        return self
     end
 
+    --- @overload fun(key : integer , callback : function)
     function RMP.Frame:addEventListener(key, callback)
+        --- @diagnostic disable-next-line
         self:super("addEventListener", key, callback)
     end
 
+    --- @param key integer
+    --- @param mouse any
+    --- @param sound Sound
+    --- @param config table
+    --- @param template table
     function RMP.Frame:run(key, mouse, sound, config, template)
+        --- @diagnostic disable-next-line
         self:super("handleEvent", key, mouse, sound, config, template)
+        --- @diagnostic disable-next-line
         self:super("render")
+        --- @diagnostic disable-next-line
         self:super("clear")
+        --- @diagnostic disable-next-line
         RMP.sleep(math.floor(RMP.Duration.new(self:getDeltaTime()):fromSec()))
     end
 end
 
--- TODO: add class Code to manage code highlighting for the text
+-- TODO: handle RE for better syntax highlighting
+--- @enum CodeSyntax
 RMP.CodeSyntax = {
     LUA = {
         { word = "--",       type = "comment",    color = RMP.FGColors.Brights.Black },
@@ -4302,8 +4828,14 @@ RMP.CodeSyntax = {
     },
 }
 
+--- @class Code
 RMP.Code = OOP.class("Code", nil, RMP.Renderable)
 do
+    --- @param code string | nil
+    --- @param syntax table | nil
+    --- @param x integer | nil
+    --- @param y integer | nil
+    --- @return self
     function RMP.Code:constructor(code, syntax, x, y)
         self.code = code or ""
         self.syntax = syntax or RMP.CodeSyntax.LUA
@@ -4312,17 +4844,23 @@ do
         return self
     end
 
+    --- @param syntax table | nil
+    --- @return self
     function RMP.Code:setSyntax(syntax)
         self.syntax = syntax
         return self
     end
 
+    --- @param x integer
+    --- @param y integer
+    --- @return self
     function RMP.Code:setPosition(x, y)
         self.x = x
         self.y = y
         return self
     end
 
+    --- @return VirtualTerminal
     function RMP.Code:highlight()
         local lines = {}
         for line in self.code:gmatch("[^\r\n]+") do
@@ -4340,6 +4878,7 @@ do
             syntaxTable = RMP.CodeSyntax.LUA
         end
 
+        --- @diagnostic disable-next-line
         local vt = RMP.VirtualTerminal.new()
 
         for lineIdx, line in ipairs(lines) do
@@ -4349,6 +4888,7 @@ do
             while i <= #line do
                 local matched = false
                 for _, keyword in ipairs(syntaxTable) do
+                    -- TODO: check comment type and highlight the rest of the line
                     local word = keyword.word
                     local wordLen = #word
 
@@ -4379,19 +4919,25 @@ do
         return vt
     end
 
+    --- @overload fun() : VirtualTerminal
     function RMP.Code:render()
         return self:highlight()
     end
 end
 
+--- @enum StatusBarPosition
 RMP.StatusBarPosition = {
     LEFT = "left",
     RIGHT = "right",
     CENTER = "CENTER"
 }
 
+--- @class StatusBar
 RMP.StatusBar = OOP.class("StatusBar", nil, RMP.Renderable)
 do
+    --- @param y integer
+    --- @param width integer
+    --- @return self
     function RMP.StatusBar:constructor(y, width)
         local _, w = RMP.Terminal:getSize()
         self.width = width or w
@@ -4406,6 +4952,12 @@ do
     -- bg: background color (from api.BGColors)
     -- style: text style (from api.TextStyle)
     -- align: "left" (default), "right", or "center"
+    --- @param text string | nil
+    --- @param fg FGColors
+    --- @param bg BGColors
+    --- @param style TextStyle
+    --- @param align StatusBarPosition
+    --- @return self
     function RMP.StatusBar:addComponent(text, fg, bg, style, align)
         table.insert(self._components, {
             text = text or "",
@@ -4417,11 +4969,19 @@ do
         return self
     end
 
+    --- @return self
     function RMP.StatusBar:clear()
         self._components = {}
         return self
     end
 
+    --- @param index integer
+    --- @param text string | nil
+    --- @param fg FGColors
+    --- @param bg BGColors
+    --- @param style TextStyle
+    --- @param align StatusBarPosition
+    --- @return self
     function RMP.StatusBar:updateComponent(index, text, fg, bg, style, align)
         if self._components[index] then
             if text then self._components[index].text = text end
@@ -4433,12 +4993,14 @@ do
         return self
     end
 
+    --- @return VirtualTerminal
     function RMP.StatusBar:render()
         local width = self.width
+        --- @diagnostic disable-next-line
         local vterm = RMP.VirtualTerminal.new()
 
         -- set background color black as default
-        RMP.Draw:line(1, self.y, w, RMP.BGColors.NoBrights.Black, vterm)
+        RMP.Draw:line(1, self._y, w, RMP.BGColors.NoBrights.Black, vterm)
 
         local leftComps, rightComps, centerComps = {}, {}, {}
         for _, comp in ipairs(self._components) do
@@ -4459,6 +5021,7 @@ do
         local x = 1
 
         for _, comp in ipairs(leftComps) do
+            --- @diagnostic disable-next-line
             local text = RMP.Text.new(comp.text, comp.style, comp.fg, comp.bg)
             text:setPosition(x, self._y)
             vterm:merge(text:render(), true)
@@ -4470,6 +5033,7 @@ do
         if #centerComps > 0 then
             local leftPad = math.floor(remaining / 2)
             if leftPad > 0 then
+                --- @diagnostic disable-next-line
                 local pad = RMP.Text.new(string.rep(" ", leftPad), nil, nil, nil)
                 pad:setPosition(x, self._y)
                 vterm:merge(pad:render(), true)
@@ -4492,6 +5056,7 @@ do
             end
         else
             if remaining > 0 then
+                --- @diagnostic disable-next-line
                 local pad = RMP.Text.new(string.rep(" ", remaining), nil, nil, nil)
                 pad:setPosition(x, self._y)
                 vterm:merge(pad:render(), true)

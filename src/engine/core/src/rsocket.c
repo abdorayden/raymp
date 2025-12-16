@@ -187,7 +187,8 @@ ALWAYS_INT rsocket_connect(STATE) {
     }
 
     lua_pushboolean(L, 1);
-    return 1;
+    lua_pushnil(L);
+    return 2;
 }
 
 ALWAYS_INT rsocket_bind(STATE) {
@@ -226,7 +227,8 @@ ALWAYS_INT rsocket_bind(STATE) {
     }
 
     lua_pushboolean(L, 1);
-    return 1;
+    lua_pushnil(L);
+    return 2;
 }
 
 ALWAYS_INT rsocket_listen(STATE) {
@@ -246,7 +248,8 @@ ALWAYS_INT rsocket_listen(STATE) {
     }
 
     lua_pushboolean(L, 1);
-    return 1;
+    lua_pushnil(L);
+    return 2;
 }
 
 ALWAYS_INT rsocket_accept(STATE) {
@@ -278,7 +281,7 @@ ALWAYS_INT rsocket_accept(STATE) {
     lua_pushstring(L, ip);
     lua_pushinteger(L, ntohs(client_addr.sin_port));
 
-    return 3;
+    return 2;
 }
 
 ALWAYS_INT rsocket_send(STATE) {
@@ -300,7 +303,8 @@ ALWAYS_INT rsocket_send(STATE) {
     }
 
     lua_pushinteger(L, sent);
-    return 1;
+    lua_pushnil(L);
+    return 2;
 }
 
 ALWAYS_INT rsocket_recv(STATE) {
@@ -333,7 +337,8 @@ ALWAYS_INT rsocket_recv(STATE) {
     }
 
     lua_pushlstring(L, buffer, received);
-    return 1;
+    lua_pushnil(L);
+    return 2;
 }
 
 ALWAYS_INT rsocket_sendto(STATE) {
@@ -372,7 +377,8 @@ ALWAYS_INT rsocket_sendto(STATE) {
     }
 
     lua_pushinteger(L, sent);
-    return 1;
+    lua_pushnil(L);
+    return 2;
 }
 
 ALWAYS_INT rsocket_recvfrom(STATE) {
@@ -381,8 +387,9 @@ ALWAYS_INT rsocket_recvfrom(STATE) {
 
     if (!rs->is_open) {
         lua_pushnil(L);
+        lua_pushnil(L);
         lua_pushstring(L, "socket closed");
-        return 2;
+        return 3;
     }
 
     if (size <= 0 || size > BUFFER_SIZE) {
@@ -397,8 +404,9 @@ ALWAYS_INT rsocket_recvfrom(STATE) {
 
     if (received == SOCKET_ERROR) {
         lua_pushnil(L);
+        lua_pushnil(L);
         lua_pushfstring(L, "recvfrom failed: %d", get_error());
-        return 2;
+        return 3;
     }
 
     lua_pushlstring(L, buffer, received);
@@ -440,7 +448,8 @@ ALWAYS_INT rsocket_setnonblock(STATE) {
     }
 
     lua_pushboolean(L, 1);
-    return 1;
+    lua_pushnil(L);
+    return 2;
 }
 
 ALWAYS_INT rsocket_setnodelay(STATE) {
@@ -466,7 +475,8 @@ ALWAYS_INT rsocket_setnodelay(STATE) {
     }
 
     lua_pushboolean(L, 1);
-    return 1;
+    lua_pushnil(L);
+    return 2;
 }
 
 ALWAYS_INT rsocket_setbroadcast(STATE) {
@@ -486,7 +496,8 @@ ALWAYS_INT rsocket_setbroadcast(STATE) {
     }
 
     lua_pushboolean(L, 1);
-    return 1;
+    lua_pushnil(L);
+    return 2;
 }
 
 ALWAYS_INT rsocket_getprotocol(STATE) {
