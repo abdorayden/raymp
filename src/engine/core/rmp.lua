@@ -1068,6 +1068,7 @@ do -- text
         return self
     end
 
+    --- @deprecated
     function RMP.Text:asVTerm()
         self.vterm:writeText(self.x, self.y, self.text, self.fg, self.bg, self.style)
         return self.vterm
@@ -1075,6 +1076,7 @@ do -- text
 
     --- @return VirtualTerminal
     function RMP.Text:render()
+        --- @diagnostic disable-next-line
         return self:asVTerm()
     end
 
