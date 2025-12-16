@@ -133,32 +133,36 @@ end
 -- Example 3: Async methods in a regular function table (not using OOP)
 local AsyncUtils = {}
 
--- Async function in a table
-AsyncUtils.processListAsync = Promise.async(function(self, items, delayPerItem)
-    delayPerItem = delayPerItem or 300
-    local results = {}
+-- FIX: Async function should not take 'self' as first parameter when used as standalone function
+function AsyncUtils.processListAsync(items, delayPerItem)
+    return Promise.async(function()
+        delayPerItem = delayPerItem or 300
+        local results = {}
 
-    print("Processing " .. #items .. " items asynchronously")
+        print("Processing " .. #items .. " items asynchronously")
 
-    for i, item in ipairs(items) do
-        print("Processing item " .. i .. ": " .. tostring(item))
-        local result = Promise.await(mockAsyncTask("ProcessItem-" .. i, delayPerItem, false,
-            "Processed: " .. tostring(item)))
-        table.insert(results, result)
-    end
+        for i, item in ipairs(items) do
+            print("Processing item " .. i .. ": " .. tostring(item))
+            local result = Promise.await(mockAsyncTask("ProcessItem-" .. i, delayPerItem, false,
+                "Processed: " .. tostring(item)))
+            table.insert(results, result)
+        end
 
-    print("All items processed")
-    return results
-end)
+        print("All items processed")
+        return results
+    end)()
+end
 
--- Another async utility function
-AsyncUtils.delayedOperation = Promise.async(function(self, operationName, delay)
-    print("Starting delayed operation: " .. operationName)
-    -- Wait for the specified delay
-    Promise.await(Promise.timeout(delay))
-    print("Completed delayed operation: " .. operationName)
-    return "Completed: " .. operationName
-end)
+-- FIX: Another async utility function without self parameter
+function AsyncUtils.delayedOperation(operationName, delay)
+    return Promise.async(function()
+        print("Starting delayed operation: " .. operationName)
+        -- Wait for the specified delay
+        Promise.await(Promise.timeout(delay))
+        print("Completed delayed operation: " .. operationName)
+        return "Completed: " .. operationName
+    end)()
+end
 
 -- Main execution to demonstrate all async OOP patterns
 local main = Promise.async(function()
@@ -166,10 +170,18 @@ local main = Promise.async(function()
     local dataService = DataService.new()
 
     local result1 = Promise.await(dataService:asyncProcessUser("001"))
-    print("Process result 1: ", result1 and result1.user.name or "nil")
+    if result1 and result1.user then
+        print("Process result 1: " .. result1.user.name)
+    else
+        print("Process result 1: nil")
+    end
 
     local result2 = Promise.await(dataService:asyncProcessUser("002"))
-    print("Process result 2: ", result2 and result2.user.name or "nil")
+    if result2 and result2.user then
+        print("Process result 2: " .. result2.user.name)
+    else
+        print("Process result 2: nil")
+    end
 
     print("\nSync method result: " .. dataService:syncMethod())
 
@@ -183,14 +195,14 @@ local main = Promise.async(function()
     end
 
     print("\n--- Test 3: Async functions in table ---")
-    local utils = AsyncUtils -- Using the table directly
-
-    local listResults = Promise.await(AsyncUtils.processListAsync(AsyncUtils, { "item1", "item2", "item3" }, 400))
+    -- FIX: Call without passing self parameter
+    local listResults = Promise.await(AsyncUtils.processListAsync({ "item1", "item2", "item3" }, 400))
     for i, result in ipairs(listResults) do
         print("List result " .. i .. ": " .. result)
     end
 
-    local delayedResult = Promise.await(AsyncUtils.delayedOperation(AsyncUtils, "Database Backup", 1200))
+    -- FIX: Call without passing self parameter
+    local delayedResult = Promise.await(AsyncUtils.delayedOperation("Database Backup", 1200))
     print("Delayed operation result: " .. delayedResult)
 
     print("\n--- All async OOP examples completed successfully! ---")
@@ -199,6 +211,8 @@ end)
 -- Run the main async function
 main():tthen(function()
     print("\nAll async operations finished.")
+end):catch(function(err)
+    print("\nError in main: " .. tostring(err))
 end)
 
 -- Start the promise event loop

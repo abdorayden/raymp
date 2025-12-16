@@ -93,6 +93,7 @@ end
 -- Pattern 3: Async functions in a regular table (not using OOP)
 local AsyncHelpers = {}
 
+-- FIX: Don't include 'self' parameter in standalone async functions
 function AsyncHelpers.fetchMultiple(urls)
     return Promise.async(function()
         local results = {}
@@ -140,12 +141,14 @@ local main = Promise.async(function()
 
     print("\n--- Example 3: Async functions in table ---")
     local urls = { "https://api1.com", "https://api2.com", "https://api3.com" }
+    -- FIX: Call without self parameter
     local results = Promise.await(AsyncHelpers.fetchMultiple(urls))
 
     for i, result in ipairs(results) do
         print("Result " .. i .. ": " .. result.content)
     end
 
+    -- FIX: Call without self parameter
     local processData = Promise.await(AsyncHelpers.processWithDelay("Important Data", 700))
     print("Process result: " .. processData)
 
@@ -154,8 +157,9 @@ end)
 
 main():tthen(function()
     print("\nAsync OOP example completed successfully.")
+end):catch(function(err)
+    print("\nError in main: " .. tostring(err))
 end)
 
 -- Run the event loop
 Promise.run()
-
