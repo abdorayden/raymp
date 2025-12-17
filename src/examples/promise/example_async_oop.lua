@@ -23,111 +23,113 @@ end
 
 -- Example 1: Class with async methods
 local DataService = OOP.class("DataService")
+do
+    function DataService:constructor()
+        self.data = {}
+    end
 
-function DataService:constructor()
-    self.data = {}
-end
+    -- Regular synchronous method
+    function DataService:syncMethod()
+        return "Sync result: Current data count is " .. #self.data
+    end
 
--- Regular synchronous method
-function DataService:syncMethod()
-    return "Sync result: Current data count is " .. #self.data
-end
-
--- Async method using Promise:tthen
-function DataService:asyncFetchUserData(userId)
-    print("Starting async fetch for user: " .. userId)
-    return mockAsyncTask("FetchUser-" .. userId, 800, false,
-            { id = userId, name = "User " .. userId, email = "user" .. userId .. "@example.com" })
-        :tthen(function(userData)
-            print("Received user data: " .. userData.name)
-            table.insert(self.data, userData)
-            return userData
-        end)
-        :catch(function(err)
-            print("Error fetching user data: " .. err)
-            return nil
-        end)
-end
-
--- Another async method
-function DataService:asyncSaveData(data)
-    print("Starting async save for data with id: " .. (data.id or "unknown"))
-    return mockAsyncTask("SaveData-" .. (data.id or "unknown"), 500, false, "Saved successfully")
-        :tthen(function(result)
-            print("Data saved: " .. result)
-            return result
-        end)
-        :catch(function(err)
-            print("Error saving data: " .. err)
-            return nil
-        end)
-end
-
--- Complex async method that chains multiple async operations
-function DataService:asyncProcessUser(userId)
-    print("Processing user: " .. userId)
-    return self:asyncFetchUserData(userId)
-        :tthen(function(userData)
-            if userData then
-                return self:asyncSaveData(userData)
-                    :tthen(function(saveResult)
-                        print("User " .. userId .. " processed successfully")
-                        return { user = userData, saveResult = saveResult }
-                    end)
-            else
-                print("Could not process user " .. userId .. ", fetch failed")
+    -- Async method using Promise:tthen
+    function DataService:asyncFetchUserData(userId)
+        print("Starting async fetch for user: " .. userId)
+        return mockAsyncTask("FetchUser-" .. userId, 800, false,
+                { id = userId, name = "User " .. userId, email = "user" .. userId .. "@example.com" })
+            :tthen(function(userData)
+                print("Received user data: " .. userData.name)
+                table.insert(self.data, userData)
+                return userData
+            end)
+            :catch(function(err)
+                print("Error fetching user data: " .. err)
                 return nil
-            end
-        end)
-        :catch(function(err)
-            print("Error processing user " .. userId .. ": " .. err)
-            return nil
-        end)
+            end)
+    end
+
+    -- Another async method
+    function DataService:asyncSaveData(data)
+        print("Starting async save for data with id: " .. (data.id or "unknown"))
+        return mockAsyncTask("SaveData-" .. (data.id or "unknown"), 500, false, "Saved successfully")
+            :tthen(function(result)
+                print("Data saved: " .. result)
+                return result
+            end)
+            :catch(function(err)
+                print("Error saving data: " .. err)
+                return nil
+            end)
+    end
+
+    -- Complex async method that chains multiple async operations
+    function DataService:asyncProcessUser(userId)
+        print("Processing user: " .. userId)
+        return self:asyncFetchUserData(userId)
+            :tthen(function(userData)
+                if userData then
+                    return self:asyncSaveData(userData)
+                        :tthen(function(saveResult)
+                            print("User " .. userId .. " processed successfully")
+                            return { user = userData, saveResult = saveResult }
+                        end)
+                else
+                    print("Could not process user " .. userId .. ", fetch failed")
+                    return nil
+                end
+            end)
+            :catch(function(err)
+                print("Error processing user " .. userId .. ": " .. err)
+                return nil
+            end)
+    end
 end
 
 -- Example 2: Using async/await pattern inside class methods
 local APIService = OOP.class("APIService")
+do
+    function APIService:constructor(baseURL)
+        self.baseURL = baseURL or "http://api.example.com"
+        self.sessionToken = nil
+    end
 
-function APIService:constructor(baseURL)
-    self.baseURL = baseURL or "http://api.example.com"
-    self.sessionToken = nil
-end
+    -- Async method using the async/await pattern
+    function APIService:login(username, password)
+        return Promise.async(function()
+            print("Attempting to login user: " .. username)
 
--- Async method using the async/await pattern
-function APIService:login(username, password)
-    return Promise.async(function()
-        print("Attempting to login user: " .. username)
+            -- Simulate async API call to get token
+            local authResult = Promise.await(mockAsyncTask("Login-" .. username, 1000, false,
+                { token = "token_" .. username, userId = 123 }))
 
-        -- Simulate async API call to get token
-        local authResult = Promise.await(mockAsyncTask("Login-" .. username, 1000, false,
-            { token = "token_" .. username, userId = 123 }))
+            if authResult and authResult.token then
+                self.sessionToken = authResult.token
+                print("Login successful for user: " .. username .. ", token: " .. self.sessionToken)
+                return authResult
+            else
+                print("Login failed for user: " .. username)
+                return nil
+            end
+        end)()
+    end
 
-        if authResult and authResult.token then
-            self.sessionToken = authResult.token
-            print("Login successful for user: " .. username .. ", token: " .. self.sessionToken)
-            return authResult
-        else
-            print("Login failed for user: " .. username)
-            return nil
-        end
-    end)()
-end
+    -- Another async method using async/await
+    function APIService:fetchData(endpoint)
+        return Promise.async(function()
+            if not self.sessionToken then
+                error("No session token available. Please login first.")
+            end
 
--- Another async method using async/await
-function APIService:fetchData(endpoint)
-    return Promise.async(function()
-        if not self.sessionToken then
-            error("No session token available. Please login first.")
-        end
+            print("Fetching data from: " .. endpoint .. " using token: " .. self.sessionToken)
 
-        print("Fetching data from: " .. endpoint .. " using token: " .. self.sessionToken)
+            -- Simulate async API call
+            local result = Promise.await(mockAsyncTask("Fetch-" .. endpoint, 700, false,
+                { endpoint = endpoint, data = "some important data", timestamp = os.time() }))
 
-        -- Simulate async API call
-        local result = Promise.await(mockAsyncTask("Fetch-" .. endpoint, 700, false,
-            { endpoint = endpoint, data = "some important data", timestamp = os.time() }))
-
-        return result
-    end)()
+            return result
+        end)()
+    end
 end
 
 -- Example 3: Async methods in a regular function table (not using OOP)
