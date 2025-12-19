@@ -152,7 +152,7 @@ ALWAYS_INT lua_init(STATE) {
 		return 2;
 	}
 
-	if (width > SIZE_MAX / height / sizeof(Cell)) {
+	if ((size_t)width > SIZE_MAX / height / sizeof(Cell)) {
 		lua_pushnil(L);
 		lua_pushstring(L, "Dimensions too large: potential overflow");
 		return 2;
@@ -628,7 +628,7 @@ ALWAYS_INT lua_resize(STATE) {
 		return 2;
 	}
 
-	if (new_width > SIZE_MAX / new_height / sizeof(Cell)) {
+	if ((size_t)new_width > SIZE_MAX / new_height / sizeof(Cell)) {
 		lua_pushboolean(L, 0);
 		lua_pushstring(L, "Dimensions too large: potential overflow");
 		return 2;

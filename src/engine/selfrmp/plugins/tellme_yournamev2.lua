@@ -24,9 +24,8 @@ local last_name = ""
 local show_greeting = false
 local greeting_time = 0
 
-local vterm = api.VirtualTerminal.new()
 return function(x, y, xx, yy)
-    vterm:clear()
+    local vterm = api.VirtualTerminal.new()
     -- Title
     vterm:writeText(x + 1, y + 1, "Tell Me Your Name Plugin",
         api.FGColors.Brights.Cyan, api.BGColors.NoBrights.Black)

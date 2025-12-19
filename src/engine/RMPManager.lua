@@ -620,7 +620,7 @@ local function engine_render_help(frame, w, h, settings, soundCfg)
         api.Text.new("Help", api.TextStyle.Bold, api.FGColors.Brights.White, api.BGColors.NoBrights.Black),
         boxX, boxY, boxWidth, boxHeight,
         api.BoxDrawing.LightBorder,
-        api.FGColors.Brights.Yellow, -- border color
+        api.FGColors.Brights.White,  -- border color
         api.BGColors.NoBrights.Black -- background color
     )
 

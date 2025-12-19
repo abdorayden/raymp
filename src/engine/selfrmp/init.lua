@@ -5,6 +5,9 @@ local api = require("rmp.rmp")
 -- 	plugins folder that has plugin arch
 -- 	themes folder that has theme arch
 
+-- local current_template = "3_simple"
+local current_template = "tutorial"
+
 return {
     -- the default configuration of the sound
     settings = {
@@ -35,46 +38,68 @@ return {
         change_playback_mode = api.KEY_TAB
     },
     -- template = "template_rmpv1" ,
-    template = "3_simple",
+    -- template = "3_simple",
+    template = current_template,
     -- template = "cyberpunk_neon",
     -- template = "music_player_template",
     -- template = "4_windows_ui",
     -- plugins
-    plugins = {                -- this is global plugins you may run in background or in window globaly
-        {
-            themeWindowId = 2, -- if this attr is not nil or exists , the runner ignore activate
-            isActivated = true,
-            activate = api.KEY_E,
-            -- this name should be the same directory and same lua file
-            -- plugins/plug_name.lua or plugins/plug_name/init.lua
-            switchPluginKey = api.KEY_I,
-            names = {
-                "matrix_digital_rain_effect",
-                "music_waves",
-                "text_editor",
-                -- "tellme_yourname",
-                "tellme_yournamev2",
-                "digital_clock_with_effects",
-                "3d_cube",
-                "filebrowser"
+    plugins = (function()
+        if current_template == "tutorial" then
+            return {
+                {
+                    themeWindowId = "tutorial-window",
+                    isActivated = true,
+                    names = {
+                        "tutorial_rmp"
+                    }
+                },
+                {
+                    themeWindowId = "helper-window",
+                    isActivated = true,
+                    names = {
+                        "helper_keys_tutorial"
+                    }
+                },
             }
+        elseif current_template == "3_simple" then
+            return {                   -- this is global plugins you may run in background or in window globaly
+                {
+                    themeWindowId = 2, -- if this attr is not nil or exists , the runner ignore activate
+                    isActivated = true,
+                    activate = api.KEY_E,
+                    -- this name should be the same directory and same lua file
+                    -- plugins/plug_name.lua or plugins/plug_name/init.lua
+                    switchPluginKey = api.KEY_I,
+                    names = {
+                        "matrix_digital_rain_effect",
+                        "music_waves",
+                        "text_editor",
+                        -- "tellme_yourname",
+                        "tellme_yournamev2",
+                        "digital_clock_with_effects",
+                        "3d_cube",
+                        "filebrowser"
+                    }
 
-        },
-        {
-            themeWindowId = 3, -- if this attr is not nil or exists , the runner ignore activate
-            isActivated = true,
-            activate = api.KEY_E,
-            -- switchPluginKey = api.KEY_I,
-            names = {
-                "center_text"
+                },
+                {
+                    themeWindowId = 3, -- if this attr is not nil or exists , the runner ignore activate
+                    isActivated = true,
+                    activate = api.KEY_E,
+                    -- switchPluginKey = api.KEY_I,
+                    names = {
+                        "center_text"
+                    }
+                },
+                {
+                    isActivated = false,
+                    activate = api.KEY_O,
+                    names = {
+                        "other plugins"
+                    }
+                }
             }
-        },
-        {
-            isActivated = false,
-            activate = api.KEY_O,
-            names = {
-                "other plugins"
-            }
-        }
-    }
+        end
+    end)()
 }

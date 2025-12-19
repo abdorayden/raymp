@@ -163,7 +163,6 @@ then
 		-o ../rmp \
 		-I ../src/engine \
 		$INCLUDE_PATH	\
-		../src/engine/runner.c\
 		$LIB_PATH
 
 elif [[ "$1" == "install" ]]
