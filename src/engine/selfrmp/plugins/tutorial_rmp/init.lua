@@ -164,6 +164,7 @@ return {
 - The return function of plugins returns a VirtualTerminal object after you apply your configurations and add event listeners to it
 - You need to initialize the VirtualTerminal object inside the returned callback function (Why? : The engine uses optimizations, which means after it adds all the components, it cleans their memories to avoid memory leaks)
 - Use global variables as plugin state and the return function as update functionality for each frame
+- plugins can be configured in **init.lua** configuration file , you can put string name of the plugin or u can put table the first index is the plugin name and second index is table with configuration field so u can load those configurations and work with them
 
 ## Code Examples
 Here are some code examples to help you get started with plugins creation:
@@ -191,6 +192,8 @@ end
 ]]
 
 local move_down = 0
+local animation_start_time = os.time() -- Record when the animation starts
+local animation_duration = 3           -- Animation duration in seconds (3 seconds)
 
 -- Process tutorial text to handle code blocks and other formatting
 local t = (function()
@@ -464,10 +467,52 @@ local function syntaxHighlightLua(codeLine)
     return tokens
 end
 
+-- Animation added: displays a welcome message for 3 seconds before showing the tutorial
+
 return function(x, y, xx, yy)
     local w = xx - x - 1
     local h = yy - y - 1
     local vterm = api.VirtualTerminal.new()
+
+    -- Check if we're still in the animation phase
+    local current_time = os.time()
+    local elapsed_time = current_time - animation_start_time
+
+    if elapsed_time < animation_duration then
+        -- Display animation
+        local animation_text = "Welcome to RayMp!"
+        local centered_x = x + math.floor((w - #animation_text) / 2)
+        local centered_y = y + math.floor(h / 2)
+
+        -- Create a simple animation effect by changing colors or styles over time
+        local animation_phase = (current_time * 2) % 4 -- Changes every 0.5 seconds
+        local color
+        if animation_phase < 1 then
+            color = api.FGColors.Brights.Red
+        elseif animation_phase < 2 then
+            color = api.FGColors.Brights.Yellow
+        elseif animation_phase < 3 then
+            color = api.FGColors.Brights.Green
+        else
+            color = api.FGColors.Brights.Cyan
+        end
+
+        vterm:writeText(centered_x, centered_y, animation_text, color, nil, api.TextStyle.Bold)
+
+        -- Add a simple progress indicator
+        local progress_text = ""
+        for i = 1, animation_duration do
+            if i <= elapsed_time then
+                progress_text = progress_text .. "●" -- Filled circle
+            else
+                progress_text = progress_text .. "○" -- Empty circle
+            end
+        end
+        local progress_x = x + math.floor((w - #progress_text) / 2)
+        vterm:writeText(progress_x, centered_y + 2, progress_text, api.FGColors.Brights.White)
+
+        return vterm
+    end
 
     vterm:onKeyboard(function(key)
         if key == api.KEY_J or key == api.KEY_DOWN then
