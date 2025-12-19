@@ -185,11 +185,12 @@ then
 	# install the local plugins and themes if the configuration dir not found on home dir
 	cp -r ../src/engine/selfrmp $LUA_SHARE
 
-	cp ../src/promises.lua 		$LUA_SHARE
-	cp ../src/future.lua 		$LUA_SHARE
-	cp ../src/util.lua 		$LUA_SHARE
-	cp ../src/oop.lua 		$LUA_SHARE
-	cp ../src/engine/core/rmp.lua 	$LUA_SHARE
+	cp ../src/promises.lua 		            $LUA_SHARE
+	cp ../src/future.lua 		            $LUA_SHARE
+	cp ../src/util.lua 		                $LUA_SHARE
+	cp ../src/oop.lua 		                $LUA_SHARE
+	cp ../src/engine/RMPManager.lua 		$LUA_SHARE
+	cp ../src/engine/core/rmp.lua 	        $LUA_SHARE
 	# cp ../rmp /bin
 
 	exit 0

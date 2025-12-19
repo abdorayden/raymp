@@ -28,11 +28,20 @@
 -- 	- https://javascript.info/promise-basics
 --	- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise
 
-local tasks = {}
+-- TODO: handle my own event loop
 
-local function schedule(ms, fn)
+local tasks = {}
+local schedule_impl
+
+local function default_schedule(ms, fn)
     local t = os.clock() + (ms / 1000)
     table.insert(tasks, { time = t, cb = fn })
+end
+
+schedule_impl = default_schedule
+
+local function schedule(ms, fn)
+    schedule_impl(ms, fn)
 end
 
 local Promise = {}
@@ -296,6 +305,20 @@ function Promise.run()
             print(err)
         end
     end
+end
+
+function Promise.setScheduler(new_scheduler)
+    if new_scheduler == nil then
+        schedule_impl = default_schedule
+    elseif type(new_scheduler) == "function" then
+        schedule_impl = new_scheduler
+    else
+        error("scheduler must be a function or nil")
+    end
+end
+
+function Promise.getScheduler()
+    return schedule_impl
 end
 
 return Promise

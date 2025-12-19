@@ -3084,8 +3084,16 @@ RMP.PopupPosition = {
 }
 
 -- TODO: handle timeout async for popups
+--- @class Popup
 RMP.Popup = OOP.class("Popup")
 do -- Popups
+    --- @param message string
+    --- @param title string
+    --- @param border_color FGColors
+    --- @param bg_color FGColors
+    --- @param poslayout PopupPosition
+    --- @param vterm VirtualTerminal | nil
+    --- @return VirtualTerminal
     function RMP.Popup:run(message, title, border_color, bg_color, poslayout, vterm)
         local rows, cols = RMP.Terminal:getSize()
         poslayout = poslayout or RMP.PopupPosition.CENTER
@@ -3149,8 +3157,14 @@ do -- Popups
     end
 end
 
+--- @class Notify
 RMP.Notify = OOP.class("Notify", RMP.Popup)
 do
+    --- @param time number
+    --- @param fps integer
+    --- @param message string | nil
+    --- @param vterm VirtualTerminal | nil
+    --- @return self
     function RMP.Notify:constructor(
         time,    -- the time will live on the Frame , should be ms
         fps,     -- the fps time
@@ -3163,21 +3177,29 @@ do
         self.fps = fps
         --- @diagnostic disable-next-line
         self.vterm = vterm or RMP.VirtualTerminal.new()
+        return self
     end
 
+    --- @param message string | nil
+    --- @return self
     function RMP.Notify:setMessage(message)
         self.message = message or ""
+        return self
     end
 
+    --- @return self
     function RMP.Notify:reset()
         self.counter = RMP.enum(true)
+        return self
     end
 
+    --- @param poslayout PopupPosition
     function RMP.Notify:error(poslayout)
         poslayout = poslayout or RMP.PopupPosition.CENTER
 
         if self.counter < math.floor(self.fps * self.time / (self.fps / 10)) then
             self.counter = RMP.enum()
+            --- @diagnostic disable-next-line
             return self:super(
                 "run",
                 self.message,
@@ -3196,11 +3218,14 @@ do
         end
     end
 
+    --- @param poslayout PopupPosition
     function RMP.Notify:info(poslayout)
         poslayout = poslayout or RMP.PopupPosition.CENTER
 
         if self.counter < self.time then
+            --- BUG: fix Notify class
             self.counter = self.counter + self.delta
+            --- @diagnostic disable-next-line
             return self:super(
                 "run",
                 self.message,
@@ -3219,11 +3244,13 @@ do
         end
     end
 
+    --- @param poslayout PopupPosition
     function RMP.Notify:message(poslayout)
         poslayout = poslayout or RMP.PopupPosition.CENTER
 
         if self.counter < self.time then
             self.counter = self.counter + self.delta
+            --- @diagnostic disable-next-line
             return self:super(
                 "run",
                 self.message,
@@ -3242,11 +3269,13 @@ do
         end
     end
 
+    --- @param poslayout PopupPosition
     function RMP.Notify:warning(poslayout)
         poslayout = poslayout or RMP.PopupPosition.CENTER
 
         if self.counter < self.time then
             self.counter = self.counter + self.delta
+            --- @diagnostic disable-next-line
             return self:super(
                 "run",
                 self.message,
@@ -3267,8 +3296,12 @@ do
     end
 end
 
+--- @class Scroller
 RMP.Scroller = OOP.class("Scroller")
 do
+    --- @param visible_height number
+    --- @param options_obj Options
+    --- @return self
     function RMP.Scroller:constructor(visible_height, options_obj)
         self.visible_height = math.max(1, tonumber(visible_height) or 10)
         --- @diagnostic disable-next-line
@@ -3291,6 +3324,8 @@ do
         return self
     end
 
+    --- @param options_obj Options
+    --- @return self
     function RMP.Scroller:setOptionsObj(options_obj)
         --- @diagnostic disable-next-line
         self.options = options_obj or RMP.Options.new({})
@@ -3310,19 +3345,23 @@ do
         return self
     end
 
+    --- @param visible_height number
+    --- @return self
     function RMP.Scroller:setHeight(visible_height)
         self.visible_height = math.max(1, tonumber(visible_height) or 10)
         self:_adjustScrollOffset()
         return self
     end
 
+    --- @private
+    --- @return nil
     function RMP.Scroller:_adjustScrollOffset()
         local data = self.options:getOptions() or {}
         local total_items = #data
 
         if total_items == 0 then
             self.scroll_offset = 0
-            return
+            return nil
         end
 
         if self.options.pos < 1 then
@@ -3349,6 +3388,9 @@ do
         self.scroll_offset = math.min(self.scroll_offset, max_scroll)
     end
 
+    --- @return table
+    --- @return integer
+    --- @return integer
     function RMP.Scroller:getVisible()
         local parsed_data = self.options:parse() or {}
         local total_items = #parsed_data
@@ -3380,6 +3422,7 @@ do
         return visible_items, start_index, focus_index
     end
 
+    --- @return self
     function RMP.Scroller:nextLine()
         local data = self.options:getOptions() or {}
         local total_items = #data
@@ -3394,6 +3437,7 @@ do
         return self
     end
 
+    --- @return self
     function RMP.Scroller:prevLine()
         local data = self.options:getOptions() or {}
 
@@ -3407,6 +3451,7 @@ do
         return self
     end
 
+    --- @return self
     function RMP.Scroller:nextContent()
         local data = self.options:getOptions() or {}
         local total_items = #data
@@ -3420,6 +3465,7 @@ do
         return self
     end
 
+    --- @return self
     function RMP.Scroller:prevContent()
         local data = self.options:getOptions() or {}
 
@@ -3432,6 +3478,7 @@ do
         return self
     end
 
+    --- @return self
     function RMP.Scroller:toStart()
         local data = self.options:getOptions() or {}
 
@@ -3443,6 +3490,7 @@ do
         return self
     end
 
+    --- @return self
     function RMP.Scroller:toEnd()
         local data = self.options:getOptions() or {}
 
@@ -3454,6 +3502,7 @@ do
         return self
     end
 
+    --- @return self
     function RMP.Scroller:resetToStart()
         self.scroll_offset = 0
         self.options:first()
@@ -3461,28 +3510,34 @@ do
         return self
     end
 
+    --- @return integer
     function RMP.Scroller:getCursorPosition()
         return self.options.pos
     end
 
+    --- @return integer
     function RMP.Scroller:getScrollOffset()
         return self.scroll_offset
     end
 
+    --- @return integer
     function RMP.Scroller:getTotalItems()
         local data = self.options:getOptions() or {}
         return #data
     end
 
+    --- @return boolean
     function RMP.Scroller:canScrollUp()
         return self.scroll_offset > 0
     end
 
+    --- @return boolean
     function RMP.Scroller:canScrollDown()
         local data = self.options:getOptions() or {}
         return self.scroll_offset + self.visible_height < #data
     end
 
+    --- @return number
     function RMP.Scroller:getScrollProgress()
         local data = self.options:getOptions() or {}
         local total_items = #data
@@ -3496,6 +3551,7 @@ do
     end
 end
 
+--- @enum PlaybackMode
 RMP.PlaybackMode = {
     ONCE          = RMP.enum(true),
     LOOP_SINGLE   = RMP.enum(),
@@ -3503,6 +3559,7 @@ RMP.PlaybackMode = {
     SHUFFLE       = RMP.enum()
 }
 
+--- @enum State
 RMP.State = {
     STOPPED = RMP.enum(true),
     PLAYING = RMP.enum(),
@@ -3514,6 +3571,8 @@ RMP.State = {
 --- @class Sound
 RMP.Sound = OOP.class("Sound")
 do
+    --- @param files table | string
+    --- @return self
     function RMP.Sound:constructor(files)
         self.playlist               = {}
         self.current_index          = 1
@@ -3556,6 +3615,7 @@ do
         return self
     end
 
+    --- @return integer|nil
     function RMP.Sound:getState()
         return self.state
     end
@@ -3563,6 +3623,8 @@ do
     --------------------------------------------------------------------
     -- Playlist management
     --------------------------------------------------------------------
+    --- @param files string | table
+    --- @return self
     function RMP.Sound:setPlaylist(files)
         self.playlist, self.metadata_cache = {}, {}
         if type(files) == "string" then
@@ -3583,6 +3645,7 @@ do
         return self
     end
 
+    --- @return string|nil
     function RMP.Sound:getLastError()
         if self.state == RMP.State.ERROR and self.last_error ~= nil then
             return self.last_error
@@ -3590,11 +3653,15 @@ do
         return nil
     end
 
+    --- @param file string
+    --- @return self
     function RMP.Sound:addTrack(file)
         if type(file) == "string" then table.insert(self.playlist, file) end
         return self
     end
 
+    --- @param index integer
+    --- @return self
     function RMP.Sound:removeTrack(index)
         if index > 0 and index <= #self.playlist then
             table.remove(self.playlist, index)
@@ -3613,10 +3680,13 @@ do
         return self
     end
 
+    --- @return table
     function RMP.Sound:getPlaylist() return self.playlist end
 
+    --- @return integer
     function RMP.Sound:getCurrentIndex() return self.current_index end
 
+    --- @return string | nil
     function RMP.Sound:getCurrentTrack()
         if self.current_index > 0 and self.current_index <= #self.playlist then
             return self.playlist[self.current_index]
@@ -3624,10 +3694,12 @@ do
         return nil
     end
 
+    --- @param mode PlaybackMode
     function RMP.Sound:setPlayBackMode(mode)
         self.playback_mode = mode
     end
 
+    --- @return integer|PlaybackMode
     function RMP.Sound:getPlayBackMode()
         return self.playback_mode
     end
@@ -3635,6 +3707,9 @@ do
     --------------------------------------------------------------------
     -- Internal loader
     --------------------------------------------------------------------
+    --- @private
+    --- @return boolean
+    --- @return string | nil
     function RMP.Sound:_loadCurrentTrack()
         if not self.is_initialized then return false, "Audio not initialized" end
         local track = self:getCurrentTrack()
@@ -3664,12 +3739,14 @@ do
         end
 
         self.state = RMP.State.STOPPED
-        return true
+        return true, nil
     end
 
     --------------------------------------------------------------------
     -- Playback control (each handles both pcall errors and boolean+error returns)
     --------------------------------------------------------------------
+    --- @return boolean
+    --- @return string | nil
     function RMP.Sound:play()
         if not self.is_initialized then
             self.last_error = "Audio not initialized"
@@ -3693,9 +3770,11 @@ do
         end
 
         self.state = RMP.State.PLAYING
-        return true
+        return true, nil
     end
 
+    --- @return boolean
+    --- @return string | nil
     function RMP.Sound:pause()
         if not self.is_initialized then return false, "Audio not initialized" end
         local ok, ret = pcall(rmpaudio.Pause)
@@ -3708,9 +3787,11 @@ do
             return false, self.last_error
         end
         self.state = RMP.State.PAUSED
-        return true
+        return true, nil
     end
 
+    --- @return boolean
+    --- @return string | nil
     function RMP.Sound:resume()
         if not self.is_initialized then return false, "Audio not initialized" end
         local ok, ret = pcall(rmpaudio.Resume)
@@ -3723,9 +3804,11 @@ do
             return false, self.last_error
         end
         self.state = RMP.State.PLAYING
-        return true
+        return true, nil
     end
 
+    --- @return boolean
+    --- @return string | nil
     function RMP.Sound:stop()
         if not self.is_initialized then return false, "Audio not initialized" end
         local ok, ret = pcall(rmpaudio.Stop)
@@ -3738,9 +3821,12 @@ do
             return false, self.last_error
         end
         self.state = RMP.State.STOPPED
-        return true
+        return true, nil
     end
 
+    --- @param seconds number
+    --- @return boolean
+    --- @return string | nil
     function RMP.Sound:seek(seconds)
         if not self.is_initialized then
             return false, "Audio not initialized"
@@ -3764,12 +3850,15 @@ do
             return false, self.last_error
         end
 
-        return true
+        return true, nil
     end
 
     --------------------------------------------------------------------
     -- Volume / speed
     --------------------------------------------------------------------
+    --- @param v number
+    --- @return boolean
+    --- @return string | nil
     function RMP.Sound:setVolume(v)
         v = math.max(0, math.min(1, tonumber(v) or 0))
         local ok, ret = pcall(rmpaudio.SetVolume, v)
@@ -3778,9 +3867,10 @@ do
             return false, self.last_error
         end
         self.volume = v
-        return true
+        return true, nil
     end
 
+    --- @return number
     function RMP.Sound:getVolume()
         local ok, vol = pcall(rmpaudio.GetVolume)
         if not ok then
@@ -3789,10 +3879,14 @@ do
         return vol or self.volume
     end
 
+    --- @return number
     function RMP.Sound:getSpeed()
         return self.speed
     end
 
+    --- @param s number
+    --- @return boolean
+    --- @return string | nil
     function RMP.Sound:setSpeed(s)
         s = tonumber(s) or 1.0
         local ok, ret = pcall(rmpaudio.SetSpeed, s)
@@ -3801,12 +3895,13 @@ do
             return false, self.last_error
         end
         self.speed = s
-        return true
+        return true, nil
     end
 
     --------------------------------------------------------------------
     -- Position / length (now properly in seconds)
     --------------------------------------------------------------------
+    --- @return integer
     function RMP.Sound:getPosition()
         local ok, pos = pcall(rmpaudio.GetPosition)
         if not ok then
@@ -3816,6 +3911,7 @@ do
         return tonumber(pos) or 0
     end
 
+    --- @return integer
     function RMP.Sound:getLength()
         local ok, len = pcall(rmpaudio.GetDuration)
         if not ok then
@@ -3828,15 +3924,19 @@ do
     --------------------------------------------------------------------
     -- Loop flag (file-level loop)
     --------------------------------------------------------------------
+    --- @param flag boolean
+    --- @return boolean
+    --- @return string | nil
     function RMP.Sound:setLoop(flag)
         local ok, ret = pcall(rmpaudio.SetLoop, flag and true or false)
         if not ok or ret == false then
             self.last_error = "SetLoop failed"
             return false, self.last_error
         end
-        return true
+        return true, nil
     end
 
+    --- @return boolean
     function RMP.Sound:getLoop()
         local ok, ret = pcall(rmpaudio.GetLoop)
         if not ok then return false end
@@ -3901,18 +4001,21 @@ do
     --------------------------------------------------------------------
     -- Info / helper
     --------------------------------------------------------------------
+    --- @return boolean
     function RMP.Sound:isPlaying()
         local ok, v = pcall(rmpaudio.IsPlaying)
         if not ok then return false end
         return not not v
     end
 
+    --- @return boolean
     function RMP.Sound:isFinished()
         local ok, v = pcall(rmpaudio.IsFinished)
         if not ok then return false end
         return not not v
     end
 
+    --- @return nil | table
     function RMP.Sound:getMetadata()
         local ok, meta = pcall(rmpaudio.GetMetadata)
         if not ok then return nil end
@@ -3922,6 +4025,8 @@ do
     --------------------------------------------------------------------
     -- Track navigation: prev/next, plus an 'update' to auto-advance
     --------------------------------------------------------------------
+    --- @return boolean
+    --- @return string | nil
     function RMP.Sound:nextTrack()
         if #self.playlist == 0 then return false, "empty playlist" end
         if self.playback_mode == RMP.PlaybackMode.SHUFFLE and #self.playlist > 1 then
@@ -3936,19 +4041,21 @@ do
         end
         local ok, err = self:_loadCurrentTrack()
         if not ok then return false, err end
-        return self:play()
+        return self:play(), nil
     end
 
+    --- @return boolean
+    --- @return string | nil
     function RMP.Sound:prevTrack()
         if #self.playlist == 0 then return false, "empty playlist" end
         self.current_index = self.current_index - 1
         if self.current_index < 1 then self.current_index = #self.playlist end
         local ok, err = self:_loadCurrentTrack()
         if not ok then return false, err end
-        return self:play()
+        return self:play(), nil
     end
 
-    -- event loop required
+    --- event loop required
     function RMP.Sound:update()
         if not self.is_initialized then return end
 
@@ -3993,6 +4100,7 @@ do
         end
     end
 
+    --- @return number
     function RMP.Sound:getProgress()
         local pos = self:getPosition()
         local dur = self:getLength()
@@ -4002,10 +4110,13 @@ do
         return 0
     end
 
+    --- @return integer
     function RMP.Sound:getTimeRemaining()
         return self:getLength() - self:getPosition()
     end
 
+    --- @param seconds integer
+    --- @return string
     function RMP.Sound:formatTime(seconds)
         seconds = math.floor(seconds or 0)
         local mins = math.floor(seconds / 60)
@@ -4013,18 +4124,22 @@ do
         return string.format("%02d:%02d", mins, secs)
     end
 
+    --- @return string
     function RMP.Sound:getFormattedPosition()
         return self:formatTime(self:getPosition())
     end
 
+    --- @return string
     function RMP.Sound:getFormattedDuration()
         return self:formatTime(self:getLength())
     end
 
+    --- @return string
     function RMP.Sound:getFormattedTimeRemaining()
         return self:formatTime(self:getTimeRemaining())
     end
 
+    --- @return boolean
     function RMP.Sound:cleanup()
         if self.visualization_enabled then
             self:disableVisualization()
@@ -4035,8 +4150,10 @@ do
     end
 end
 
+--- @class Path
 RMP.Path = OOP.class("Path")
 do -- Path
+    --- @return string
     function RMP.Path.getPathSeparator()
         local os_type = RMP.getOs()
         if os_type == RMP.PlatformType.WINDOWS then
@@ -4046,6 +4163,8 @@ do -- Path
         end
     end
 
+    --- @param ... unknown
+    --- @return string
     function RMP.Path.joinPath(...)
         local parts = { ... }
         local sep = RMP.Path.getPathSeparator()
@@ -4070,26 +4189,33 @@ do -- Path
         return result
     end
 
+    --- @param path string
     function RMP.Path:constructor(path)
         self.path = path or self:getCurrentPath()
     end
 
+    --- @param path string
     function RMP.Path:setPath(path)
         self.path = path
     end
 
+    --- @return string
     function RMP.Path:getPath()
         return self.path
     end
 
+    --- @return any
     function RMP.Path:getCurrentPath()
         return directory.get_current_path()
     end
 
+    --- @return any
     function RMP.Path:getHomePath()
         return directory.home_path()
     end
 
+    -- TODO: create listDirAsync
+    --- @return any
     function RMP.Path:listDir()
         -- this method return table of tables contains two value
         -- first one is boolean indecates if it is file or dir (true -> file else dir)
@@ -4097,10 +4223,13 @@ do -- Path
         return directory.list_dir(self.path) -- may return nil
     end
 
+    --- @return boolean
     function RMP.Path:exists()
         return self:listDir() ~= nil
     end
 
+    --- @param dir_name string
+    --- @return any
     function RMP.Path:makeDir(dir_name)
         dir_name = dir_name or ""
         local full_dir = nil
@@ -4114,6 +4243,8 @@ do -- Path
         )
     end
 
+    --- @param dir_name string
+    --- @return any
     function RMP.Path:removeDir(dir_name)
         local full_dir = nil
         if string.sub(self.path, -1) == "/" then
@@ -4124,6 +4255,9 @@ do -- Path
         return directory.rmdir(full_dir)
     end
 
+    --- @param pattern string
+    --- @param is_find_file boolean
+    --- @return boolean
     function RMP.Path:find(pattern, is_find_file) -- boolean
         -- if file or dir is founded it returns true so you can access it directly
         local lst = self:listDir()
@@ -4145,6 +4279,10 @@ do -- Path
         return false
     end
 
+    --- @param pattern string
+    --- @param is_file_pattern boolean
+    --- @param max_depth integer
+    --- @return table
     function RMP.Path:findRecursive(pattern, is_file_pattern, max_depth) -- return Table {path , name , is_file}
         max_depth = max_depth or -1
         local results = {}
@@ -4161,6 +4299,7 @@ do -- Path
                 return
             end
 
+            --- @diagnostic disable-next-line
             local temp_path = RMP.Path.new(current_path)
             local lst = temp_path:listDir()
             if not lst then
@@ -4223,7 +4362,9 @@ do -- Config
         self.os_type = RMP.getOs()
         self.path_sep = RMP.Path.getPathSeparator()
 
+        --- @diagnostic disable-next-line
         self.currentPath = RMP.Path.new()
+        --- @diagnostic disable-next-line
         self.homePath = RMP.Path.new(self.currentPath:getHomePath())
 
         -- Cross-platform config directory
@@ -4236,6 +4377,7 @@ do -- Config
 
         -- Use cross-platform path joining
         local configPath = RMP.Path.joinPath(self.homePath:getPath(), configDirName)
+        --- @diagnostic disable-next-line
         self.configurationPath = RMP.Path.new(configPath)
 
         if not self.configurationPath:find("init.lua", true) then
@@ -4245,6 +4387,7 @@ do -- Config
 
         -- Cross-platform path for init.lua
         local initPath = RMP.Path.joinPath(configPath, "init.lua")
+        --- @diagnostic disable-next-line
         self.initPath = RMP.Path.new(initPath)
         self.isValidFile = true
 
