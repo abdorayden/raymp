@@ -61,6 +61,13 @@ return {
                         "helper_keys_tutorial"
                     }
                 },
+                {
+                    themeWindowId = "animation-window",
+                    isActivated = true,
+                    names = {
+                        "matrix_digital_rain_effect",
+                    }
+                },
             }
         elseif current_template == "3_simple" then
             return {                   -- this is global plugins you may run in background or in window globaly
