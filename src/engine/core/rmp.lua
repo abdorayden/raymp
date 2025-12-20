@@ -1682,10 +1682,10 @@ do -- VirtualTerminal
         -- and it used to access the methods from mother class
         --- @diagnostic disable-next-line
         self:super("constructor")
-        local h, w = window.get_size()
+        self.h, self.w = window.get_size()
 
-        self.realWidth = width or w
-        self.realHeight = height or h
+        self.realWidth = width or self.w
+        self.realHeight = height or self.h
 
         self.native_vt_rmp = vt_rmp.init(self.realWidth, self.realHeight)
         self.cursor = { x = 1, y = 1 }
@@ -1833,20 +1833,29 @@ do -- VirtualTerminal
                 self:setChar(j, i, " ", nil, bg)
             end
         end
-
+        --- @type string
+        local title_text = ""
+        local title_fg = nil
+        local title_bg = nil
+        local title_style = nil
         --- @diagnostic disable-next-line
-        if title and title ~= "" and title:instanceOf(RMP.Text) then
+        if title and type(title) == "table" and title:instanceOf(RMP.Text) then
             --- @diagnostic disable-next-line
-            local title_text = title:getText()
-            local available_width = width - 2
-            if #title_text > available_width then
-                title_text = title_text:sub(1, available_width)
-            end
-            local title_x = x + 1 + math.floor((available_width - #title_text) / 2)
-            local title_y = y
-            --- @diagnostic disable-next-line
-            self:writeText(title_x, title_y, title_text, title:getFGColor(), title:getBGColor(), title:getStyle())
+            title_text = title:getText()
+            title_fg = title:getFGColor()
+            title_bg = title:getBGColor()
+            title_style = title:getStyle()
+        elseif title and type(title) == "string" then
+            title_text = title
         end
+        local available_width = width - 2
+        if #title_text > available_width then
+            title_text = title_text:sub(1, available_width)
+        end
+        local title_x = x + 1 + math.floor((available_width - #title_text) / 2)
+        local title_y = y
+        --- @diagnostic disable-next-line
+        self:writeText(title_x, title_y, title_text, title_fg, title_bg, title_style)
 
         self.dirty = true
     end
@@ -1892,7 +1901,7 @@ do -- VirtualTerminal
     --- @param width integer
     --- @param height integer
     function RMP.VirtualTerminal:resize(width, height)
-        if width ~= w or height ~= h then
+        if width ~= self.w or height ~= self.h then
             vt_rmp.resize(self.native_vt_rmp, width, height)
         end
     end
@@ -3185,21 +3194,14 @@ end
 --- @class Notify
 RMP.Notify = OOP.class("Notify", RMP.Popup)
 do
-    --- @param time number
-    --- @param fps integer
     --- @param message string | nil
     --- @param vterm VirtualTerminal | nil
     --- @return self
     function RMP.Notify:constructor(
-        time,    -- the time will live on the Frame , should be ms
-        fps,     -- the fps time
         message, -- the message
         vterm
     )
         self.message = message or ""
-        self.time = time
-        self.counter = 0
-        self.fps = fps
         --- @diagnostic disable-next-line
         self.vterm = vterm or RMP.VirtualTerminal.new()
         return self
@@ -3212,112 +3214,92 @@ do
         return self
     end
 
-    --- @return self
-    function RMP.Notify:reset()
-        self.counter = RMP.enum(true)
-        return self
-    end
-
     --- @param poslayout PopupPosition
     function RMP.Notify:error(poslayout)
         poslayout = poslayout or RMP.PopupPosition.CENTER
 
-        if self.counter < math.floor(self.fps * self.time / (self.fps / 10)) then
-            self.counter = RMP.enum()
+        --- @diagnostic disable-next-line
+        return self:super(
+            "run",
+            self.message,
             --- @diagnostic disable-next-line
-            return self:super(
-                "run",
-                self.message,
-                --- @diagnostic disable-next-line
-                RMP.Text.new(
-                    "[ " .. "ERROR" .. " ]",
-                    RMP.TextStyle.Bold,
-                    RMP.FGColors.NoBrights.White,
-                    RMP.BGColors.NoBrights.BGRed
-                ),
-                RMP.FGColors.NoBrights.Red,
-                nil,
-                poslayout,
-                self.vterm
-            )
-        end
+            RMP.Text.new(
+                "[ " .. "ERROR" .. " ]",
+                RMP.TextStyle.Bold,
+                RMP.FGColors.NoBrights.White,
+                RMP.BGColors.NoBrights.BGRed
+            ),
+            RMP.FGColors.NoBrights.Red,
+            nil,
+            poslayout,
+            self.vterm
+        )
     end
 
     --- @param poslayout PopupPosition
     function RMP.Notify:info(poslayout)
         poslayout = poslayout or RMP.PopupPosition.CENTER
 
-        if self.counter < self.time then
-            --- BUG: fix Notify class
-            self.counter = self.counter + self.delta
+        --- @diagnostic disable-next-line
+        return self:super(
+            "run",
+            self.message,
             --- @diagnostic disable-next-line
-            return self:super(
-                "run",
-                self.message,
-                --- @diagnostic disable-next-line
-                RMP.Text.new(
-                    "[ " .. "INFO" .. " ]",
-                    RMP.TextStyle.Bold,
-                    RMP.FGColors.NoBrights.White,
-                    RMP.BGColors.NoBrights.Green
-                ),
-                RMP.FGColors.NoBrights.Green,
-                nil,
-                poslayout,
-                self.vterm
-            )
-        end
+            RMP.Text.new(
+                "[ " .. "INFO" .. " ]",
+                RMP.TextStyle.Bold,
+                RMP.FGColors.NoBrights.White,
+                RMP.BGColors.NoBrights.Green
+            ),
+            RMP.FGColors.NoBrights.Green,
+            nil,
+            poslayout,
+            self.vterm
+        )
     end
 
     --- @param poslayout PopupPosition
-    function RMP.Notify:message(poslayout)
+    function RMP.Notify:msg(poslayout)
         poslayout = poslayout or RMP.PopupPosition.CENTER
 
-        if self.counter < self.time then
-            self.counter = self.counter + self.delta
+        --- @diagnostic disable-next-line
+        return self:super(
+            "run",
+            self.message,
             --- @diagnostic disable-next-line
-            return self:super(
-                "run",
-                self.message,
-                --- @diagnostic disable-next-line
-                RMP.Text.new(
-                    "[ " .. "Message" .. " ]",
-                    RMP.TextStyle.Bold,
-                    RMP.FGColors.NoBrights.White,
-                    RMP.BGColors.NoBrights.Blue
-                ),
-                RMP.FGColors.NoBrights.Blue,
-                nil,
-                poslayout,
-                self.vterm
-            )
-        end
+            RMP.Text.new(
+                "[ " .. "MESSAGE" .. " ]",
+                RMP.TextStyle.Bold,
+                RMP.FGColors.NoBrights.White,
+                RMP.BGColors.NoBrights.Blue
+            ),
+            RMP.FGColors.NoBrights.Blue,
+            nil,
+            poslayout,
+            self.vterm
+        )
     end
 
     --- @param poslayout PopupPosition
     function RMP.Notify:warning(poslayout)
         poslayout = poslayout or RMP.PopupPosition.CENTER
 
-        if self.counter < self.time then
-            self.counter = self.counter + self.delta
+        --- @diagnostic disable-next-line
+        return self:super(
+            "run",
+            self.message,
             --- @diagnostic disable-next-line
-            return self:super(
-                "run",
-                self.message,
-                --- @diagnostic disable-next-line
-                RMP.Text.new(
-                    "[ " .. "Warning" .. " ]",
-                    RMP.TextStyle.Bold,
-                    RMP.FGColors.NoBrights.White,
-                    RMP.BGColors.NoBrights.Yellow
-                ),
-                RMP.FGColors.NoBrights.Yellow,
-                nil,
-                poslayout,
-                self.vterm
-
-            )
-        end
+            RMP.Text.new(
+                "[ " .. "Warning" .. " ]",
+                RMP.TextStyle.Bold,
+                RMP.FGColors.NoBrights.White,
+                RMP.BGColors.NoBrights.Yellow
+            ),
+            RMP.FGColors.NoBrights.Yellow,
+            nil,
+            poslayout,
+            self.vterm
+        )
     end
 end
 
@@ -5170,7 +5152,7 @@ do
         local vterm = RMP.VirtualTerminal.new()
 
         -- set background color black as default
-        RMP.Draw:line(1, self._y, w, RMP.BGColors.NoBrights.Black, vterm)
+        RMP.Draw:line(1, self._y, width, RMP.BGColors.NoBrights.Black, vterm)
 
         local leftComps, rightComps, centerComps = {}, {}, {}
         for _, comp in ipairs(self._components) do
