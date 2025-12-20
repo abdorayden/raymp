@@ -1747,6 +1747,31 @@ do -- VirtualTerminal
         return self
     end
 
+    -- TODO: use native function
+    -- --- @param title string | Text
+    -- --- @param x integer
+    -- --- @param y integer
+    -- --- @param width integer
+    -- --- @param height integer
+    -- --- @param border_style BoxDrawing
+    -- --- @param fg FGColors
+    -- --- @param bg BGColors
+    -- function RMP.VirtualTerminal:drawBox(title, x, y, width, height, border_style, fg, bg)
+    --     x      = math.floor(x or 1)
+    --     y      = math.floor(y or 1)
+    --     width  = math.floor(width or 80)
+    --     height = math.floor(height or 24)
+    --     if title and type(title) == "table" and title:instanceOf(RMP.Text) then
+    --         title = title:getText()
+    --     elseif title and type(title) == "table" then
+    --         title = title
+    --     else
+    --         title = ""
+    --     end
+    --
+    --     vt_rmp.draw_box(self.native_vt_rmp, title, x, y, width, height, border_style, fg, bg)
+    -- end
+
     --- @param title string | Text
     --- @param x integer
     --- @param y integer
