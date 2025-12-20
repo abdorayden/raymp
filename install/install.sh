@@ -23,7 +23,6 @@
 # /*  											*/ 
 # /**************************************************************************************/
 
-INIT_PATH="$HOME/.rmp/.init.lua"
 INCLUDE_PATH="-I../src/engine/lua/include -I../src/third_party -O3"
 
 LIB_PATH="-L../src/engine/lua/lib -l:liblua.a -lm"
@@ -41,8 +40,10 @@ help(){
 	echo ""
 	echo "Commands:"
 	echo "	clean : remove all installed shared librarys and lua files from the system files"
+	echo "	clean-conf : remove the default configurations and plugins in home directory be carefull if your configurations are there it will be deleted "
 	echo "	compile : compile .c files lua libs to shared libs"
 	echo "	install : install .so and .lua files to system files"
+	echo "	install-conf : install the default configurations and plugins for tutorial to learn how to work with raymp"
 	echo "		-v : verbose flag"
 	echo "NOTE:"
 	echo "	install and clean command require root privileges"
@@ -192,37 +193,37 @@ then
 	cp ../src/engine/core/rmp.lua 	        $LUA_SHARE
 	# cp ../rmp /bin
 
-	exit 0
 
-	if [ ! -d "$HOME/.rmp" ]; then
-		mkdir -p "$HOME/.rmp"
+elif [[ "$1" == "install-conf" ]]
+then
+	echo "[+] Installing configuration ..."
+    if [[ "$2" == "-v" ]]
+    then
+        set -xe
+    fi
+    # check if the rmp configuration folder are not found 
+    # it will create one and install the default configurations with tutorial
+    if [ ! -d "$HOME/.rmp" ]; then
+        mkdir -p "$HOME/.rmp"
 		mkdir -p "$HOME/.rmp/themes"
 		mkdir -p "$HOME/.rmp/plugins"
-		echo "return {" >> INIT_PATH 
-		echo "	sound_cfg = {" >> INIT_PATH 
-		echo "		pause = api.KEY_SPACE," >> INIT_PATH 
-		echo "		resume = api.KEY_SPACE," >> INIT_PATH 
-		echo "		next = api.KEY_N," >> INIT_PATH 
-		echo "		prev = api.KEY_P," >> INIT_PATH 
-		echo "		vol_up = api.KEY_PLUS," >> INIT_PATH 
-		echo "		vol_down = api.KEY_MINUS," >> INIT_PATH 
-		echo "		seek_left = api.KEY_LEFT," >> INIT_PATH 
-		echo "		seek_right = api.KEY_RIGHT," >> INIT_PATH 
-		echo "		speed_up = api.KEY_UP," >> INIT_PATH 
-		echo "		speed_down = api.KEY_DOWN," >> INIT_PATH 
-		echo "	}," >> INIT_PATH 
 
-		#  TODO: add default theme path 
-		echo "	theme = \"theme path\"," >> INIT_PATH 
-
-		# TODO: add default plugins
-		echo "	plugins = {" >> INIT_PATH 
-		echo "	}," >> INIT_PATH 
-
-
-		echo "}" >> INIT_PATH 
-	fi
-
+        cp ../src/engine/selfrmp/init.lua "$HOME/.rmp"
+        cp ../src/engine/selfrmp/themes/tutorial.lua "$HOME/.rmp/themes"
+        cp -r ../src/engine/selfrmp/plugins/tutorial_rmp/ "$HOME/.rmp/plugins"
+        cp -r ../src/engine/selfrmp/plugins/helper_keys_tutorial/ "$HOME/.rmp/plugins"
+        cp ../src/engine/selfrmp/plugins/digital_clock_with_effects.lua "$HOME/.rmp/plugins"
+    fi
+elif [[ "$1" == "install-conf" ]]
+then
+	echo "[+] removing configuration ..."
+    if [[ "$2" == "-v" ]]
+    then
+        set -xe
+    fi
+    if [ ! -d "$HOME/.rmp" ]; then
+        rm -rf "$HOME/.rmp/"
+    fi
 else
 	echo "[-] there's no subcommand $1"
 	help
