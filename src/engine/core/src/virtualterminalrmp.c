@@ -279,6 +279,178 @@ ALWAYS_INT lua_setchar(STATE) {
 	return 0;
 }
 
+ALWAYS_INT lua_draw_box(STATE) {
+    VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
+    size_t title_len;
+    const char* title = luaL_checklstring(L , 2 , &title_len);
+    int x = luaL_checkinteger(L, 3);
+    int y = luaL_checkinteger(L, 4);
+    int width = luaL_checkinteger(L, 5);
+    int height = luaL_checkinteger(L, 6);
+
+    // Check if border_style is provided and is a valid table with content at index 1
+    const char* h_line = "─";  // Default horizontal line (LightBorder[1])
+    const char* v_line = "│";  // Default vertical line (LightBorder[2])
+    const char* tl_corner = "┌";  // Default top-left corner (LightBorder[3])
+    const char* tr_corner = "┐";  // Default top-right corner (LightBorder[4])
+    const char* bl_corner = "└";  // Default bottom-left corner (LightBorder[5])
+    const char* br_corner = "┘";  // Default bottom-right corner (LightBorder[6])
+
+    bool use_default = true;  // default to LightBorder
+
+    if (lua_istable(L, 7)) {
+        lua_rawgeti(L, 7, 1);
+        if (lua_isstring(L, -1) && lua_tostring(L, -1) != NULL) {
+            h_line = lua_tostring(L, -1);
+
+            lua_rawgeti(L, 7, 2);
+            if (lua_isstring(L, -1)) v_line = lua_tostring(L, -1);
+            lua_pop(L, 1);
+
+            lua_rawgeti(L, 7, 3);
+            if (lua_isstring(L, -1)) tl_corner = lua_tostring(L, -1);
+            lua_pop(L, 1);
+
+            lua_rawgeti(L, 7, 4);
+            if (lua_isstring(L, -1)) tr_corner = lua_tostring(L, -1);
+            lua_pop(L, 1);
+
+            lua_rawgeti(L, 7, 5);
+            if (lua_isstring(L, -1)) bl_corner = lua_tostring(L, -1);
+            lua_pop(L, 1);
+
+            lua_rawgeti(L, 7, 6);
+            if (lua_isstring(L, -1)) br_corner = lua_tostring(L, -1);
+            lua_pop(L, 1);
+
+            use_default = false;
+        }
+        lua_pop(L, 1);
+    }
+    // If not a table or table[1] is nil, use defaults (LightBorder)
+
+    const char* fg = luaL_optstring(L, 8, "");
+    const char* bg = luaL_optstring(L, 9, "");
+
+    if (width < 1 || height < 1 || x < 1 || y < 1) {
+        return 0;
+    }
+
+    int right = x + width - 1;
+    int bottom = y + height - 1;
+
+    if (right > vt->width || bottom > vt->height) {
+        return 0;
+    }
+
+    for (int i = x; i <= right; i++) {
+        Cell* top_cell = get_cell(vt, i, y);
+        if (top_cell) {
+            if (i == x) {
+                strcpy(top_cell->ch, tl_corner);
+            } else if (i == right) {
+                strcpy(top_cell->ch, tr_corner);
+            } else {
+                strcpy(top_cell->ch, h_line);
+            }
+            strcpy(top_cell->fg, fg);
+            strcpy(top_cell->bg, bg);
+            strcpy(top_cell->style, "");
+        }
+
+        if (height > 1) {
+            Cell* bottom_cell = get_cell(vt, i, bottom);
+            if (bottom_cell) {
+                if (i == x) {
+                    strcpy(bottom_cell->ch, bl_corner);
+                } else if (i == right) {
+                    strcpy(bottom_cell->ch, br_corner);
+                } else {
+                    strcpy(bottom_cell->ch, h_line);
+                }
+                strcpy(bottom_cell->fg, fg);
+                strcpy(bottom_cell->bg, bg);
+                strcpy(bottom_cell->style, "");
+            }
+        }
+    }
+
+    for (int j = y; j <= bottom; j++) {
+        Cell* left_cell = get_cell(vt, x, j);
+        if (left_cell) {
+            if (j == y) {
+            } else if (j == bottom) {
+            } else {
+                strcpy(left_cell->ch, v_line);
+            }
+            strcpy(left_cell->fg, fg);
+            strcpy(left_cell->bg, bg);
+            strcpy(left_cell->style, "");
+        }
+
+        if (width > 1) {
+            Cell* right_cell = get_cell(vt, right, j);
+            if (right_cell) {
+                if (j == y) {
+                } else if (j == bottom) {
+                } else {
+                    strcpy(right_cell->ch, v_line);
+                }
+                strcpy(right_cell->fg, fg);
+                strcpy(right_cell->bg, bg);
+                strcpy(right_cell->style, "");
+            }
+        }
+    }
+
+    if (title_len > 0 && width > 2) {
+        int title_max_width = width - 2;
+        if ((int)title_len > title_max_width) {
+            title_len = title_max_width;
+        }
+
+        const char* title_ptr = title;
+        int title_x = x + 1;
+
+        while (title_ptr < title + title_len && title_x < right) {
+            int byte_len = 0, disp_width = 0;
+            const char* next_char = next_utf8_char_info(title_ptr, &byte_len, &disp_width);
+
+            if (byte_len <= 0) break;
+            if (title_ptr + byte_len > title + title_len) break;
+
+            if (title_x + disp_width > x + width) break;
+
+            Cell* title_cell = get_cell(vt, title_x, y);
+            if (title_cell) {
+                int copy_len = (byte_len < CH_UTF8_SIZE - 1) ? byte_len : (CH_UTF8_SIZE - 1);
+                memcpy(title_cell->ch, title_ptr, copy_len);
+                title_cell->ch[copy_len] = '\0';
+                strcpy(title_cell->fg, fg);
+                strcpy(title_cell->bg, bg);
+                strcpy(title_cell->style, "");
+
+                if (disp_width > 1) {
+                    for (int k = 1; k < disp_width; k++) {
+                        Cell* cont_cell = get_cell(vt, title_x + k, y);
+                        if (cont_cell) {
+                            cont_cell->ch[0] = '\0';
+                            strcpy(cont_cell->fg, fg);
+                            strcpy(cont_cell->bg, bg);
+                            strcpy(cont_cell->style, "");
+                        }
+                    }
+                }
+            }
+
+            title_ptr += byte_len;
+            title_x += (disp_width > 0) ? disp_width : 1;
+        }
+    }
+
+    vt->is_dirty = true;
+    return 0;
+}
 
 ALWAYS_INT lua_writetext_clipped(STATE) {
     VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
@@ -747,6 +919,7 @@ static const luaL_Reg lib[] = {
 	{"init", lua_init},
 	{"clear", lua_clear},
 	{"setchar", lua_setchar},
+	{"draw_box", lua_draw_box},
 	{"writetext", lua_writetext},
 	{"writetext_clipped", lua_writetext_clipped},
 	{"merge", lua_merge},
