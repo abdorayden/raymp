@@ -30,8 +30,8 @@
 - [ ] make engine handle loop runner of async functions so plugins can write async fns 
 - [ ] create C api for creating plugins (better plugins performance)
 - [ ] drag and drop event
-- [ ] move the engine lua implementation to global module and call it with C 
+- [X] move the engine lua implementation to global module and call it with C 
 - [ ] deaubfuscate C main file to RMP
 - [ ] add some async functions to rmp framework
-- [ ] create a whole tutorial that displayed when the user install raymp for the first time 
+- [X] create a whole tutorial that displayed when the user install raymp for the first time 
         teaching him how to work with raymp with animations and small game

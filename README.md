@@ -28,7 +28,7 @@
 
 ## ✨ What is RMP?
 
-**RMP (Ray Media Platform)** is a high-performance, extensible framework built in C with Lua scripting for creating sophisticated terminal user interfaces. Originally conceived as a music player, RMP has evolved into a comprehensive platform for terminal-based applications, featuring:
+**RMP (Ray Music Player)** is a high-performance, extensible framework built in C with Lua scripting for creating sophisticated terminal user interfaces. Originally conceived as a music player, RMP has evolved into a comprehensive platform for terminal-based applications, featuring:
 
 - 🎵 **Advanced Music Player** - Multi-format audio support with real-time visualization
 - 📱 **Rich TUI Framework** - Create complex terminal interfaces with ease  
