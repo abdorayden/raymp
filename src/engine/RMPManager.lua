@@ -41,6 +41,28 @@ local os = require("os")
 local HashMap = utils.HashMap
 local Queue = utils.Queue
 
+local function coloredKeywordInString(str, keyword, color)
+    local pattern = "%f[%w_]" .. keyword .. "%f[%W]"
+    return str:gsub(pattern, color .. keyword .. api.Default)
+end
+
+local function coloredLuaCode(str)
+    if type(str) ~= "string" then
+        return str
+    end
+
+    local keywords = {
+        "and", "break", "do", "else", "elseif", "end", "false", "for", "function",
+        "if", "in", "local", "nil", "not", "or", "repeat", "return", "then",
+        "true", "until", "while"
+    }
+
+    for _, keyword in ipairs(keywords) do
+        str = coloredKeywordInString(str, keyword, api.FGColors.Brights.Green)
+    end
+
+    return str
+end
 local PlugManager = OOP.class("PlugManager")
 do
     function PlugManager:constructor(cfgObj)
@@ -632,7 +654,132 @@ local function engine_render_help(frame, w, h, settings, soundCfg)
     end
 end
 
-local function runRMPApplication(plugManager, template, settings, otherPlugs, soundCfg, pl_cfgs)
+local function setupPlugins(configObj, is_userconfig)
+    local plugs = HashMap.new()
+    local plugins = configObj.plugins
+    local otherPlugs = Queue.new() -- this is for global plugins not attached to any window
+    local currentPath = api.Path.new():getHomePath()
+    local plugins_configurations = HashMap.new()
+
+
+    if not plugins or type(plugins) ~= "table" then
+        logerror("Invalid plugins configuration.")
+        lognote("plugins should be a table of plugin configurations.")
+        lognote("Example plugins configuration:")
+        lognote(coloredLuaCode("return {"))
+        lognote(coloredLuaCode("    	..."))
+        lognote(coloredLuaCode("	plugins = {"))
+        lognote(coloredLuaCode("	    {"))
+        lognote(coloredLuaCode("	        themeWindowId = 'main',"))
+        lognote(coloredLuaCode("	        switchPluginKey = api.KEY_TAB,"))
+        lognote(coloredLuaCode("	        names = {'plugin1', 'plugin2'},"))
+        lognote(coloredLuaCode("	        isActivated = true,"))
+        lognote(coloredLuaCode("	    },"))
+        lognote(coloredLuaCode("	    {"))
+        lognote(coloredLuaCode("	        names = {'globalPlugin'},"))
+        lognote(coloredLuaCode("	        isActivated = true,"))
+        lognote(coloredLuaCode("	    },"))
+        lognote(coloredLuaCode("	}"))
+        lognote(coloredLuaCode("}"))
+        return nil, nil
+    end
+
+    for _, plug in ipairs(plugins) do
+        if plug.themeWindowId and plug.isActivated and plug.names then
+            local pq = Queue.new()
+
+            for _, name in ipairs(plug.names) do
+                local pluginOk, pluginModule
+
+                if is_userconfig then
+                    local homePath = api.Path.new():getHomePath()
+                    if type(name) == "string" then
+                        singleFile = joinPath(homePath, ".rmp", "plugins", name .. ".lua")
+                        folderInit = joinPath(homePath, ".rmp", "plugins", name, "init.lua")
+                        plugins_configurations:put(name, nil)
+                    elseif type(name) == "table" then
+                        singleFile = joinPath(homePath, ".rmp", "plugins", name[1] .. ".lua")
+                        folderInit = joinPath(homePath, ".rmp", "plugins", name[1], "init.lua")
+                        plugins_configurations:put(name[1], name[2])
+                    end
+
+                    pluginOk, pluginModule = pcall(dofile, singleFile)
+                    if not pluginOk then
+                        pluginOk, pluginModule = pcall(dofile, folderInit)
+                    end
+                else
+                    if type(name) == "string" then
+                        pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name) -- try to load from default selfrmp plugins
+                        plugins_configurations:put(name, nil)
+                    elseif type(name) == "table" then
+                        pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name[1]) -- try to load from default selfrmp plugins
+                        plugins_configurations:put(name[1], name[2])
+                    end
+                end
+
+                if pluginOk and pluginModule then
+                    pq:push(pluginModule)
+                else
+                    if type(name) == "string" then
+                        logwarn("Could not load global plugin '" .. name .. "': " .. tostring(pluginModule) .. "\n")
+                    elseif type(name) == "table" then
+                        logwarn("Could not load global plugin '" .. name[1] .. "': " .. tostring(pluginModule) .. "\n")
+                    end
+                    os.exit(1)
+                end
+            end
+
+            if not pq:isEmpty() then
+                plugs:put(plug.themeWindowId, { plug.switchPluginKey, pq })
+            end
+        elseif plug.isActivated and plug.names and plug.themeWindowId == nil then
+            for _, name in ipairs(plug.names) do
+                local pluginOk, pluginModule
+                if is_userconfig then
+                    local homePath = api.Path.new():getHomePath()
+                    if type(name) == "string" then
+                        singleFile = joinPath(homePath, ".rmp", "plugins", name .. ".lua")
+                        folderInit = joinPath(homePath, ".rmp", "plugins", name, "init.lua")
+                        plugins_configurations:put(name, nil)
+                    elseif type(name) == "table" then
+                        -- first index is plugin name the second is configuration
+                        singleFile = joinPath(homePath, ".rmp", "plugins", name[1] .. ".lua")
+                        folderInit = joinPath(homePath, ".rmp", "plugins", name[1], "init.lua")
+                        plugins_configurations:put(name[1], name[2])
+                    end
+
+                    pluginOk, pluginModule = pcall(dofile, singleFile)
+                    if not pluginOk then
+                        pluginOk, pluginModule = pcall(dofile, folderInit)
+                    end
+                else
+                    if type(name) == "string" then
+                        pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name) -- try to load from default selfrmp plugins
+                        plugins_configurations:put(name, nil)
+                    elseif type(name) == "table" then
+                        pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name[1]) -- try to load from default selfrmp plugins
+                        plugins_configurations:put(name[1], name[2])
+                    end
+                end
+                if pluginOk and pluginModule then
+                    otherPlugs:push(pluginModule)
+                else
+                    if type(name) == "string" then
+                        logwarn("Could not load global plugin '" .. name .. "': " .. tostring(pluginModule) .. "\n")
+                    elseif type(name) == "table" then
+                        logwarn("Could not load global plugin '" .. name[1] .. "': " .. tostring(pluginModule) .. "\n")
+                    end
+                    os.exit(1)
+                end
+            end
+        end
+    end
+
+    return PlugManager.new(plugs), otherPlugs, plugins_configurations
+end
+
+local function runRMPApplication(plugManager, template, settings, otherPlugs, soundCfg, plugs_cfgs, configObj,
+                                 is_userconfig)
     local h, w = api.Terminal:getSize()
     local mainFrame = api.Frame.new()
 
@@ -730,6 +877,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
 
     mainFrame:initMainFrame()
 
+    local plugManager, otherPlugs, plugs_cfgs = setupPlugins(configObj, is_userconfig)
     local parser = TemplateParser.new(template, plugManager)
     local switchKeys = parser:getPluginSwitchKeys()
     local quit = false
@@ -741,6 +889,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
 
 
     while not quit do
+        plugManager, otherPlugs, plugs_cfgs = setupPlugins(configObj, is_userconfig)
         mainFrame:clear()
         local key = api.Terminal:handleKey()
 
@@ -886,7 +1035,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
 
         local qq = Queue.new()
 
-        while not oq:isEmpty() do
+        while oq and not oq:isEmpty() do
             local plug = oq:pop()
             if plug then
                 if type(plug) == "function" then
@@ -906,11 +1055,12 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         -- TODO: add other plugins that are not intergrated to spesific window id template to event
         -- TODO: rayden was here
 
-        if pl_cfgs then
+        if plugs_cfgs then
             -- TODO: add settings and soundCfg keys to plugins values table configurations
 
-            pl_cfgs:put("soundCfg", soundCfg)
-            pl_cfgs:put("settings", settings)
+            plugs_cfgs:put("soundCfg", soundCfg)
+            plugs_cfgs:put("settings", settings)
+            plugs_cfgs:put("all", configObj)
         end
         ---
 
@@ -926,7 +1076,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             key,
             nil, -- TODO: add mouse support later
             sound,
-            pl_cfgs,
+            plugs_cfgs,
             -- windows is just table of windows tables
             template
         )
@@ -943,28 +1093,6 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
     return restart
 end
 
-local function coloredKeywordInString(str, keyword, color)
-    local pattern = "%f[%w_]" .. keyword .. "%f[%W]"
-    return str:gsub(pattern, color .. keyword .. api.Default)
-end
-
-local function coloredLuaCode(str)
-    if type(str) ~= "string" then
-        return str
-    end
-
-    local keywords = {
-        "and", "break", "do", "else", "elseif", "end", "false", "for", "function",
-        "if", "in", "local", "nil", "not", "or", "repeat", "return", "then",
-        "true", "until", "while"
-    }
-
-    for _, keyword in ipairs(keywords) do
-        str = coloredKeywordInString(str, keyword, api.FGColors.Brights.Green)
-    end
-
-    return str
-end
 
 local function loadConfiguration()
     local config = api.Config.new()
@@ -1034,130 +1162,6 @@ local function loadConfiguration()
 
         return defaultConfig, template, false -- false means default config
     end
-end
-
-local function setupPlugins(configObj, is_userconfig)
-    local plugs = HashMap.new()
-    local plugins = configObj.plugins
-    local otherPlugs = Queue.new() -- this is for global plugins not attached to any window
-    local currentPath = api.Path.new():getHomePath()
-    local plugins_configurations = HashMap.new()
-
-
-    if not plugins or type(plugins) ~= "table" then
-        logerror("Invalid plugins configuration.")
-        lognote("plugins should be a table of plugin configurations.")
-        lognote("Example plugins configuration:")
-        lognote(coloredLuaCode("return {"))
-        lognote(coloredLuaCode("    	..."))
-        lognote(coloredLuaCode("	plugins = {"))
-        lognote(coloredLuaCode("	    {"))
-        lognote(coloredLuaCode("	        themeWindowId = 'main',"))
-        lognote(coloredLuaCode("	        switchPluginKey = api.KEY_TAB,"))
-        lognote(coloredLuaCode("	        names = {'plugin1', 'plugin2'},"))
-        lognote(coloredLuaCode("	        isActivated = true,"))
-        lognote(coloredLuaCode("	    },"))
-        lognote(coloredLuaCode("	    {"))
-        lognote(coloredLuaCode("	        names = {'globalPlugin'},"))
-        lognote(coloredLuaCode("	        isActivated = true,"))
-        lognote(coloredLuaCode("	    },"))
-        lognote(coloredLuaCode("	}"))
-        lognote(coloredLuaCode("}"))
-        return nil, nil
-    end
-
-    for _, plug in ipairs(plugins) do
-        if plug.themeWindowId and plug.isActivated and plug.names then
-            local pq = Queue.new()
-
-            for _, name in ipairs(plug.names) do
-                local pluginOk, pluginModule
-
-                if is_userconfig then
-                    local homePath = api.Path.new():getHomePath()
-                    if type(name) == "string" then
-                        singleFile = joinPath(homePath, ".rmp", "plugins", name .. ".lua")
-                        folderInit = joinPath(homePath, ".rmp", "plugins", name, "init.lua")
-                        plugins_configurations:put(name, nil)
-                    elseif type(name) == "table" then
-                        singleFile = joinPath(homePath, ".rmp", "plugins", name[1] .. ".lua")
-                        folderInit = joinPath(homePath, ".rmp", "plugins", name[1], "init.lua")
-                        plugins_configurations:put(name[1], name[2])
-                    end
-
-                    pluginOk, pluginModule = pcall(dofile, singleFile)
-                    if not pluginOk then
-                        pluginOk, pluginModule = pcall(dofile, folderInit)
-                    end
-                else
-                    if type(name) == "string" then
-                        pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name) -- try to load from default selfrmp plugins
-                        plugins_configurations:put(name, nil)
-                    elseif type(name) == "table" then
-                        pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name[1]) -- try to load from default selfrmp plugins
-                        plugins_configurations:put(name[1], name[2])
-                    end
-                end
-
-                if pluginOk and pluginModule then
-                    pq:push(pluginModule)
-                else
-                    if type(name) == "string" then
-                        logwarn("Could not load global plugin '" .. name .. "': " .. tostring(pluginModule) .. "\n")
-                    elseif type(name) == "table" then
-                        logwarn("Could not load global plugin '" .. name[1] .. "': " .. tostring(pluginModule) .. "\n")
-                    end
-                    os.exit(1)
-                end
-            end
-
-            if not pq:isEmpty() then
-                plugs:put(plug.themeWindowId, { plug.switchPluginKey, pq })
-            end
-        elseif plug.isActivated and plug.names and plug.themeWindowId == nil then
-            for _, name in ipairs(plug.names) do
-                local pluginOk, pluginModule
-                if is_userconfig then
-                    local homePath = api.Path.new():getHomePath()
-                    if type(name) == "string" then
-                        singleFile = joinPath(homePath, ".rmp", "plugins", name .. ".lua")
-                        folderInit = joinPath(homePath, ".rmp", "plugins", name, "init.lua")
-                        plugins_configurations:put(name, nil)
-                    elseif type(name) == "table" then
-                        -- first index is plugin name the second is configuration
-                        singleFile = joinPath(homePath, ".rmp", "plugins", name[1] .. ".lua")
-                        folderInit = joinPath(homePath, ".rmp", "plugins", name[1], "init.lua")
-                        plugins_configurations:put(name[1], name[2])
-                    end
-
-                    pluginOk, pluginModule = pcall(dofile, singleFile)
-                    if not pluginOk then
-                        pluginOk, pluginModule = pcall(dofile, folderInit)
-                    end
-                else
-                    if type(name) == "string" then
-                        pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name) -- try to load from default selfrmp plugins
-                        plugins_configurations:put(name, nil)
-                    elseif type(name) == "table" then
-                        pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name[1]) -- try to load from default selfrmp plugins
-                        plugins_configurations:put(name[1], name[2])
-                    end
-                end
-                if pluginOk and pluginModule then
-                    otherPlugs:push(pluginModule)
-                else
-                    if type(name) == "string" then
-                        logwarn("Could not load global plugin '" .. name .. "': " .. tostring(pluginModule) .. "\n")
-                    elseif type(name) == "table" then
-                        logwarn("Could not load global plugin '" .. name[1] .. "': " .. tostring(pluginModule) .. "\n")
-                    end
-                    os.exit(1)
-                end
-            end
-        end
-    end
-
-    return PlugManager.new(plugs), otherPlugs, plugins_configurations
 end
 
 -- Main Entry Point
@@ -1240,7 +1244,17 @@ local function main()
     local parser = TemplateParser.new(template, plugManager)
     -- You could add template validation here if needed
 
-    if runRMPApplication(plugManager, template, configObj.settings, otherPlugs, soundCfg, plugs_cfgs) then
+    if runRMPApplication(
+            plugManager,
+            template,
+            configObj.settings,
+            otherPlugs,
+            soundCfg,
+            plugs_cfgs,
+            configObj,
+            is_userconfig
+
+        ) then
         goto here
     end
 end
