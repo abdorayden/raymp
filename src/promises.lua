@@ -40,12 +40,13 @@ end
 
 schedule_impl = default_schedule
 
-local function schedule(ms, fn)
-    schedule_impl(ms, fn)
-end
 
 local Promise = {}
 Promise.__index = Promise
+
+function Promise.schedule(ms, fn)
+    schedule_impl(ms, fn)
+end
 
 Promise.State = {
     Pending = "pending",
@@ -95,7 +96,7 @@ end
 
 function Promise.timeout(ms)
     return Promise.new(function(resolve)
-        schedule(ms, resolve)
+        Promise.schedule(ms, resolve)
     end)
 end
 
@@ -131,9 +132,9 @@ function Promise:tthen(onFulfilled, onRejected)
         end
 
         if self.state == Promise.State.Fulfilled then
-            schedule(0, function() handleFulfilled(self.value) end)
+            Promise.schedule(0, function() handleFulfilled(self.value) end)
         elseif self.state == Promise.State.Rejected then
-            schedule(0, function() handleRejected(self.reason) end)
+            Promise.schedule(0, function() handleRejected(self.reason) end)
         else
             table.insert(self.fulfilledCallbacks, handleFulfilled)
             table.insert(self.rejectedCallbacks, handleRejected)
