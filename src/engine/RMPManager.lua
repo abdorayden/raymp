@@ -889,7 +889,15 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
 
 
     while not quit do
+        if plugs_cfgs then
+            local c = plugs_cfgs:get("all")
+            if c and type(c) == "table" then
+                configObj = c
+            end
+        end
+
         plugManager, otherPlugs, plugs_cfgs = setupPlugins(configObj, is_userconfig)
+
         mainFrame:clear()
         local key = api.Terminal:handleKey()
 
