@@ -988,7 +988,11 @@ do -- color from hex
     --- @param fg_or_bg string
     --- @return string
     function RMP.colorFromHex(hex, fg_or_bg)
+        --- BUG: i used colorFromHex function and i saw that it breaks the UI , and not displying colors correctly
         local fb = fg_or_bg or "38"
+        if hex:sub(1, 1) == "#" then
+            hex = hex:sub(2)
+        end
         local r, g, b = tonumber(hex:sub(1, 2), 16), tonumber(hex:sub(3, 4), 16), tonumber(hex:sub(5, 6), 16)
         return string.format("\27[%s;2;%d;%d;%dm", fb, r, g, b)
     end
@@ -2286,7 +2290,7 @@ do
     --- @overload fun()
     function RMP.Input:render()
         self.vterm:clear()
-        self.vterm:writeText(self.x, self.y, self.label, RMP.FGColors.Brights.White, RMP.BGColors.NoBrights.Blue)
+        self.vterm:writeText(self.x, self.y, self.label)
 
         local visible_width = self.max_visible_chars
 
@@ -2298,17 +2302,14 @@ do
         --- @diagnostic disable-next-line
         displayText = displayText .. string.rep(" ", math.max(0, visible_width - #displayText))
 
-        self.vterm:writeText(self.x + #self.label, self.y, displayText, RMP.FGColors.Brights.White,
-            RMP.BGColors.NoBrights.Blue)
+        self.vterm:writeText(self.x + #self.label, self.y, displayText)
         --- @diagnostic disable-next-line
         if self.active then
             local cursor_screen_pos = self.cursor_pos - self.scroll_offset
             if cursor_screen_pos > 0 and cursor_screen_pos <= visible_width then
                 self.vterm:writeText(
                     self.x + #self.label + cursor_screen_pos - 1, self.y,
-                    "_",
-                    RMP.FGColors.Brights.Yellow,
-                    RMP.BGColors.NoBrights.Blue
+                    "_"
                 )
             end
         end
