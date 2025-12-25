@@ -1220,35 +1220,120 @@ local function main()
         if not ok then
             key = api.Terminal:handleKey()
             local h, w = api.Terminal:getSize()
-
             mainFrame:clear()
             restart = true
-            local x_popup = math.floor(w * 0.2)
-            local y_popup = math.floor(h * 0.2)
-            local popup_w = math.floor(w * 0.6)
-            local popup_h = math.floor(h * 0.6)
+
+            -- Popup dimensions
+            local boxWidth = math.min(math.floor(w * 0.9), 120)
+            local boxHeight = math.floor(h * 0.8)
+            if w < 60 then boxWidth = w end
+            if h < 20 then boxHeight = h end
+            local boxX = math.floor((w - boxWidth) / 2)
+            local boxY = math.floor((h - boxHeight) / 2)
+
+            -- Title and box
+            local box_title = api.Text.new(" RMP Engine Error ", api.TextStyle.Bold, api.FGColors.Brights.White,
+                api.BGColors.NoBrights.Red)
             mainFrame:drawBox(
-                api.Text.new("Error", api.TextStyle.Bold, api.FGColors.Brights.Red, api.BGColors.NoBrights.Black),
-                x_popup, y_popup, popup_w, popup_h,
-                api.BoxDrawing.LightBorder,
+                box_title,
+                boxX, boxY, boxWidth, boxHeight,
+                api.BoxDrawing.DoubleBorder,
                 api.FGColors.Brights.Red,
                 api.BGColors.NoBrights.Black
             )
-            local i = 2
-            local second_error = "An error occurred: " .. the_error_message
-            if the_error_message ~= "" then
-                mainFrame:writeTextClipped(x_popup + 1, y_popup + i, second_error, popup_w - 6, api.FGColors.Brights.Red,
-                    api.BGColors.NoBrights.Black)
-                i = i + 1
-                mainFrame:writeTextClipped(x_popup + 1, y_popup + i, string.sub(second_error, popup_w - 5), popup_w - 6,
-                    api.FGColors.Brights.Red,
-                    api.BGColors.NoBrights.Black)
+
+            local err_msg = tostring(error)
+
+            -- Error message parsing
+            local file, line, message = err_msg:match("([%w%._%-%/]+%.lua):(%d+): (.*)")
+            if not message then
+                _, _, message = err_msg:match("LUA_ERRRUN (%d+):.-:%d+: (.*)")
+                if not message then
+                    message = err_msg
+                end
             end
-            mainFrame:writeText(x_popup + 1, y_popup - 1, "press Q to quit ... ", api.FGColors.Brights.Red,
-                api.BGColors.NoBrights.Black)
+            local display_message = message
+
+            -- Text wrapping function
+            local function wrapText(str, width)
+                if width <= 0 then return { str } end
+                local lines = {}
+                str = str:gsub("\t", "    ")
+                for s in str:gmatch("[^\r\n]+") do
+                    local current_pos = 1
+                    while current_pos <= #s do
+                        local end_pos = current_pos + width - 1
+                        if end_pos >= #s then
+                            table.insert(lines, s:sub(current_pos))
+                            break
+                        end
+                        local break_pos = end_pos
+                        local space_found = false
+                        for i = end_pos, current_pos, -1 do
+                            if s:sub(i, i) == " " then
+                                break_pos = i
+                                space_found = true
+                                break
+                            end
+                        end
+                        if space_found and break_pos > current_pos then
+                            table.insert(lines, s:sub(current_pos, break_pos - 1))
+                            current_pos = break_pos + 1
+                        else
+                            table.insert(lines, s:sub(current_pos, end_pos))
+                            current_pos = end_pos + 1
+                        end
+                    end
+                end
+                return lines
+            end
+
+            local text_width = boxWidth - 4
+            local wrapped_message = wrapText(display_message, text_width)
+
+            -- Draw wrapped error message
+            local currentY = boxY + 2
+            for _, line_text in ipairs(wrapped_message) do
+                if currentY < boxY + boxHeight - 5 then
+                    mainFrame:writeText(boxX + 2, currentY, line_text, api.FGColors.Brights.White,
+                        api.BGColors.NoBrights.Black)
+                    currentY = currentY + 1
+                else
+                    mainFrame:writeText(boxX + 2, currentY, "...", api.FGColors.Brights.White,
+                        api.BGColors.NoBrights.Black)
+                    break
+                end
+            end
+
+            -- Draw highlighted code location
+            if file and line then
+                currentY = currentY + 1
+                if currentY < boxY + boxHeight - 3 then
+                    local separator = string.rep(api.BoxDrawing.LightBorder[2], text_width)
+                    mainFrame:writeText(boxX + 2, currentY, separator, api.FGColors.NoBrights.White,
+                        api.BGColors.NoBrights.Black)
+                    currentY = currentY + 1
+                    local location_text = "Location: "
+                    mainFrame:writeText(boxX + 2, currentY, location_text, api.FGColors.Brights.White,
+                        api.BGColors.NoBrights.Black)
+                    local highlight_text = file .. ":" .. line
+                    mainFrame:writeText(boxX + 2 + #location_text, currentY, highlight_text, api.FGColors.Brights.Yellow,
+                        api.BGColors.NoBrights.Black, api.TextStyle.Bold)
+                end
+            end
+
+            -- Draw prompt
+            local prompt_message = "Press 'Q' to Quit or 'R' to Reload"
+            local prompt_x = math.floor((w - #prompt_message) / 2)
+            local prompt_y = boxY + boxHeight - 2
+            mainFrame:writeText(prompt_x, prompt_y, prompt_message, api.FGColors.Brights.Black,
+                api.BGColors.NoBrights.White)
+
             mainFrame:onKeyboard(function(key)
                 if key == api.KEY_Q then
                     restart = false
+                elseif key == api.KEY_R then
+                    -- Setting restart to true is handled by the loop, just need to allow it to continue
                 end
             end)
             mainFrame:run(key, nil, nil, nil, nil)
