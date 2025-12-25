@@ -20,14 +20,13 @@
 -- /*  THE SOFTWARE. 										*/
 -- /*  												*/
 -- /*********************************************************************************************/
---
---
--- complete rmp engine with error handling , plugin management , template parsing and layout engine
--- enhanced version of rmpv1 with better structure and modularity
 
--- TODO: rewrote all engine to C for better performance and lower memory usage
+-- Complete RMP engine with error handling, plugin management, template parsing and layout engine
+-- Enhanced version of rmpv1 with better structure and modularity
+
+-- TODO: rewrite all engine to C for better performance and lower memory usage
 -- NOTE: plugins should create VirtualTerminal inside returned function
--- BUG:  program stop if lua access nil obj or something (add system logs)
+-- BUG:  program stops if lua access nil obj or something (add system logs)
 
 local api = require("rmp.rmp")
 local utils = require("rmp.util")
@@ -41,11 +40,13 @@ local os = require("os")
 local HashMap = utils.HashMap
 local Queue = utils.Queue
 
+-- Function to color specific keywords in a string
 local function coloredKeywordInString(str, keyword, color)
     local pattern = "%f[%w_]" .. keyword .. "%f[%W]"
     return str:gsub(pattern, color .. keyword .. api.Default)
 end
 
+-- Function to color Lua code keywords
 local function coloredLuaCode(str)
     if type(str) ~= "string" then
         return str
@@ -63,6 +64,8 @@ local function coloredLuaCode(str)
 
     return str
 end
+
+-- Plugin Manager class
 local PlugManager = OOP.class("PlugManager")
 do
     function PlugManager:constructor(cfgObj)
@@ -104,21 +107,13 @@ do
     end
 end
 
--- TODO: wrap all tables from template to class for better management and future extensions
--- like adding methods to update component data or validate it
--- also for simplifying the access to the component data on script property in the template
---
--- wrapper for component table that parsed from template
--- TODO: came back
-
--- TODO: add more components type
-
+-- Component types
 local ComponentType = {
     Window = "Window",
-    Title = "Text"
+    Text = "Text"
 }
 
--- represent a single component
+-- Component class to represent a single component
 local Component = OOP.class("Component")
 do
     function Component:constructor(comp)
@@ -158,8 +153,7 @@ do
     end
 end
 
--- TODO: came back
--- manager for all components in the application
+-- Components manager class for all components in the application
 local Components = OOP.class("Components")
 do
     function Components:constructor(templeArray)
@@ -200,26 +194,30 @@ do
     -- @param id: string - unique identifier for the component
     -- @return: table or nil - the component data or nil if not found
     function Components:getComponent(id)
-        if id and self.components[id] then
+        if id and self.components:get(id) then
             return self.components:get(id)
         end
         return nil
     end
 
     function Components:updateComponent(id, newComponent)
-        if id and self.components[id] then
-            self.components:get(id):set(newComponent)
+        if id and self.components:get(id) then
+            -- Assuming Component has a set method or we update fields directly
+            local comp = self.components:get(id)
+            for k, v in pairs(newComponent) do
+                comp[k] = v
+            end
         end
     end
 
     function Components:removeComponent(id)
-        if id and self.components[id] then
-            self.components[id] = nil
+        if id and self.components:get(id) then
+            self.components:remove(id) -- Using HashMap's remove method instead of direct assignment
         end
     end
 end
 
--- TODO: replcae all those logs with simple notifications and add them to the logs file
+-- Logging functions
 local function logerror(err)
     io.write(api.BGColors.Brights.Red ..
         api.FGColors.Brights.Yellow .. "RMP Error:" .. api.Default .. " " .. tostring(err) .. "\n")
@@ -235,7 +233,7 @@ local function logwarn(warn)
         api.FGColors.Brights.Black .. "RMP Warning:" .. api.Default .. " " .. tostring(warn) .. "\n")
 end
 
--- template parser with layout engine
+-- Template parser with layout engine
 local TemplateParser = OOP.class("TemplateParser")
 do
     function TemplateParser:constructor(template, plugManager)
@@ -284,8 +282,7 @@ do
         }
     end
 
-    --TODO: add more usefull callbacks to a text and window parser later
-    -- dynamic and condition is really useful , so im gonna looking for more usefull callbacks
+    -- Dynamic and condition are really useful, so I'm gonna look for more useful callbacks
     function TemplateParser:parseText(textConfig, context)
         if not textConfig or textConfig.type ~= "Text" then
             return nil
@@ -427,7 +424,7 @@ do
             -- also the script should return the updated components data
             local success, err = pcall(self.template.script, context)
             if not success then
-                logwarn("Error executing script in window '" .. tostring(self.template.id) .. "': " .. tostring(err))
+                logwarn("Error executing script in template: " .. tostring(err))
             end
         end
 
@@ -481,119 +478,69 @@ do
     end
 end
 
--- TODO: add ability to make help functionality interactive like scrolling or searching , also make it configured from config file
--- so we can use more advanced plugins for better help messages
--- TODO: make sure that the help show keys
+-- Key to character mapping using a lookup table for efficiency
+local keyToCharMap = {
+    [api.KEY_RIGHT] = "<right>",
+    [api.KEY_LEFT] = "<left>",
+    [api.KEY_UP] = "<up>",
+    [api.KEY_DOWN] = "<down>",
+    [api.KEY_SPACE] = "<space>",
+    [api.KEY_TAB] = "<tab>",
+    [api.KEY_ALT_A] = "<A-a>",
+    [api.KEY_ALT_B] = "<A-b>",
+    [api.KEY_ALT_C] = "<A-c>",
+    [api.KEY_ALT_D] = "<A-d>",
+    [api.KEY_ALT_E] = "<A-e>",
+    [api.KEY_ALT_F] = "<A-f>",
+    [api.KEY_ALT_G] = "<A-g>",
+    [api.KEY_ALT_H] = "<A-h>",
+    [api.KEY_ALT_K] = "<A-k>",
+    [api.KEY_ALT_L] = "<A-l>",
+    [api.KEY_ALT_M] = "<A-m>",
+    [api.KEY_ALT_N] = "<A-n>",
+    [api.KEY_ALT_O] = "<A-o>",
+    [api.KEY_ALT_P] = "<A-p>",
+    [api.KEY_ALT_Q] = "<A-q>",
+    [api.KEY_ALT_R] = "<A-r>",
+    [api.KEY_ALT_S] = "<A-s>",
+    [api.KEY_ALT_T] = "<A-t>",
+    [api.KEY_ALT_U] = "<A-u>",
+    [api.KEY_ALT_V] = "<A-v>",
+    [api.KEY_ALT_W] = "<A-w>",
+    [api.KEY_ALT_X] = "<A-x>",
+    [api.KEY_ALT_Y] = "<A-y>",
+    [api.KEY_ALT_Z] = "<A-z>",
+    [api.KEY_CTRL_A] = "<C-a>",
+    [api.KEY_CTRL_B] = "<C-b>",
+    [api.KEY_CTRL_C] = "<C-c>",
+    [api.KEY_CTRL_D] = "<C-d>",
+    [api.KEY_CTRL_E] = "<C-e>",
+    [api.KEY_CTRL_F] = "<C-f>",
+    [api.KEY_CTRL_G] = "<C-g>",
+    [api.KEY_CTRL_H] = "<C-h>",
+    [api.KEY_CTRL_K] = "<C-k>",
+    [api.KEY_CTRL_L] = "<C-l>",
+    [api.KEY_CTRL_M] = "<C-m>",
+    [api.KEY_CTRL_N] = "<C-n>",
+    [api.KEY_CTRL_O] = "<C-o>",
+    [api.KEY_CTRL_P] = "<C-p>",
+    [api.KEY_CTRL_Q] = "<C-q>",
+    [api.KEY_CTRL_R] = "<C-r>",
+    [api.KEY_CTRL_S] = "<C-s>",
+    [api.KEY_CTRL_T] = "<C-t>",
+    [api.KEY_CTRL_U] = "<C-u>",
+    [api.KEY_CTRL_V] = "<C-v>",
+    [api.KEY_CTRL_W] = "<C-w>",
+    [api.KEY_CTRL_X] = "<C-x>",
+    [api.KEY_CTRL_Y] = "<C-y>",
+    [api.KEY_CTRL_Z] = "<C-z>"
+}
+
 local function engine_render_help(frame, w, h, settings, soundCfg)
-    local ktc = function(k)
-        if k == api.KEY_RIGHT then
-            return "<right>"
-        elseif k == api.KEY_LEFT then
-            return "<left>"
-        elseif k == api.KEY_UP then
-            return "<up>"
-        elseif k == api.KEY_DOWN then
-            return "<down>"
-        elseif k == api.KEY_SPACE then
-            return "<space>"
-        elseif k == api.KEY_TAB then
-            return "<tab>"
-        elseif k == api.KEY_ALT_A then
-            return "<A-a>"
-        elseif k == api.KEY_ALT_B then
-            return "<A-b>"
-        elseif k == api.KEY_ALT_C then
-            return "<A-c>"
-        elseif k == api.KEY_ALT_D then
-            return "<A-d>"
-        elseif k == api.KEY_ALT_E then
-            return "<A-e>"
-        elseif k == api.KEY_ALT_F then
-            return "<A-f>"
-        elseif k == api.KEY_ALT_G then
-            return "<A-g>"
-        elseif k == api.KEY_ALT_H then
-            return "<A-h>"
-        elseif k == api.KEY_ALT_K then
-            return "<A-k>"
-        elseif k == api.KEY_ALT_L then
-            return "<A-l>"
-        elseif k == api.KEY_ALT_M then
-            return "<A-m>"
-        elseif k == api.KEY_ALT_N then
-            return "<A-n>"
-        elseif k == api.KEY_ALT_O then
-            return "<A-o>"
-        elseif k == api.KEY_ALT_P then
-            return "<A-p>"
-        elseif k == api.KEY_ALT_Q then
-            return "<A-q>"
-        elseif k == api.KEY_ALT_R then
-            return "<A-r>"
-        elseif k == api.KEY_ALT_S then
-            return "<A-s>"
-        elseif k == api.KEY_ALT_T then
-            return "<A-t>"
-        elseif k == api.KEY_ALT_U then
-            return "<A-u>"
-        elseif k == api.KEY_ALT_V then
-            return "<A-v>"
-        elseif k == api.KEY_ALT_W then
-            return "<A-w>"
-        elseif k == api.KEY_ALT_X then
-            return "<A-x>"
-        elseif k == api.KEY_ALT_Y then
-            return "<A-y>"
-        elseif k == api.KEY_ALT_Z then
-            return "<A-z>"
-        elseif k == api.KEY_CTRL_A then
-            return "<C-a>"
-        elseif k == api.KEY_CTRL_B then
-            return "<C-b>"
-        elseif k == api.KEY_CTRL_C then
-            return "<C-c>"
-        elseif k == api.KEY_CTRL_D then
-            return "<C-d>"
-        elseif k == api.KEY_CTRL_E then
-            return "<C-e>"
-        elseif k == api.KEY_CTRL_F then
-            return "<C-f>"
-        elseif k == api.KEY_CTRL_G then
-            return "<C-g>"
-        elseif k == api.KEY_CTRL_H then
-            return "<C-h>"
-        elseif k == api.KEY_CTRL_K then
-            return "<C-k>"
-        elseif k == api.KEY_CTRL_L then
-            return "<C-l>"
-        elseif k == api.KEY_CTRL_M then
-            return "<C-m>"
-        elseif k == api.KEY_CTRL_N then
-            return "<C-n>"
-        elseif k == api.KEY_CTRL_O then
-            return "<C-o>"
-        elseif k == api.KEY_CTRL_P then
-            return "<C-p>"
-        elseif k == api.KEY_CTRL_Q then
-            return "<C-q>"
-        elseif k == api.KEY_CTRL_R then
-            return "<C-r>"
-        elseif k == api.KEY_CTRL_S then
-            return "<C-s>"
-        elseif k == api.KEY_CTRL_T then
-            return "<C-t>"
-        elseif k == api.KEY_CTRL_U then
-            return "<C-u>"
-        elseif k == api.KEY_CTRL_V then
-            return "<C-v>"
-        elseif k == api.KEY_CTRL_W then
-            return "<C-w>"
-        elseif k == api.KEY_CTRL_X then
-            return "<C-x>"
-        elseif k == api.KEY_CTRL_Y then
-            return "<C-y>"
-        elseif k == api.KEY_CTRL_Z then
-            return "<C-z>"
+    local function ktc(k)
+        local mapped = keyToCharMap[k]
+        if mapped then
+            return mapped
         else
             return api.Input.new():keyToChar(k)
         end
@@ -658,9 +605,7 @@ local function setupPlugins(configObj, is_userconfig)
     local plugs = HashMap.new()
     local plugins = configObj.plugins
     local otherPlugs = Queue.new() -- this is for global plugins not attached to any window
-    local currentPath = api.Path.new():getHomePath()
     local plugins_configurations = HashMap.new()
-
 
     if not plugins or type(plugins) ~= "table" then
         logerror("Invalid plugins configuration.")
@@ -693,6 +638,7 @@ local function setupPlugins(configObj, is_userconfig)
 
                 if is_userconfig then
                     local homePath = api.Path.new():getHomePath()
+                    local singleFile, folderInit
                     if type(name) == "string" then
                         singleFile = joinPath(homePath, ".rmp", "plugins", name .. ".lua")
                         folderInit = joinPath(homePath, ".rmp", "plugins", name, "init.lua")
@@ -721,9 +667,9 @@ local function setupPlugins(configObj, is_userconfig)
                     pq:push(pluginModule)
                 else
                     if type(name) == "string" then
-                        logwarn("Could not load global plugin '" .. name .. "': " .. tostring(pluginModule) .. "\n")
+                        logwarn("Could not load plugin '" .. name .. "': " .. tostring(pluginModule) .. "\n")
                     elseif type(name) == "table" then
-                        logwarn("Could not load global plugin '" .. name[1] .. "': " .. tostring(pluginModule) .. "\n")
+                        logwarn("Could not load plugin '" .. name[1] .. "': " .. tostring(pluginModule) .. "\n")
                     end
                     os.exit(1)
                 end
@@ -737,6 +683,7 @@ local function setupPlugins(configObj, is_userconfig)
                 local pluginOk, pluginModule
                 if is_userconfig then
                     local homePath = api.Path.new():getHomePath()
+                    local singleFile, folderInit
                     if type(name) == "string" then
                         singleFile = joinPath(homePath, ".rmp", "plugins", name .. ".lua")
                         folderInit = joinPath(homePath, ".rmp", "plugins", name, "init.lua")
@@ -822,10 +769,6 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             sound:setSpeed(1.0)
         end
 
-        -- if settings.mode and type(settings.mode) == "number" then
-        -- 	sound:setPlayBackMode(settings.mode)
-        -- end
-
         if settings.mode and type(settings.mode) == "number" and settings.mode >= 0 and settings.mode <= 3 then
             sound:setPlayBackMode(settings.mode)
         else
@@ -877,7 +820,6 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
 
     mainFrame:initMainFrame()
 
-    local plugManager, otherPlugs, plugs_cfgs = setupPlugins(configObj, is_userconfig)
     local parser = TemplateParser.new(template, plugManager)
     local switchKeys = parser:getPluginSwitchKeys()
     local quit = false
@@ -885,8 +827,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
     local restart = false
     local render_help = false
 
-    local template = parser:getTemplate()
-
+    local template_copy = parser:getTemplate()
 
     while not quit do
         if plugs_cfgs then
@@ -896,7 +837,8 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             end
         end
 
-        plugManager, otherPlugs, plugs_cfgs = setupPlugins(configObj, is_userconfig)
+        -- Only call setupPlugins once per loop, not twice as in original
+        local currentPlugManager, currentOtherPlugs, currentPlugsCfgs = setupPlugins(configObj, is_userconfig)
 
         mainFrame:clear()
         local key = api.Terminal:handleKey()
@@ -914,7 +856,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             end)
         end
 
-        -- TODO: handle the exit key from configuration
+        -- Handle the exit key from configuration
         mainFrame:addEventListener(api.EventType.Keyboard, function(inputKey)
             if inputKey == exit then
                 quit = true
@@ -930,7 +872,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         end)
 
         mainFrame:addEventListener(api.EventType.Keyboard, function(inputKey)
-            -- in case u configured pause and resume with same key
+            -- in case you configured pause and resume with same key
             if soundCfg.pause_sound ~= soundCfg.resume_sound then
                 if inputKey == soundCfg.pause_sound then
                     if sound:isPlaying() then
@@ -1003,7 +945,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
                     local len = math.floor(sound:getLength())
                     if currPos < len then
                         if currPos + inc_seek >= len then
-                            sound:seek(len - 1) -- i know i know don't ask any quesion
+                            sound:seek(len - 1) -- i know i know don't ask any question
                         else
                             sound:seek(currPos + inc_seek)
                         end
@@ -1035,7 +977,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         sound:update()
 
         -- To work with the same table
-        local windows, _ = parser:parseTemplate(template)
+        local windows, _ = parser:parseTemplate(template_copy)
 
         for _, window in ipairs(windows) do
             mainFrame:add(window, true)
@@ -1050,7 +992,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
                     mainFrame:add(plug(), true)
                     qq:push(plug)
                 elseif type(plug) == "table" then
-                    -- TODO: other plugins are configured , add thier configurations to Config event
+                    -- TODO: other plugins are configured , add their configurations to Config event
 
                     mainFrame:add(plug[1](), true)
                     qq:push(plug)
@@ -1060,15 +1002,15 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         oq = qq
 
         ---
-        -- TODO: add other plugins that are not intergrated to spesific window id template to event
+        -- TODO: add other plugins that are not integrated to specific window id template to event
         -- TODO: rayden was here
 
-        if plugs_cfgs then
+        if currentPlugsCfgs then
             -- TODO: add settings and soundCfg keys to plugins values table configurations
 
-            plugs_cfgs:put("soundCfg", soundCfg)
-            plugs_cfgs:put("settings", settings)
-            plugs_cfgs:put("all", configObj)
+            currentPlugsCfgs:put("soundCfg", soundCfg)
+            currentPlugsCfgs:put("settings", settings)
+            currentPlugsCfgs:put("all", configObj)
         end
         ---
 
@@ -1084,9 +1026,9 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             key,
             nil, -- TODO: add mouse support later
             sound,
-            plugs_cfgs,
+            currentPlugsCfgs,
             -- windows is just table of windows tables
-            template
+            template_copy
         )
 
         if restart then
@@ -1094,9 +1036,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         end
     end
 
-
     sound:cleanup()
-
     mainFrame:cleanupMainFrame()
     return restart
 end
@@ -1175,84 +1115,82 @@ end
 -- Main Entry Point
 local function main()
     -- Load configuration
+    local restart = true
+    while restart do
+        restart = false -- Reset restart flag
 
-    ::here::
+        local configObj, template, is_userconfig = loadConfiguration()
+        if not configObj or not template then
+            logerror("Failed to load configuration. Exiting.")
+            -- TODO: assuming default path windows and linux
+            lognote("check your configuration file or try to reset it by deleting ~/.rmp/config.lua")
+            lognote("see the errors above for more details.")
+            os.exit(1)
+        end
 
-    local configObj, template, is_userconfig = loadConfiguration()
-    if not configObj or not template then
-        logerror("Failed to load configuration. Exiting.")
-        -- TODO: assuming default path windows and linux
-        lognote("check your configuration file or try to reset it by deleting ~/.rmp/config.lua")
-        lognote("see the errors above for more details.")
-        os.exit(1)
-    end
+        local soundCfg = configObj.soundMap
 
-    local soundCfg = configObj.soundMap
+        if soundCfg == nil then --- use the default
+            soundCfg = {
+                pause_sound = api.KEY_SPACE,
+                resume_sound = api.KEY_SPACE,
+                next_sound = api.KEY_N,
+                prev_sound = api.KEY_P,
+                vol_up = api.KEY_PLUS,
+                vol_down = api.KEY_MINUS,
+                seek_left = api.KEY_LEFT,
+                seek_right = api.KEY_RIGHT,
+                speed_up = api.KEY_UP,
+                speed_down = api.KEY_DOWN,
+                change_playback_mode = api.KEY_TAB
+            }
+        elseif #soundCfg < 10 then --- check for every key if it's not exists set the default key
+            if soundCfg.pause_sound == nil or type(soundCfg.pause_sound) ~= "number" then
+                soundCfg.pause_sound = api.KEY_SPACE
+            end
+            if soundCfg.change_playback_mode == nil or type(soundCfg.change_playback_mode) ~= "number" then
+                soundCfg.change_playback_mode = api.KEY_TAB
+            end
+            if soundCfg.resume_sound == nil or type(soundCfg.resume_sound) ~= "number" then
+                soundCfg.resume_sound = api.KEY_SPACE
+            end
+            if soundCfg.next_sound == nil or type(soundCfg.next_sound) ~= "number" then
+                soundCfg.next_sound = api.KEY_N
+            end
+            if soundCfg.prev_sound == nil or type(soundCfg.prev_sound) ~= "number" then
+                soundCfg.prev_sound = api.KEY_P
+            end
+            if soundCfg.vol_up == nil or type(soundCfg.vol_up) ~= "number" then
+                soundCfg.vol_up = api.KEY_PLUS
+            end
+            if soundCfg.vol_down == nil or type(soundCfg.vol_down) ~= "number" then
+                soundCfg.vol_down = api.KEY_MINUS
+            end
+            if soundCfg.seek_left == nil or type(soundCfg.seek_left) ~= "number" then
+                soundCfg.seek_left = api.KEY_LEFT
+            end
+            if soundCfg.seek_right == nil or type(soundCfg.seek_right) ~= "number" then
+                soundCfg.seek_right = api.KEY_RIGHT
+            end
+            if soundCfg.speed_up == nil or type(soundCfg.speed_up) ~= "number" then
+                soundCfg.speed_up = api.KEY_UP
+            end
+            if soundCfg.speed_down == nil or type(soundCfg.speed_down) ~= "number" then
+                soundCfg.speed_down = api.KEY_DOWN
+            end
+        end
 
-    if soundCfg == nil then --- use the default
-        soundCfg = {
-            pause_sound = api.KEY_SPACE,
-            resume_sound = api.KEY_SPACE,
-            next_sound = api.KEY_N,
-            prev_sound = api.KEY_P,
-            vol_up = api.KEY_PLUS,
-            vol_down = api.KEY_MINUS,
-            seek_left = api.KEY_LEFT,
-            seek_right = api.KEY_RIGHT,
-            speed_up = api.KEY_UP,
-            speed_down = api.KEY_DOWN,
-            change_playback_mode = api.KEY_TAB
-        }
-    elseif #soundCfg < 10 then --- check for every key if it's not exists set the default key
-        if soundCfg.pause_sound == nil or type(soundCfg.pause_sound) ~= "number" then
-            soundCfg.pause_sound = api.KEY_SPACE
-        end
-        if soundCfg.change_playback_mode == nil or type(soundCfg.change_playback_mode) ~= "number" then
-            soundCfg.pause_sound = api.KEY_TAB
-        end
-        if soundCfg.resume_sound == nil or type(soundCfg.resume_sound) ~= "number" then
-            soundCfg.resume_sound = api.KEY_SPACE
-        end
-        if soundCfg.next_sound == nil or type(soundCfg.next_sound) ~= "number" then
-            soundCfg.next_sound = api.KEY_N
-        end
-        if soundCfg.prev_sound == nil or type(soundCfg.prev_sound) ~= "number" then
-            soundCfg.prev_sound = api.KEY_P
-        end
-        if soundCfg.vol_up == nil or type(soundCfg.vol_up) ~= "number" then
-            soundCfg.vol_up = api.KEY_PLUS
-        end
-        if soundCfg.vol_down == nil or type(soundCfg.vol_down) ~= "number" then
-            soundCfg.vol_down = api.KEY_MINUS
-        end
-        if soundCfg.seek_left == nil or type(soundCfg.seek_left) ~= "number" then
-            soundCfg.seek_left = api.KEY_LEFT
-        end
-        if soundCfg.seek_right == nil or type(soundCfg.seek_right) ~= "number" then
-            soundCfg.seek_right = api.KEY_RIGHT
-        end
-        if soundCfg.speed_up == nil or type(soundCfg.speed_up) ~= "number" then
-            soundCfg.speed_up = api.KEY_UP
-        end
-        if soundCfg.speed_down == nil or type(soundCfg.speed_down) ~= "number" then
-            soundCfg.speed_down = api.KEY_DOWN
-        end
-    end
+        local plugManager, otherPlugs, plugs_cfgs = setupPlugins(configObj, is_userconfig)
 
-    local plugManager, otherPlugs, plugs_cfgs = setupPlugins(configObj, is_userconfig)
+        if not plugManager and not otherPlugs then
+            logerror("Failed to setup plugins. Exiting.")
+            lognote("check your plugins configuration.")
+            lognote("see the errors above for more details.")
+            os.exit(1)
+        end
 
-
-    if not plugManager and not otherPlugs then
-        logerror("Failed to setup plugins. Exiting.")
-        lognote("check your plugins configuration.")
-        lognote("see the errors above for more details.")
-        os.exit(1)
-    end
-
-    local parser = TemplateParser.new(template, plugManager)
-    -- You could add template validation here if needed
-
-    if runRMPApplication(
+        -- Run the application and check if restart is needed
+        restart = runRMPApplication(
             plugManager,
             template,
             configObj.settings,
@@ -1261,9 +1199,7 @@ local function main()
             plugs_cfgs,
             configObj,
             is_userconfig
-
-        ) then
-        goto here
+        )
     end
 end
 
@@ -1280,3 +1216,4 @@ end
 
 -- Start the application
 safeMain()
+
