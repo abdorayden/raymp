@@ -224,21 +224,30 @@ end
 
 -- Logging functions
 local function logerror(err)
-    the_error_message = the_error_message .. "RMP Error: " .. tostring(err)
+    local err_str = "RMP Error: " .. tostring(err)
+    if not string.find(the_error_message, err_str, 1, true) then
+        the_error_message = the_error_message .. err_str .. "\n"
+    end
     error(the_error_message)
     -- io.write(api.BGColors.Brights.Red ..
     --     api.FGColors.Brights.Yellow .. "RMP Error:" .. api.Default .. " " .. tostring(err) .. "\n")
 end
 
 local function lognote(note)
-    the_error_message = the_error_message .. "RMP Note: " .. tostring(note)
+    local note_str = "RMP Note: " .. tostring(note)
+    if not string.find(the_error_message, note_str, 1, true) then
+        the_error_message = the_error_message .. note_str .. "\n"
+    end
     error(the_error_message)
     -- io.write(api.BGColors.Brights.Blue ..
     --     api.FGColors.Brights.White .. "RMP Note:" .. api.Default .. " " .. tostring(note) .. "\n")
 end
 
 local function logwarn(warn)
-    the_error_message = the_error_message .. "RMP Warning: " .. tostring(warn)
+    local warn_str = "RMP Warning: " .. tostring(warn)
+    if not string.find(the_error_message, warn_str, 1, true) then
+        the_error_message = the_error_message .. warn_str .. "\n"
+    end
     error(the_error_message)
     -- io.write(api.BGColors.Brights.Yellow ..
     --     api.FGColors.Brights.Black .. "RMP Warning:" .. api.Default .. " " .. tostring(warn) .. "\n")
@@ -1323,7 +1332,7 @@ local function main()
             end
 
             -- Draw prompt
-            local prompt_message = "Press 'Q' to Quit or 'R' to Reload"
+            local prompt_message = "Press 'Q' to Quit"
             local prompt_x = math.floor((w - #prompt_message) / 2)
             local prompt_y = boxY + boxHeight - 2
             mainFrame:writeText(prompt_x, prompt_y, prompt_message, api.FGColors.Brights.Black,
