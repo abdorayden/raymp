@@ -36,4 +36,4 @@
 - [X] create a whole tutorial that displayed when the user install raymp for the first time 
         teaching him how to work with raymp with animations and small game
 - [ ] make plugins configurations are mutable so i can add another plugins at runtime
-- [ ] test colorFromHex and see the expected output
+- [X] test colorFromHex and see the expected output
