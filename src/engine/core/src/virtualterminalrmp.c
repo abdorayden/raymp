@@ -712,9 +712,9 @@ ALWAYS_INT lua_render(STATE) {
 	luaL_Buffer B;
 	luaL_buffinit(L, &B);
 	char sequence_buf[128];
-	char current_fg[16] = "";
-	char current_bg[16] = "";
-	char current_style[8] = "";
+	char current_fg[CH_STRYLE_AND_COLOR_SIZE] = "";  // Increased size to match storage
+	char current_bg[CH_STRYLE_AND_COLOR_SIZE] = "";  // Increased size to match storage
+	char current_style[CH_STRYLE_AND_COLOR_SIZE] = "";  // Increased size to match storage
 	int saved_cursor_x = vt->cursor_x;
 	int saved_cursor_y = vt->cursor_y;
 
@@ -744,6 +744,7 @@ ALWAYS_INT lua_render(STATE) {
 				current_fg[sizeof(current_fg) - 1] = '\0';
 				strncpy(current_bg, cell->bg, sizeof(current_bg) - 1);
 				current_bg[sizeof(current_bg) - 1] = '\0';
+				// Apply combined color/style sequence to avoid issues with multiple separate codes
 				if (current_style[0] != '\0') luaL_addstring(&B, current_style);
 				if (current_fg[0] != '\0') luaL_addstring(&B, current_fg);
 				if (current_bg[0] != '\0') luaL_addstring(&B, current_bg);
