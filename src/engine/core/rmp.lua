@@ -4435,7 +4435,7 @@ do -- Config
         end
 
         local configPath = self.configurationPath:getPath()
-        return RMP.Path.joinPath(configPath, "themes", themeName .. ".lua")
+        return RMP.Path.joinPath(configPath, "templates", themeName .. ".lua")
     end
 
     -- Cross-platform plugin path resolution

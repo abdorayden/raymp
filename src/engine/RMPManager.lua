@@ -43,7 +43,6 @@ local os = require("os")
 local HashMap = utils.HashMap
 local Queue = utils.Queue
 
-local got_error = false
 local the_error_message = ""
 
 -- Function to color specific keywords in a string
@@ -226,21 +225,21 @@ end
 -- Logging functions
 local function logerror(err)
     the_error_message = the_error_message .. "RMP Error: " .. tostring(err)
-    got_error = true
+    error(the_error_message)
     -- io.write(api.BGColors.Brights.Red ..
     --     api.FGColors.Brights.Yellow .. "RMP Error:" .. api.Default .. " " .. tostring(err) .. "\n")
 end
 
 local function lognote(note)
     the_error_message = the_error_message .. "RMP Note: " .. tostring(note)
-    got_error = true
+    error(the_error_message)
     -- io.write(api.BGColors.Brights.Blue ..
     --     api.FGColors.Brights.White .. "RMP Note:" .. api.Default .. " " .. tostring(note) .. "\n")
 end
 
 local function logwarn(warn)
     the_error_message = the_error_message .. "RMP Warning: " .. tostring(warn)
-    got_error = true
+    error(the_error_message)
     -- io.write(api.BGColors.Brights.Yellow ..
     --     api.FGColors.Brights.Black .. "RMP Warning:" .. api.Default .. " " .. tostring(warn) .. "\n")
 end
@@ -739,7 +738,6 @@ end
 
 local function runRMPApplication(plugManager, template, settings, otherPlugs, soundCfg, plugs_cfgs, configObj,
                                  is_userconfig)
-    got_error = false
     the_error_message = ""
     local h, w = api.Terminal:getSize()
     mainFrame:clear()
@@ -879,7 +877,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
 
         mainFrame:addEventListener(api.EventType.Keyboard, function(key)
             if valid_restart then
-                if key == settings.restart_engine then
+                if settings and key == settings.restart_engine then
                     restart = true
                 end
             end
@@ -1082,7 +1080,7 @@ local function loadConfiguration()
         end
 
         local templateOk, template = pcall(dofile,
-            joinPath(config.homePath:getPath(), ".rmp", "themes", themeName .. ".lua"))
+            joinPath(config.homePath:getPath(), ".rmp", "templates", themeName .. ".lua"))
         if not templateOk then
             logerror("loading user template: Not found or " .. template)
             logerror("template should be a lua file that returns a table.")
@@ -1115,7 +1113,7 @@ local function loadConfiguration()
         return cfgObj, template, true -- true means user config
     else
         local defaultConfig = require("rmp.selfrmp.init")
-        local templateOk, template = pcall(require, "rmp.selfrmp.themes." .. defaultConfig.template)
+        local templateOk, template = pcall(require, "rmp.selfrmp.templates." .. defaultConfig.template)
 
         if not templateOk then
             logerror("Error loading default template: " .. template)
@@ -1143,7 +1141,9 @@ local function main()
                 -- os.exit(1)
             end
 
-            local soundCfg = configObj.soundMap
+            if configObj then
+                local soundCfg = configObj.soundMap
+            end
 
             if soundCfg == nil then --- use the default
                 soundCfg = {
@@ -1216,24 +1216,35 @@ local function main()
                 is_userconfig
             )
         end)
+
         if not ok then
             key = api.Terminal:handleKey()
+            local h, w = api.Terminal:getSize()
+
             mainFrame:clear()
             restart = true
+            local x_popup = math.floor(w * 0.2)
+            local y_popup = math.floor(h * 0.2)
+            local popup_w = math.floor(w * 0.6)
+            local popup_h = math.floor(h * 0.6)
             mainFrame:drawBox(
                 api.Text.new("Error", api.TextStyle.Bold, api.FGColors.Brights.Red, api.BGColors.NoBrights.Black),
-                2, 2, 76, 10,
+                x_popup, y_popup, popup_w, popup_h,
                 api.BoxDrawing.LightBorder,
                 api.FGColors.Brights.Red,
                 api.BGColors.NoBrights.Black
             )
-            mainFrame:writeText(4, 4, "An error occurred: " .. tostring(error), api.FGColors.Brights.Red,
-                api.BGColors.NoBrights.Black)
+            local i = 2
+            local second_error = "An error occurred: " .. the_error_message
             if the_error_message ~= "" then
-                mainFrame:writeText(4, 5, "An error occurred: " .. the_error_message, api.FGColors.Brights.Red,
+                mainFrame:writeTextClipped(x_popup + 1, y_popup + i, second_error, popup_w - 6, api.FGColors.Brights.Red,
+                    api.BGColors.NoBrights.Black)
+                i = i + 1
+                mainFrame:writeTextClipped(x_popup + 1, y_popup + i, string.sub(second_error, popup_w - 5), popup_w - 6,
+                    api.FGColors.Brights.Red,
                     api.BGColors.NoBrights.Black)
             end
-            mainFrame:writeText(4, 6, "press Q to quit ... ", api.FGColors.Brights.Red,
+            mainFrame:writeText(x_popup + 1, y_popup - 1, "press Q to quit ... ", api.FGColors.Brights.Red,
                 api.BGColors.NoBrights.Black)
             mainFrame:onKeyboard(function(key)
                 if key == api.KEY_Q then
@@ -1248,7 +1259,6 @@ local function main()
     end
     if not restart then
         lognote("Exiting application...")
-        os.exit(0)
     end
     key:closeKey()
 end
