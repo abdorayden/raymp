@@ -33,6 +33,8 @@ local api = require("rmp.rmp")
 local utils = require("rmp.util")
 local OOP = require("rmp.oop")
 
+local mainFrame = api.Frame.new()
+
 local joinPath = api.Path.joinPath
 
 local io = require("io")
@@ -40,6 +42,9 @@ local os = require("os")
 
 local HashMap = utils.HashMap
 local Queue = utils.Queue
+
+local got_error = false
+local the_error_message = ""
 
 -- Function to color specific keywords in a string
 local function coloredKeywordInString(str, keyword, color)
@@ -220,18 +225,24 @@ end
 
 -- Logging functions
 local function logerror(err)
-    io.write(api.BGColors.Brights.Red ..
-        api.FGColors.Brights.Yellow .. "RMP Error:" .. api.Default .. " " .. tostring(err) .. "\n")
+    the_error_message = the_error_message .. "RMP Error: " .. tostring(err)
+    got_error = true
+    -- io.write(api.BGColors.Brights.Red ..
+    --     api.FGColors.Brights.Yellow .. "RMP Error:" .. api.Default .. " " .. tostring(err) .. "\n")
 end
 
 local function lognote(note)
-    io.write(api.BGColors.Brights.Blue ..
-        api.FGColors.Brights.White .. "RMP Note:" .. api.Default .. " " .. tostring(note) .. "\n")
+    the_error_message = the_error_message .. "RMP Note: " .. tostring(note)
+    got_error = true
+    -- io.write(api.BGColors.Brights.Blue ..
+    --     api.FGColors.Brights.White .. "RMP Note:" .. api.Default .. " " .. tostring(note) .. "\n")
 end
 
 local function logwarn(warn)
-    io.write(api.BGColors.Brights.Yellow ..
-        api.FGColors.Brights.Black .. "RMP Warning:" .. api.Default .. " " .. tostring(warn) .. "\n")
+    the_error_message = the_error_message .. "RMP Warning: " .. tostring(warn)
+    got_error = true
+    -- io.write(api.BGColors.Brights.Yellow ..
+    --     api.FGColors.Brights.Black .. "RMP Warning:" .. api.Default .. " " .. tostring(warn) .. "\n")
 end
 
 -- Template parser with layout engine
@@ -672,7 +683,7 @@ local function setupPlugins(configObj, is_userconfig)
                     elseif type(name) == "table" then
                         logwarn("Could not load plugin '" .. name[1] .. "': " .. tostring(pluginModule) .. "\n")
                     end
-                    os.exit(1)
+                    -- os.exit(1)
                 end
             end
 
@@ -717,7 +728,7 @@ local function setupPlugins(configObj, is_userconfig)
                     elseif type(name) == "table" then
                         logwarn("Could not load global plugin '" .. name[1] .. "': " .. tostring(pluginModule) .. "\n")
                     end
-                    os.exit(1)
+                    -- os.exit(1)
                 end
             end
         end
@@ -728,8 +739,10 @@ end
 
 local function runRMPApplication(plugManager, template, settings, otherPlugs, soundCfg, plugs_cfgs, configObj,
                                  is_userconfig)
+    got_error = false
+    the_error_message = ""
     local h, w = api.Terminal:getSize()
-    local mainFrame = api.Frame.new()
+    mainFrame:clear()
 
     -- check the settings first and then the keymap
     local sound = api.Sound.new() -- empty playlist
@@ -842,7 +855,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         local currentPlugManager, currentOtherPlugs, currentPlugsCfgs = setupPlugins(configObj, is_userconfig)
 
         mainFrame:clear()
-        local key = api.Terminal:handleKey()
+        key = api.Terminal:handleKey()
 
         if parser:wasTerminalResized() then
             h, w = api.Terminal:getSize()
@@ -1118,90 +1131,126 @@ local function main()
     -- Load configuration
     local restart = true
     while restart do
-        restart = false -- Reset restart flag
+        local ok, error = pcall(function()
+            restart = false -- Reset restart flag
 
-        local configObj, template, is_userconfig = loadConfiguration()
-        if not configObj or not template then
-            logerror("Failed to load configuration. Exiting.")
-            -- TODO: assuming default path windows and linux
-            lognote("check your configuration file or try to reset it by deleting ~/.rmp/config.lua")
-            lognote("see the errors above for more details.")
-            os.exit(1)
+            local configObj, template, is_userconfig = loadConfiguration()
+            if not configObj or not template then
+                logerror("Failed to load configuration. Exiting.")
+                -- TODO: assuming default path windows and linux
+                lognote("check your configuration file or try to reset it by deleting ~/.rmp/config.lua")
+                lognote("see the errors above for more details.")
+                -- os.exit(1)
+            end
+
+            local soundCfg = configObj.soundMap
+
+            if soundCfg == nil then --- use the default
+                soundCfg = {
+                    pause_sound = api.KEY_SPACE,
+                    resume_sound = api.KEY_SPACE,
+                    next_sound = api.KEY_N,
+                    prev_sound = api.KEY_P,
+                    vol_up = api.KEY_PLUS,
+                    vol_down = api.KEY_MINUS,
+                    seek_left = api.KEY_LEFT,
+                    seek_right = api.KEY_RIGHT,
+                    speed_up = api.KEY_UP,
+                    speed_down = api.KEY_DOWN,
+                    change_playback_mode = api.KEY_TAB
+                }
+            elseif #soundCfg < 10 then --- check for every key if it's not exists set the default key
+                if soundCfg.pause_sound == nil or type(soundCfg.pause_sound) ~= "number" then
+                    soundCfg.pause_sound = api.KEY_SPACE
+                end
+                if soundCfg.change_playback_mode == nil or type(soundCfg.change_playback_mode) ~= "number" then
+                    soundCfg.change_playback_mode = api.KEY_TAB
+                end
+                if soundCfg.resume_sound == nil or type(soundCfg.resume_sound) ~= "number" then
+                    soundCfg.resume_sound = api.KEY_SPACE
+                end
+                if soundCfg.next_sound == nil or type(soundCfg.next_sound) ~= "number" then
+                    soundCfg.next_sound = api.KEY_N
+                end
+                if soundCfg.prev_sound == nil or type(soundCfg.prev_sound) ~= "number" then
+                    soundCfg.prev_sound = api.KEY_P
+                end
+                if soundCfg.vol_up == nil or type(soundCfg.vol_up) ~= "number" then
+                    soundCfg.vol_up = api.KEY_PLUS
+                end
+                if soundCfg.vol_down == nil or type(soundCfg.vol_down) ~= "number" then
+                    soundCfg.vol_down = api.KEY_MINUS
+                end
+                if soundCfg.seek_left == nil or type(soundCfg.seek_left) ~= "number" then
+                    soundCfg.seek_left = api.KEY_LEFT
+                end
+                if soundCfg.seek_right == nil or type(soundCfg.seek_right) ~= "number" then
+                    soundCfg.seek_right = api.KEY_RIGHT
+                end
+                if soundCfg.speed_up == nil or type(soundCfg.speed_up) ~= "number" then
+                    soundCfg.speed_up = api.KEY_UP
+                end
+                if soundCfg.speed_down == nil or type(soundCfg.speed_down) ~= "number" then
+                    soundCfg.speed_down = api.KEY_DOWN
+                end
+            end
+
+            local plugManager, otherPlugs, plugs_cfgs = setupPlugins(configObj, is_userconfig)
+
+            if not plugManager and not otherPlugs then
+                logerror("Failed to setup plugins. Exiting.")
+                lognote("check your plugins configuration.")
+                lognote("see the errors above for more details.")
+                -- os.exit(1)
+            end
+
+            -- Run the application and check if restart is needed
+            restart = runRMPApplication(
+                plugManager,
+                template,
+                configObj.settings,
+                otherPlugs,
+                soundCfg,
+                plugs_cfgs,
+                configObj,
+                is_userconfig
+            )
+        end)
+        if not ok then
+            key = api.Terminal:handleKey()
+            mainFrame:clear()
+            restart = true
+            mainFrame:drawBox(
+                api.Text.new("Error", api.TextStyle.Bold, api.FGColors.Brights.Red, api.BGColors.NoBrights.Black),
+                2, 2, 76, 10,
+                api.BoxDrawing.LightBorder,
+                api.FGColors.Brights.Red,
+                api.BGColors.NoBrights.Black
+            )
+            mainFrame:writeText(4, 4, "An error occurred: " .. tostring(error), api.FGColors.Brights.Red,
+                api.BGColors.NoBrights.Black)
+            if the_error_message ~= "" then
+                mainFrame:writeText(4, 5, "An error occurred: " .. the_error_message, api.FGColors.Brights.Red,
+                    api.BGColors.NoBrights.Black)
+            end
+            mainFrame:writeText(4, 6, "press Q to quit ... ", api.FGColors.Brights.Red,
+                api.BGColors.NoBrights.Black)
+            mainFrame:onKeyboard(function(key)
+                if key == api.KEY_Q then
+                    restart = false
+                end
+            end)
+            mainFrame:run(key, nil, nil, nil, nil)
+            if not restart then
+                break
+            end
         end
-
-        local soundCfg = configObj.soundMap
-
-        if soundCfg == nil then --- use the default
-            soundCfg = {
-                pause_sound = api.KEY_SPACE,
-                resume_sound = api.KEY_SPACE,
-                next_sound = api.KEY_N,
-                prev_sound = api.KEY_P,
-                vol_up = api.KEY_PLUS,
-                vol_down = api.KEY_MINUS,
-                seek_left = api.KEY_LEFT,
-                seek_right = api.KEY_RIGHT,
-                speed_up = api.KEY_UP,
-                speed_down = api.KEY_DOWN,
-                change_playback_mode = api.KEY_TAB
-            }
-        elseif #soundCfg < 10 then --- check for every key if it's not exists set the default key
-            if soundCfg.pause_sound == nil or type(soundCfg.pause_sound) ~= "number" then
-                soundCfg.pause_sound = api.KEY_SPACE
-            end
-            if soundCfg.change_playback_mode == nil or type(soundCfg.change_playback_mode) ~= "number" then
-                soundCfg.change_playback_mode = api.KEY_TAB
-            end
-            if soundCfg.resume_sound == nil or type(soundCfg.resume_sound) ~= "number" then
-                soundCfg.resume_sound = api.KEY_SPACE
-            end
-            if soundCfg.next_sound == nil or type(soundCfg.next_sound) ~= "number" then
-                soundCfg.next_sound = api.KEY_N
-            end
-            if soundCfg.prev_sound == nil or type(soundCfg.prev_sound) ~= "number" then
-                soundCfg.prev_sound = api.KEY_P
-            end
-            if soundCfg.vol_up == nil or type(soundCfg.vol_up) ~= "number" then
-                soundCfg.vol_up = api.KEY_PLUS
-            end
-            if soundCfg.vol_down == nil or type(soundCfg.vol_down) ~= "number" then
-                soundCfg.vol_down = api.KEY_MINUS
-            end
-            if soundCfg.seek_left == nil or type(soundCfg.seek_left) ~= "number" then
-                soundCfg.seek_left = api.KEY_LEFT
-            end
-            if soundCfg.seek_right == nil or type(soundCfg.seek_right) ~= "number" then
-                soundCfg.seek_right = api.KEY_RIGHT
-            end
-            if soundCfg.speed_up == nil or type(soundCfg.speed_up) ~= "number" then
-                soundCfg.speed_up = api.KEY_UP
-            end
-            if soundCfg.speed_down == nil or type(soundCfg.speed_down) ~= "number" then
-                soundCfg.speed_down = api.KEY_DOWN
-            end
-        end
-
-        local plugManager, otherPlugs, plugs_cfgs = setupPlugins(configObj, is_userconfig)
-
-        if not plugManager and not otherPlugs then
-            logerror("Failed to setup plugins. Exiting.")
-            lognote("check your plugins configuration.")
-            lognote("see the errors above for more details.")
-            os.exit(1)
-        end
-
-        -- Run the application and check if restart is needed
-        restart = runRMPApplication(
-            plugManager,
-            template,
-            configObj.settings,
-            otherPlugs,
-            soundCfg,
-            plugs_cfgs,
-            configObj,
-            is_userconfig
-        )
     end
+    if not restart then
+        lognote("Exiting application...")
+        os.exit(0)
+    end
+    key:closeKey()
 end
 
 local function safeMain()
@@ -1211,7 +1260,7 @@ local function safeMain()
         api.Terminal:rawMode(false)
         logerror(tostring(err))
         lognote("check the error above for more details.")
-        os.exit(1)
+        -- os.exit(1)
     end
 end
 
