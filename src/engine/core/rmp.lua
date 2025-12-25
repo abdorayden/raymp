@@ -988,7 +988,6 @@ do -- color from hex
     --- @param fg_or_bg string
     --- @return string
     function RMP.colorFromHex(hex, fg_or_bg)
-        --- BUG: i used colorFromHex function and i saw that it breaks the UI , and not displying colors correctly
         local fb = fg_or_bg or "38"
         if hex:sub(1, 1) == "#" then
             hex = hex:sub(2)

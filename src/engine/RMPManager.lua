@@ -27,6 +27,7 @@
 -- TODO: rewrite all engine to C for better performance and lower memory usage
 -- NOTE: plugins should create VirtualTerminal inside returned function
 -- BUG:  program stops if lua access nil obj or something (add system logs)
+-- BUG:  bg color title not working properly in window (drawBox)
 
 local api = require("rmp.rmp")
 local utils = require("rmp.util")
@@ -1216,4 +1217,3 @@ end
 
 -- Start the application
 safeMain()
-
