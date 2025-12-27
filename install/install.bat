@@ -24,10 +24,10 @@ REM /*  THE SOFTWARE. 									*/
 REM /*  										*/ 
 REM /************************************************************************************/
 
-set INIT_PATH=%USERPROFILE%\.rmp\.init.lua
-set INCLUDE_PATH=-I../src/engine/lua/include
-set LUA_LIB_PATH=../src/engine/lua/lib
-set CC=gcc.exe
+set INIT_PATH=%USERPROFILE%\.rmp\init.lua
+set INCLUDE_PATH=-I..\src\engine\lua\include -I..\src\third_party\
+set LUA_LIB_PATH=..\src\engine\lua\lib
+set CC=gcc
 
 set FLAGS=-shared -s -Wall -static
 
@@ -66,14 +66,14 @@ if "%~1"=="clean" (
     if "%~2"=="-v" echo on
     del "%LUA_LIB%\rmpaudio.dll" 2>nul
     del "%LUA_LIB%\keyboard.dll" 2>nul
+    del "%LUA_LIB%\rsocket.dll" 2>nul
     del "%LUA_LIB%\sleep.dll" 2>nul
     del "%LUA_LIB%\directory.dll" 2>nul
     del "%LUA_LIB%\window.dll" 2>nul
-    del "%LUA_LIB%\platform.dll" 2>nul
-    del "%LUA_LIB%\virtualterminalrmp.dll" 2>nul
 
     del "%LUA_SHARE%\rmp.lua" 2>nul
     del "%LUA_SHARE%\promises.lua" 2>nul
+    del "%LUA_SHARE%\future.lua" 2>nul
     del "%LUA_SHARE%\util.lua" 2>nul
     del "%LUA_SHARE%\oop.lua" 2>nul
 
@@ -93,15 +93,16 @@ if "%~1"=="compile" (
         goto :eof
     )
 
-    %CC% %FLAGS% -o ../src/engine/core/lib/rmpaudio.dll ../src/engine/core/src/rmpaudio.c %INCLUDE_PATH% %LIB_FILE% -lwinmm
-    %CC% %FLAGS% -o ../src/engine/core/lib/virtualterminalrmp.dll ../src/engine/core/src/virtualterminalrmp.c %INCLUDE_PATH% %LIB_FILE%
-    %CC% %FLAGS% -o ../src/engine/core/lib/keyboard.dll ../src/engine/core/src/keyboard.c %INCLUDE_PATH% %LIB_FILE% -luser32
-    %CC% %FLAGS% -o ../src/engine/core/lib/sleep.dll ../src/engine/core/src/sleep.c %INCLUDE_PATH% %LIB_FILE%
-    %CC% %FLAGS% -o ../src/engine/core/lib/platform.dll ../src/engine/core/src/platform.c %INCLUDE_PATH% %LIB_FILE%
-    %CC% %FLAGS% -o ../src/engine/core/lib/directory.dll ../src/engine/core/src/directory.c %INCLUDE_PATH% %LIB_FILE%
-    %CC% %FLAGS% -o ../src/engine/core/lib/window.dll ../src/engine/core/src/window.c %INCLUDE_PATH% %LIB_FILE% -lgdi32 -luser32
+    %CC% %FLAGS% -o ..\src\engine\core\lib\rmpaudio.dll ..\src\engine\core\src\rmpaudio.c %INCLUDE_PATH% %LIB_FILE% -lwinmm
+    %CC% %FLAGS% -o ..\src\engine\core\lib\virtualterminalrmp.dll ..\src\engine\core\src\virtualterminalrmp.c %INCLUDE_PATH% %LIB_FILE%
+    %CC% %FLAGS% -o ..\src\engine\core\lib\keyboard.dll ..\src\engine\core\src\keyboard.c %INCLUDE_PATH% %LIB_FILE% -luser32
+    %CC% %FLAGS% -o ..\src\engine\core\lib\sleep.dll ..\src\engine\core\src\sleep.c %INCLUDE_PATH% %LIB_FILE%
+    %CC% %FLAGS% -o ..\src\engine\core\lib\platform.dll ..\src\engine\core\src\platform.c %INCLUDE_PATH% %LIB_FILE%
+    %CC% %FLAGS% -o ..\src\engine\core\lib\directory.dll ..\src\engine\core\src\directory.c %INCLUDE_PATH% %LIB_FILE%
+    %CC% %FLAGS% -o ..\src\engine\core\lib\window.dll ..\src\engine\core\src\window.c %INCLUDE_PATH% %LIB_FILE% -lgdi32 -luser32
+    %CC% %FLAGS% -o ..\src\engine\core\lib\rsocket.dll ..\src\engine\core\src\rsocket.c %INCLUDE_PATH% %LIB_FILE%
 
-    %CC% -s -Wall -static -o ../rmp.exe ../main.c ../src/engine/runner.c %INCLUDE_PATH% -I../src/engine %LIB_FILE%
+    %CC% -s -Wall -static -o ..\rmp.exe ..\main.c ..\src\engine\runner.c %INCLUDE_PATH% -I..\src\engine %LIB_FILE%
 
     echo Compile completed.
     goto :eof
@@ -127,14 +128,16 @@ if "%~1"=="install" (
     copy "..\src\engine\core\lib\platform.dll" "%LUA_LIB%"
     copy "..\src\engine\core\lib\directory.dll" "%LUA_LIB%"
     copy "..\src\engine\core\lib\window.dll" "%LUA_LIB%"
+    copy "..\src\engine\core\lib\rsocket.dll" "%LUA_LIB%"
     copy "..\src\engine\core\lib\virtualterminalrmp.dll" "%LUA_LIB%"
 
-    if not exist "%LUA_SHARE%\selfrmp" mkdir "%LUA_SHARE%\selfrmp"
     xcopy "..\src\engine\selfrmp" "%LUA_SHARE%\selfrmp" /E /I /Y
 
     copy "..\src\promises.lua" "%LUA_SHARE%"
+    copy "..\src\future.lua" "%LUA_SHARE%"
     copy "..\src\util.lua" "%LUA_SHARE%"
     copy "..\src\oop.lua" "%LUA_SHARE%"
+    copy "..\src\engine\RMPManager.lua" "%LUA_SHARE%"
     copy "..\src\engine\core\rmp.lua" "%LUA_SHARE%"
 
     echo Install completed.
@@ -143,15 +146,43 @@ if "%~1"=="install" (
     goto :eof
 )
 
+if "%~1"=="install-conf" (
+    echo [+] Installing configuration...
+    if "%~2"=="-v" echo on
+    if not exist "%USERPROFILE%\.rmp" (
+        mkdir "%USERPROFILE%\.rmp"
+        mkdir "%USERPROFILE%\.rmp\themes"
+        mkdir "%USERPROFILE%\.rmp\plugins"
+
+        copy "..\src\engine\selfrmp\init.lua" "%USERPROFILE%\.rmp"
+        copy "..\src\engine\selfrmp\themes\tutorial.lua" "%USERPROFILE%\.rmp\themes"
+        xcopy "..\src\engine\selfrmp\plugins\tutorial_rmp" "%USERPROFILE%\.rmp\plugins\tutorial_rmp" /E /I /Y
+        xcopy "..\src\engine\selfrmp\plugins\helper_keys_tutorial" "%USERPROFILE%\.rmp\plugins\helper_keys_tutorial" /E /I /Y
+        copy "..\src\engine\selfrmp\plugins\digital_clock_with_effects.lua" "%USERPROFILE%\.rmp\plugins"
+    )
+    echo Install configuration completed.
+    goto :eof
+)
+
+if "%~1"=="clean-conf" (
+    echo [+] Removing configuration...
+    if "%~2"=="-v" echo on
+    if exist "%USERPROFILE%\.rmp" rmdir /s /q "%USERPROFILE%\.rmp"
+    echo Remove configuration completed.
+    goto :eof
+)
+
 :help
 echo HELP:
 echo Usage: %0 [command]
 echo.
 echo Commands:
-echo   clean    : remove all installed DLLs and lua files from system directories
-echo   compile  : compile .c files to DLLs
-echo   install  : install DLLs and .lua files to system directories
-echo   -v       : verbose flag (for install and clean)
+echo   clean       : remove all installed shared libraries and lua files from system directories
+echo   clean-conf   : remove the default configurations and plugins in home directory be careful if your configurations are there it will be deleted
+echo   compile     : compile .c files to shared libraries
+echo   install     : install .dll and .lua files to system directories
+echo   install-conf : install the default configurations and plugins for tutorial to learn how to work with raymp
+echo   -v          : verbose flag
 echo.
 echo NOTE:
 echo   install and clean commands may require administrator privileges
