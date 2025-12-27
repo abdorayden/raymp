@@ -1872,7 +1872,7 @@ do -- VirtualTerminal
     function RMP.VirtualTerminal:moveCursor(x, y)
         --- @diagnostic disable-next-line
         if x and y then
-            vt_rmp.movecursor(self.native_vt_rmp, x, y)
+            vt_rmp.movecursor(self.native_vt_rmp, math.tointeger(math.floor(x)), math.tointeger(math.floor(y)))
         end
     end
 
@@ -4230,6 +4230,9 @@ do -- Path
         return directory.list_dir(self.path) -- may return nil
     end
 
+    -- TODO: add exists file
+    -- TODO: add more functionality to Path class
+
     --- @return boolean
     function RMP.Path:exists()
         return self:listDir() ~= nil
@@ -5225,6 +5228,25 @@ do
 
         return vterm
     end
+end
+
+--- requireRmp helps you to load lua file or module directly by path and work with it
+--- @param path string
+--- @return boolean
+--- @return any | nil
+function RMP.requireRmp(path)
+    local file = io.open(path, "r")
+    if not file then
+        return false, "File not found: " .. path
+    end
+    file:close()
+
+    local chunk, err = loadfile(path)
+    if not chunk then
+        return false, "Failed to load: " .. tostring(err)
+    end
+
+    return pcall(chunk)
 end
 
 return RMP
