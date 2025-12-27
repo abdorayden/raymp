@@ -91,17 +91,7 @@ if "%~1"=="compile" (
     ) else if exist "%LUA_LIB_PATH%\liblua.a" (
         set LIB_FILE=-L%LUA_LIB_PATH% -l:liblua.a
     ) else if exist "%LUA_LIB_PATH%\lua54.dll" (
-        echo Generating import library from lua54.dll...
-        if not exist "%LUA_LIB_PATH%\lua54.def" (
-            gendef "%LUA_LIB_PATH%\lua54.dll"
-        )
-        dlltool -d "%LUA_LIB_PATH%\lua54.def" -l "%LUA_LIB_PATH%\lua54.a" -D lua54.dll
-        if exist "%LUA_LIB_PATH%\lua54.a" (
-            set LIB_FILE=-L%LUA_LIB_PATH% -l:lua54.a
-        ) else (
-            echo ERROR: Failed to generate Lua import library
-            goto :eof
-        )
+        set LIB_FILE=%LUA_LIB_PATH%\lua54.dll
     ) else (
         echo ERROR: No Lua library found in %LUA_LIB_PATH%
         goto :eof
@@ -115,8 +105,6 @@ if "%~1"=="compile" (
     %CC% %FLAGS% -o ..\src\engine\core\lib\directory.dll ..\src\engine\core\src\directory.c %INCLUDE_PATH% %LIB_FILE%
     %CC% %FLAGS% -o ..\src\engine\core\lib\window.dll ..\src\engine\core\src\window.c %INCLUDE_PATH% %LIB_FILE% -lgdi32 -luser32
     %CC% %FLAGS% -o ..\src\engine\core\lib\rsocket.dll ..\src\engine\core\src\rsocket.c %INCLUDE_PATH% %LIB_FILE% -lws2_32
-
-    %CC% -s -Wall -static -o ..\rmp.exe ..\main.c ..\src\engine\runner.c %INCLUDE_PATH% -I..\src\engine %LIB_FILE%
 
     echo Compile completed.
     goto :eof
