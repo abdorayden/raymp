@@ -91,7 +91,7 @@ if "%~1"=="compile" (
     ) else if exist "%LUA_LIB_PATH%\liblua.a" (
         set LIB_FILE=-L%LUA_LIB_PATH% -l:liblua.a
     ) else if exist "%LUA_LIB_PATH%\lua54.dll" (
-        set LIB_FILE=%LUA_LIB_PATH%\lua54.dll
+        set LIB_FILE=-L%LUA_LIB_PATH% -llua54
     ) else (
         echo ERROR: No Lua library found in %LUA_LIB_PATH%
         goto :eof
