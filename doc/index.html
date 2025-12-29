@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RMP - Ray's Music Player</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="../assets/logo.jpg" type="image/jpg">
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="nav-brand">
+                <img src="../assets/logo.jpg" alt="RMP Logo" class="logo">
+                <h1>RMP</h1>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#documentation">Documentation</a></li>
+                <li><a href="#plugins">Plugins</a></li>
+                <li><a href="#installation">Installation</a></li>
+                <li><a href="#community">Community</a></li>
+            </ul>
+            <div class="nav-actions">
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+                    <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                    <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </button>
+            </div>
+            <div class="hamburger">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container">
+                <h1>RMP - Ray's Music Player</h1>
+                <p>A high-performance, extensible framework built in C with Lua scripting for creating sophisticated terminal user interfaces.</p>
+                <div class="cta-buttons">
+                    <a href="#installation" class="btn btn-primary">Get Started</a>
+                    <a href="#documentation" class="btn btn-secondary">Learn More</a>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="features">
+            <div class="container">
+                <h2>Powerful Features</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="icon">🎵</div>
+                        <h3>Advanced Music Player</h3>
+                        <p>Multi-format audio support with advanced playback controls including volume, speed, and seek functionality.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">📱</div>
+                        <h3>Rich TUI Framework</h3>
+                        <p>Create complex terminal interfaces with ease using our comprehensive UI toolkit.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">🎮</div>
+                        <h3>Game Development Platform</h3>
+                        <p>Build 2D games directly in the terminal with our powerful game development tools.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">🔧</div>
+                        <h3>Extensible Plugin System</h3>
+                        <p>Modular architecture for unlimited customization with Lua-based plugins.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">🎨</div>
+                        <h3>Dynamic Theming Engine</h3>
+                        <p>Hot-swappable themes with Lua scripting for complete visual customization.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="icon">⚡</div>
+                        <h3>High Performance</h3>
+                        <p>Native C engine with Lua binding for optimal speed and efficiency.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="about" class="about">
+            <div class="container">
+                <div class="about-content">
+                    <h2>What is RMP?</h2>
+                    <p><strong>RMP (Ray Music Player)</strong> is a high-performance, extensible framework built in C with Lua scripting for creating sophisticated terminal user interfaces. Originally conceived as a music player, RMP has evolved into a comprehensive platform for terminal-based applications.</p>
+                    
+                    <h3>Difference Between RMP and RayMp</h3>
+                    <p><strong>RayMp</strong> is a software platform that renders templates and plugins with user configurations for a better audio experience using the <strong>RMP</strong> framework. <strong>RMP</strong> is a framework with multiple classes and functions that uses C as a backend for better performance. It is used to create templates and plugins for the RayMp software and is also powerful for creating TUI applications in Lua.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="documentation" class="documentation">
+            <div class="container">
+                <h2>Documentation</h2>
+                
+                <div class="doc-section">
+                    <h3>Configuration Structure</h3>
+                    <p>The RMP engine checks the <code>~/.rmp</code> directory (<code>~</code> refers to the HOME directory). The structure of the .rmp directory is:</p>
+                    <ul>
+                        <li><code>init.lua</code> - Configuration of the engine, sound keymaps, rendered templates, and plugin configurations</li>
+                        <li><code>templates</code> - Directory of templates that we created or downloaded from the plugin manager</li>
+                        <li><code>plugins</code> - Directory of plugins that we created or downloaded from the plugin manager</li>
+                    </ul>
+                </div>
+                
+                <div class="doc-section">
+                    <h3>Example Configuration</h3>
+                    <pre><code class="language-lua">-- Example configuration
+return {
+    settings = {
+        fps = 60,
+        help_key = api.KEY_H,
+        volume = 0.5,                 -- 0 to 1
+        speed = 1.0,                  -- 0.25 to 4.0
+        mode = api.PlaybackMode.ONES, -- playback modes
+        restart_engine = api.KEY_CTRL_R,
+        exit = api.KEY_Q,
+
+        -- inc or dec
+        inc_speed = 0.1,
+        inc_volume = 0.1,
+        inc_seek = 5
+    },
+    soundMap = {
+        pause_sound = api.KEY_SPACE,
+        resume_sound = api.KEY_SPACE,
+        next_sound = api.KEY_N,
+        prev_sound = api.KEY_P,
+        vol_up = api.KEY_PLUS,
+        vol_down = api.KEY_MINUS,
+        seek_left = api.KEY_LEFT,
+        seek_right = api.KEY_RIGHT,
+        speed_up = api.KEY_UP,
+        speed_down = api.KEY_DOWN,
+        change_playback_mode = api.KEY_TAB
+    },
+
+    template = "my_template",
+    plugins = {
+            {
+                themewindowid = "tutorial-window",
+                isactivated = true,
+                names = {
+                    "tutorial_rmp"
+                }
+            },
+            {
+                themewindowid = "helper-window",
+                isactivated = true,
+                names = {
+                    {
+                        "helper_keys_tutorial",
+                        {
+                            -- example of how to configure you plugin
+                            color = api.FGColors.Brights.Red
+                        }
+                    }
+                }
+            },
+    }
+}</code></pre>
+                </div>
+                
+                <div class="doc-section">
+                    <h3>Creating Templates</h3>
+                    <p>To create your own template, you have to put your init.lua template file in the <code>~/.rmp.templates</code> directory. Choose your template name (for example foo.lua).</p>
+                    <p><code>foo.lua</code> returns a table with multiple tables that represent components or windows for each table.</p>
+                    
+                    <h4>Component Fields:</h4>
+                    <ul>
+                        <li><code>id</code> - The window ID</li>
+                        <li><code>type</code> - The type of component ["Window" , "Text"]</li>
+                        <li><code>title</code> - Window type field that contains a string value or component of type "Text"</li>
+                        <li><code>width</code> - Window field that specifies the window width</li>
+                        <li><code>height</code> - Window field that specifies the window height</li>
+                        <li><code>x</code> - Window field that specifies the window x position</li>
+                        <li><code>y</code> - Window field that specifies the window y position</li>
+                        <li><code>border</code> - Border style of the window</li>
+                        <li><code>backgroundColor</code> - Background color of the window</li>
+                        <li><code>foregroundColor</code> - Foreground color of the window (border color)</li>
+                        <li><code>style</code> - Text type component field to specify text style</li>
+                        <li><code>dynamic</code> - Text type component field of type callback function that accepts the window context and returns a string</li>
+                        <li><code>condition</code> - Window type component field of type callback function that accepts the window context and returns a boolean</li>
+                    </ul>
+                    
+                    <pre><code class="language-lua">-- Example template code
+return {
+    {
+        id = "main_window",
+        type = "Window",
+        title = "My Custom Window",
+        -- x , y , width , height : can evaluate string operations
+        -- and use w and h as window width and height
+        x = 1,
+        y = 1,
+        width = "w/2",
+        height = 20,
+        border = "Single",
+        backgroundColor = api.BGColors.Black,
+        foregroundColor = api.FGColors.White
+    },
+    {
+        id = "text_display",
+        type = "Text",
+        x = 2,
+        y = 2,
+        width = 48,
+        height = 18,
+        style = api.TextStyle.Normal
+    }
+}</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <section id="plugins" class="plugins">
+            <div class="container">
+                <h2>Plugin System</h2>
+                <p>RMP features a powerful plugin system that allows for extensive customization and extension of functionality. Plugins are Lua files that return a callback function with 4 parameters if the plugin is integrated into a specific window; otherwise, you can ignore them.</p>
+                
+                <div class="doc-section">
+                    <h3>Creating Plugins</h3>
+                    <p>The return function of plugins returns a VirtualTerminal object after you apply your configurations and add event listeners to it. You need to initialize the VirtualTerminal object inside the returned callback function.</p>
+                    
+                    <pre><code class="language-lua">-- Example plugin code
+-- require rmp framework
+local api = require("rmp.rmp")
+
+-- x , y , xx , yy : are optional
+-- u need them if you integrate plugin to specific window
+-- otherwise you can get
+-- width and height of the window by rmp framework
+return function(x, y, xx, yy)
+    local w = xx - x - 1
+    local h = yy - y - 1
+    local vterm = api.VirtualTerminal.new()
+
+    vterm:writeText(x + 1, y + 1, "Hello from my plugin!")
+
+    return vterm
+end</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <section id="installation" class="installation">
+            <div class="container">
+                <h2>Installation</h2>
+                <div class="install-steps">
+                    <div class="step">
+                        <h3>Step 1: Clone the Repository</h3>
+                        <pre><code>git clone https://github.com/abdorayden/raymp</code></pre>
+                    </div>
+                    <div class="step">
+                        <h3>Step 2: Build the Project</h3>
+                        <pre><code>cd raymp/install
+./install.sh help or .\install.bat help</code></pre>
+                    </div>
+                    <div class="step">
+                        <h3>Step 3: Install Dependencies</h3>
+                        <p>RMP requires Lua and other dependencies to run properly. Make sure you have them installed on your system.</p>
+                    </div>
+                    <div class="step">
+                        <h3>Step 4: Configure</h3>
+                        <p>Create the <code>~/.rmp</code> directory and add your configuration files as described in the documentation.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="community" class="community">
+            <div class="container">
+                <h2>Community & Support</h2>
+                <p>Join our community to get support, share your plugins, and contribute to the project.</p>
+                <div class="community-links">
+                    <a href="#" class="community-link">
+                        <div class="icon">💬</div>
+                        <h3>Discussions</h3>
+                        <p>Ask questions and discuss features</p>
+                    </a>
+                    <a href="#" class="community-link">
+                        <div class="icon">🐛</div>
+                        <h3>Issues</h3>
+                        <p>Report bugs and suggest enhancements</p>
+                    </a>
+                    <a href="#" class="community-link">
+                        <div class="icon">📖</div>
+                        <h3>Wiki</h3>
+                        <p>Community-driven documentation</p>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>RMP</h3>
+                    <p>A high-performance, extensible framework built in C with Lua scripting for creating sophisticated terminal user interfaces.</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Documentation</h4>
+                    <ul>
+                        <li><a href="#documentation">Getting Started</a></li>
+                        <li><a href="#plugins">Plugin System</a></li>
+                        <li><a href="#documentation">Configuration</a></li>
+                        <li><a href="#installation">Installation</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Community</h4>
+                    <ul>
+                        <li><a href="#">GitHub</a></li>
+                        <li><a href="#">Discussions</a></li>
+                        <li><a href="#">Issues</a></li>
+                        <li><a href="#">Contributing</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="#">License</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2025 Ray Den. All rights reserved.</p>
+                <p>RMP is released under the License (check LICENSE file in github repo).</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
