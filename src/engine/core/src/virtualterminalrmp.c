@@ -24,16 +24,16 @@
 #ifndef VIRTUALTERMINALRMP_C
 #define VIRTUALTERMINALRMP_C
 
-// #include "lua.h"
 #include "../../lua/include/lua.h"
-// #include "lauxlib.h"
 #include "../../lua/include/lauxlib.h"
-// #include "lualib.h"
 #include "../../lua/include/lualib.h"
-// #include "luaconf.h"
 #include "../../lua/include/luaconf.h"
 
 #include "simply.h"
+
+// reffrences:
+//  - utf-8 article : https://en.wikipedia.org/wiki/UTF-8
+//  - https://www.youtube.com/watch?v=MijmeoH9LT4
 
 #ifdef _WIN32
     #define PLATFORM_WINDOWS
@@ -236,6 +236,63 @@ ALWAYS_INT lua_clear(STATE) {
     #endif
 #endif
 
+static int decode_utf8_char(const char* str, int* byte_len) {
+    unsigned char byte = (unsigned char)str[0];
+
+    if (byte == 0) {
+        *byte_len = 0;
+        return 0;
+    }
+    // tiny ifs that returns -1 is incompleted utf
+
+    if ((byte & 0x80) == 0) {  // ASCII: 0xxxxxxx
+        *byte_len = 1;
+        return byte;
+    } else if ((byte & 0xE0) == 0xC0) {  // 2-byte: 110xxxxx 10xxxxxx
+        if ((unsigned char)str[1] == 0) { 
+            *byte_len = 1; 
+            return -1; 
+        }
+        *byte_len = 2;
+        int code = (((byte & 0x1F) << 6) | ((unsigned char)str[1] & 0x3F));
+        if (code < 0x80) 
+            return -1;
+        return code;
+    } else if ((byte & 0xF0) == 0xE0) {  // 3-byte: 1110xxxx 10xxxxxx 10xxxxxx
+        if ((unsigned char)str[1] == 0 || (unsigned char)str[2] == 0) { 
+            *byte_len = 1; 
+            return -1; 
+        }
+        *byte_len = 3;
+        int code = (((byte & 0x0F) << 12) |
+                (((unsigned char)str[1] & 0x3F) << 6) |
+                ((unsigned char)str[2] & 0x3F));
+        if (code < 0x800) 
+            return -1;
+        if (code >= 0xD800 && code <= 0xDFFF) 
+            return -1;
+        return code;
+    } else if ((byte & 0xF8) == 0xF0) {  // 4-byte: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+        if ((unsigned char)str[1] == 0 || (unsigned char)str[2] == 0 || (unsigned char)str[3] == 0) { 
+            *byte_len = 1; 
+            return -1; 
+        }
+        *byte_len = 4;
+        int code = (((byte & 0x07) << 18) |
+                (((unsigned char)str[1] & 0x3F) << 12) |
+                (((unsigned char)str[2] & 0x3F) << 6) |
+                ((unsigned char)str[3] & 0x3F));
+        if (code < 0x10000) 
+            return -1;
+        if (code > 0x10FFFF) 
+            return -1;
+        return code;
+    } else {
+        *byte_len = 1;
+        return -1;
+    }
+}
+
 static const char* next_utf8_char_info(const char* str, int* byte_len, int* disp_width) {
 	if (!str || !*str) {
 		if (byte_len) *byte_len = 0;
@@ -243,21 +300,20 @@ static const char* next_utf8_char_info(const char* str, int* byte_len, int* disp
 		return str;
 	}
 
-	mbstate_t st;
-	memset(&st, 0, sizeof(st));
-	wchar_t wc;
-	size_t ret = mbrtowc(&wc, str, MB_CUR_MAX, &st);
-	if (ret == (size_t)-1 || ret == (size_t)-2) {
-		if (byte_len) *byte_len = 1;
-		if (disp_width) *disp_width = 1;
-		return str + 1;  
-	}
+    int decoded_char = decode_utf8_char(str, byte_len);
+    if (decoded_char < 0) {
+        if (byte_len) *byte_len = 1;  // On error, advance by 1
+        if (disp_width) *disp_width = 1;
+        return str + 1;
+    }
 
-	if (byte_len) *byte_len = (int)ret;
-	int w = wcwidth(wc);
-	if (w < 0) w = 0;
-	if (disp_width) *disp_width = w;
-	return str + ret;  
+    // Convert to wchar_t for wcwidth (for most platforms this is fine for Unicode codepoints)
+    wchar_t wc = (wchar_t)decoded_char;
+    int w = wcwidth(wc);
+    if (w < 0) w = 0;
+    if (byte_len) *byte_len = *byte_len;  // Already set by decode_utf8_char
+    if (disp_width) *disp_width = w;
+    return str + *byte_len;  // Return pointer to next character
 }
 
 ALWAYS_INT lua_setchar(STATE) {
