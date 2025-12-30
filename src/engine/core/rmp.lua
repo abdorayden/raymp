@@ -1606,19 +1606,25 @@ do
         end
 
         -- TODO: make sure that processTransformDataEvents is working fine with complicated cases
+
         local put_queue = self.events:get(RMP.EventType.TransformDataPut)
         local get_queue = self.events:get(RMP.EventType.TransformDataGet)
 
-        while not put_queue:isEmpty() and not get_queue:isEmpty() do
+        while not put_queue:isEmpty() do
             local put_callback = put_queue:pop()
-            local get_callback = get_queue:pop()
+            local store_get_queue = Queue.new()
 
-            --- @diagnostic disable-next-line
-            if put_callback and type(put_callback) == 'function' and
-                get_callback and type(get_callback) == 'function' then
-                local data = put_callback()
-                get_callback(data)
+            while not get_queue:isEmpty() do
+                local get_callback = get_queue:pop()
+                --- @diagnostic disable-next-line
+                if put_callback and type(put_callback) == 'function' and
+                    get_callback and type(get_callback) == 'function' then
+                    local data = put_callback()
+                    get_callback(data)
+                end
+                store_get_queue:push(get_callback)
             end
+            get_queue = store_get_queue
         end
 
         local sound_queue = self.events:get(RMP.EventType.Sound)
@@ -4802,12 +4808,14 @@ do
     function RMP.Frame:initMainFrame()
         RMP.Terminal:clearWindow()
         RMP.Terminal:hideCursor()
+        io.flush()
     end
 
     function RMP.Frame:cleanupMainFrame()
         RMP.Terminal:closeKey()
         RMP.Terminal:showCursor()
         RMP.Terminal:clearWindow()
+        io.flush()
     end
 
     --- @param fps integer

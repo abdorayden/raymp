@@ -274,8 +274,8 @@ do
         end
 
         local evaluated = expr
-        for key, value in pairs(context) do
-            evaluated = evaluated:gsub(key, tostring(value))
+        for k, value in pairs(context) do
+            evaluated = evaluated:gsub(k, tostring(value))
         end
 
         evaluated = evaluated:gsub("math%.floor", "math.floor")
@@ -459,9 +459,9 @@ do
 
         local function collectKeys(config)
             if config.id then
-                local key = self.plugManager:getSwitchKey(config.id)
-                if key then
-                    switchKeys[config.id] = key
+                local ky = self.plugManager:getSwitchKey(config.id)
+                if ky then
+                    switchKeys[config.id] = ky
                 end
             end
             if config.children then
@@ -862,7 +862,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         local currentPlugManager, currentOtherPlugs, currentPlugsCfgs = setupPlugins(configObj, is_userconfig)
 
         mainFrame:clear()
-        key = api.Terminal:handleKey()
+        local key = api.Terminal:handleKey()
 
         if parser:wasTerminalResized() then
             h, w = api.Terminal:getSize()
@@ -1058,7 +1058,6 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
     end
 
     sound:cleanup()
-    mainFrame:cleanupMainFrame()
     return restart
 end
 
@@ -1134,7 +1133,7 @@ local function loadConfiguration()
 end
 
 -- Main Entry Point
-local function main()
+(function()
     -- Load configuration
     local restart = true
     while restart do
@@ -1217,7 +1216,7 @@ local function main()
             restart = runRMPApplication(
                 plugManager,
                 template,
-                configObj.settings,
+                configObj and configObj.settings or nil,
                 otherPlugs,
                 soundCfg,
                 plugs_cfgs,
@@ -1351,22 +1350,5 @@ local function main()
             end
         end
     end
-    if not restart then
-        lognote("Exiting application...")
-    end
-    key:closeKey()
-end
-
-local function safeMain()
-    local ok, err = pcall(main)
-    if not ok then
-        api.Terminal:showCursor()
-        api.Terminal:rawMode(false)
-        logerror(tostring(err))
-        lognote("check the error above for more details.")
-        -- os.exit(1)
-    end
-end
-
--- Start the application
-safeMain()
+    mainFrame:cleanupMainFrame()
+end)()
