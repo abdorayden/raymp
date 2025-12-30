@@ -49,7 +49,7 @@
 #include <locale.h>
 
 #ifndef PLATFORM_WINDOWS
-    #include <uchar.h>   // optional for char32_t, not strictly required on Unix
+    #include <uchar.h>   // for char32_t
 #endif
 
 // Cross-platform wcwidth implementation
@@ -57,43 +57,50 @@
 // on unix we can just use the system wcwidth
 // for more cross platform handling
 #ifdef PLATFORM_WINDOWS
-    ALWAYS_INT wcwidth_impl(wchar_t wc) {
-        if (wc == 0) return 0;
-        if (wc < 32 || wc == 127) return 0; 
-        if (wc < 127) return 1; 
-        
-        if ((wc >= 0x1100 && wc <= 0x115F) ||  // Hangul Jamo
-            (wc >= 0x2E80 && wc <= 0x2EFF) ||  // CJK Radicals Supplement
-            (wc >= 0x2F00 && wc <= 0x2FDF) ||  // Kangxi Radicals
-            (wc >= 0x3000 && wc <= 0x303F) ||  // CJK Symbols and Punctuation
-            (wc >= 0x3040 && wc <= 0x309F) ||  // Hiragana
-            (wc >= 0x30A0 && wc <= 0x30FF) ||  // Katakana
-            (wc >= 0x3100 && wc <= 0x312F) ||  // Bopomofo
-            (wc >= 0x3130 && wc <= 0x318F) ||  // Hangul Compatibility Jamo
-            (wc >= 0x3190 && wc <= 0x319F) ||  // Kanbun
-            (wc >= 0x31A0 && wc <= 0x31BF) ||  // Bopomofo Extended
-            (wc >= 0x31C0 && wc <= 0x31EF) ||  // CJK Strokes
-            (wc >= 0x31F0 && wc <= 0x31FF) ||  // Katakana Phonetic Extensions
-            (wc >= 0x3200 && wc <= 0x32FF) ||  // Enclosed CJK Letters and Months
-            (wc >= 0x3300 && wc <= 0x33FF) ||  // CJK Compatibility
-            (wc >= 0x3400 && wc <= 0x4DBF) ||  // CJK Unified Ideographs Extension A
-            (wc >= 0x4E00 && wc <= 0x9FFF) ||  // CJK Unified Ideographs
-            (wc >= 0xA000 && wc <= 0xA48F) ||  // Yi Syllables
-            (wc >= 0xA490 && wc <= 0xA4CF) ||  // Yi Radicals
-            (wc >= 0xAC00 && wc <= 0xD7AF) ||  // Hangul Syllables
-            (wc >= 0xF900 && wc <= 0xFAFF) ||  // CJK Compatibility Ideographs
-            (wc >= 0xFE10 && wc <= 0xFE1F) ||  // Vertical Forms
-            (wc >= 0xFE30 && wc <= 0xFE4F) ||  // CJK Compatibility Forms
-            (wc >= 0xFE50 && wc <= 0xFE6F) ||  // Small Form Variants
-            (wc >= 0xFF00 && wc <= 0xFFEF)) {  // Halfwidth and Fullwidth Forms
+    // Define a function that works with char32_t for proper Unicode handling
+    int unicode_width(char32_t ucs) {
+        if (ucs == 0) return 0;
+        if (ucs < 32 || ucs == 127) return 0;
+        if (ucs < 127) return 1;
+
+        if ((ucs >= 0x1100 && ucs <= 0x115F) ||  // Hangul Jamo
+            (ucs >= 0x2800 && ucs <= 0x28FF) ||  // Braille Patterns
+            (ucs >= 0x2E80 && ucs <= 0x2EFF) ||  // CJK Radicals Supplement
+            (ucs >= 0x2F00 && ucs <= 0x2FDF) ||  // Kangxi Radicals
+            (ucs >= 0x3000 && ucs <= 0x303F) ||  // CJK Symbols and Punctuation
+            (ucs >= 0x3040 && ucs <= 0x309F) ||  // Hiragana
+            (ucs >= 0x30A0 && ucs <= 0x30FF) ||  // Katakana
+            (ucs >= 0x3100 && ucs <= 0x312F) ||  // Bopomofo
+            (ucs >= 0x3130 && ucs <= 0x318F) ||  // Hangul Compatibility Jamo
+            (ucs >= 0x3190 && ucs <= 0x319F) ||  // Kanbun
+            (ucs >= 0x31A0 && ucs <= 0x31BF) ||  // Bopomofo Extended
+            (ucs >= 0x31C0 && ucs <= 0x31EF) ||  // CJK Strokes
+            (ucs >= 0x31F0 && ucs <= 0x31FF) ||  // Katakana Phonetic Extensions
+            (ucs >= 0x3200 && ucs <= 0x32FF) ||  // Enclosed CJK Letters and Months
+            (ucs >= 0x3300 && ucs <= 0x33FF) ||  // CJK Compatibility
+            (ucs >= 0x3400 && ucs <= 0x4DBF) ||  // CJK Unified Ideographs Extension A
+            (ucs >= 0x4E00 && ucs <= 0x9FFF) ||  // CJK Unified Ideographs
+            (ucs >= 0xA000 && ucs <= 0xA48F) ||  // Yi Syllables
+            (ucs >= 0xA490 && ucs <= 0xA4CF) ||  // Yi Radicals
+            (ucs >= 0xAC00 && ucs <= 0xD7AF) ||  // Hangul Syllables
+            (ucs >= 0xF900 && ucs <= 0xFAFF) ||  // CJK Compatibility Ideographs
+            (ucs >= 0xFE10 && ucs <= 0xFE1F) ||  // Vertical Forms
+            (ucs >= 0xFE30 && ucs <= 0xFE4F) ||  // CJK Compatibility Forms
+            (ucs >= 0xFE50 && ucs <= 0xFE6F) ||  // Small Form Variants
+            (ucs >= 0xFF00 && ucs <= 0xFFEF)) {  // Halfwidth and Fullwidth Forms
             return 2;
         }
-        
+
         return 1;
     }
-    #define wcwidth wcwidth_impl
 #else
     int wcwidth(wchar_t);
+    // on unix, we can use system wcwidth
+    int unicode_width(char32_t ucs) {
+        // cast to wchar_t for system wcwidth function
+        // this should work for most cases since unicode codepoints <= 0x10ffff
+        return wcwidth((wchar_t)(ucs <= WCHAR_MAX ? ucs : '?'));
+    }
 #endif
 
 #include <stddef.h>
@@ -307,13 +314,13 @@ static const char* next_utf8_char_info(const char* str, int* byte_len, int* disp
         return str + 1;
     }
 
-    // Convert to wchar_t for wcwidth (for most platforms this is fine for Unicode codepoints)
-    wchar_t wc = (wchar_t)decoded_char;
-    int w = wcwidth(wc);
+    char32_t ucs = (char32_t)decoded_char;
+    int w = unicode_width(ucs);
+
     if (w < 0) w = 0;
-    if (byte_len) *byte_len = *byte_len;  // Already set by decode_utf8_char
+    if (byte_len) *byte_len = *byte_len;
     if (disp_width) *disp_width = w;
-    return str + *byte_len;  // Return pointer to next character
+    return str + *byte_len; 
 }
 
 ALWAYS_INT lua_setchar(STATE) {
