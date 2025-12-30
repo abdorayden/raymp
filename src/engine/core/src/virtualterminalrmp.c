@@ -24,10 +24,14 @@
 #ifndef VIRTUALTERMINALRMP_C
 #define VIRTUALTERMINALRMP_C
 
-#include "lua.h"
-#include "lauxlib.h"
-#include "lualib.h"
-#include "luaconf.h"
+// #include "lua.h"
+#include "../../lua/include/lua.h"
+// #include "lauxlib.h"
+#include "../../lua/include/lauxlib.h"
+// #include "lualib.h"
+#include "../../lua/include/lualib.h"
+// #include "luaconf.h"
+#include "../../lua/include/luaconf.h"
 
 #include "simply.h"
 
@@ -246,14 +250,14 @@ static const char* next_utf8_char_info(const char* str, int* byte_len, int* disp
 	if (ret == (size_t)-1 || ret == (size_t)-2) {
 		if (byte_len) *byte_len = 1;
 		if (disp_width) *disp_width = 1;
-		return str;
+		return str + 1;  
 	}
 
 	if (byte_len) *byte_len = (int)ret;
 	int w = wcwidth(wc);
 	if (w < 0) w = 0;
 	if (disp_width) *disp_width = w;
-	return str;
+	return str + ret;  
 }
 
 ALWAYS_INT lua_setchar(STATE) {
@@ -443,7 +447,7 @@ ALWAYS_INT lua_draw_box(STATE) {
                 }
             }
 
-            title_ptr += byte_len;
+            title_ptr = next_char;  
             title_x += (disp_width > 0) ? disp_width : 1;
         }
     }
@@ -470,7 +474,7 @@ ALWAYS_INT lua_writetext_clipped(STATE) {
 
     while (ptr < end && current_x <= vt->width && (current_x - start_x) < max_cols) {
         int byte_len = 0, disp_width = 0;
-        next_utf8_char_info(ptr, &byte_len, &disp_width);
+        const char* next_char = next_utf8_char_info(ptr, &byte_len, &disp_width);
         if (byte_len <= 0) break;
         if (ptr + byte_len > end) byte_len = (int)(end - ptr);
 
@@ -479,7 +483,7 @@ ALWAYS_INT lua_writetext_clipped(STATE) {
             while (base_x >= start_x) {
                 Cell* base = get_cell(vt, base_x, y);
                 if (!base) { base_x--; continue; }
-                if (base->ch[0] == '\0') { base_x--; continue; } 
+                if (base->ch[0] == '\0') { base_x--; continue; }
                 size_t existing = strlen(base->ch);
                 int can_copy = CH_UTF8_SIZE - 1 - (int)existing;
                 if (can_copy > 0) {
@@ -492,7 +496,7 @@ ALWAYS_INT lua_writetext_clipped(STATE) {
                 if (style && style[0]) { strncpy(base->style, style, sizeof(base->style)-1); base->style[sizeof(base->style)-1] = '\0'; }
                 break;
             }
-            ptr += byte_len;
+            ptr = next_char;  
             continue;
         }
 
@@ -524,7 +528,7 @@ ALWAYS_INT lua_writetext_clipped(STATE) {
         }
 
         current_x += (disp_width > 0) ? disp_width : 1;
-        ptr += byte_len;
+        ptr = next_char;  
     }
 
     while ((current_x - start_x) < max_cols && current_x <= vt->width) {
@@ -560,7 +564,7 @@ ALWAYS_INT lua_writetext(STATE) {
 	while (ptr < end) {
 		int byte_len = 0;
 		int disp_width = 0;
-		next_utf8_char_info(ptr, &byte_len, &disp_width);
+		const char* next_char = next_utf8_char_info(ptr, &byte_len, &disp_width);
 		if (byte_len <= 0) break;
 		if (ptr + byte_len > end) byte_len = (int)(end - ptr);
 
@@ -609,7 +613,7 @@ ALWAYS_INT lua_writetext(STATE) {
 				}
 				current_x += 1;
 			}
-			ptr += byte_len;
+			ptr = next_char;  
 			continue;
 		}
 
@@ -641,7 +645,7 @@ ALWAYS_INT lua_writetext(STATE) {
 		}
 
 		current_x += (disp_width > 0) ? disp_width : 1;
-		ptr += byte_len;
+		ptr = next_char;  
 	}
 
 	vt->is_dirty = true;
@@ -712,9 +716,9 @@ ALWAYS_INT lua_render(STATE) {
 	luaL_Buffer B;
 	luaL_buffinit(L, &B);
 	char sequence_buf[128];
-	char current_fg[CH_STRYLE_AND_COLOR_SIZE] = "";  // Increased size to match storage
-	char current_bg[CH_STRYLE_AND_COLOR_SIZE] = "";  // Increased size to match storage
-	char current_style[CH_STRYLE_AND_COLOR_SIZE] = "";  // Increased size to match storage
+	char current_fg[CH_STRYLE_AND_COLOR_SIZE] = "";  
+	char current_bg[CH_STRYLE_AND_COLOR_SIZE] = "";  
+	char current_style[CH_STRYLE_AND_COLOR_SIZE] = "";  
 	int saved_cursor_x = vt->cursor_x;
 	int saved_cursor_y = vt->cursor_y;
 
