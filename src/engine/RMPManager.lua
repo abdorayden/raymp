@@ -28,6 +28,7 @@
 -- NOTE: plugins should create VirtualTerminal inside returned function
 -- BUG:  program stops if lua access nil obj or something (add system logs)
 -- BUG:  bg color title not working properly in window (drawBox)
+-- BUG:  make .rmp part of lua envirement
 
 local api = require("rmp.rmp")
 local utils = require("rmp.util")
