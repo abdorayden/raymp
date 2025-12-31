@@ -38,3 +38,4 @@
 - [ ] make plugins configurations are mutable so i can add another plugins at runtime
 - [ ] make sure that the buffer handle arabic and other languages correctly
 - [X] test colorFromHex and see the expected output
+- [ ] create C api to communicate with engine vt 

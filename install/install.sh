@@ -23,8 +23,6 @@
 # /*  											*/ 
 # /**************************************************************************************/
 
-# TODO: use configuurations install like in my directory /home/rayden/.rmp_builtin/
-
 INCLUDE_PATH="-ggdb -I../src/engine/lua/include -I../src/third_party -O3"
 
 LIB_PATH="-L../src/engine/lua/lib -l:liblua.a -lm"
@@ -203,19 +201,21 @@ then
     then
         set -xe
     fi
+
+    cp -r ../conf/.rmp_builtin/ "$HOME/.rmp/"
     # check if the rmp configuration folder are not found 
     # it will create one and install the default configurations with tutorial
-    if [ ! -d "$HOME/.rmp" ]; then
-        mkdir -p "$HOME/.rmp"
-		mkdir -p "$HOME/.rmp/themes"
-		mkdir -p "$HOME/.rmp/plugins"
-
-        cp ../src/engine/selfrmp/init.lua "$HOME/.rmp"
-        cp ../src/engine/selfrmp/themes/tutorial.lua "$HOME/.rmp/themes"
-        cp -r ../src/engine/selfrmp/plugins/tutorial_rmp/ "$HOME/.rmp/plugins"
-        cp -r ../src/engine/selfrmp/plugins/helper_keys_tutorial/ "$HOME/.rmp/plugins"
-        cp ../src/engine/selfrmp/plugins/digital_clock_with_effects.lua "$HOME/.rmp/plugins"
-    fi
+  #   if [ ! -d "$HOME/.rmp" ]; then
+  #       mkdir -p "$HOME/.rmp"
+		# mkdir -p "$HOME/.rmp/themes"
+		# mkdir -p "$HOME/.rmp/plugins"
+		#
+  #       cp ../src/engine/selfrmp/init.lua "$HOME/.rmp"
+  #       cp ../src/engine/selfrmp/themes/tutorial.lua "$HOME/.rmp/themes"
+  #       cp -r ../src/engine/selfrmp/plugins/tutorial_rmp/ "$HOME/.rmp/plugins"
+  #       cp -r ../src/engine/selfrmp/plugins/helper_keys_tutorial/ "$HOME/.rmp/plugins"
+  #       cp ../src/engine/selfrmp/plugins/digital_clock_with_effects.lua "$HOME/.rmp/plugins"
+  #   fi
 elif [[ "$1" == "clean-conf" ]]
 then
 	echo "[+] removing configuration ..."

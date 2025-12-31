@@ -27,9 +27,9 @@
 // Powered by Lua scripting
 // Elegant C implementation
 
-#include "lua.h"
-#include "lauxlib.h"
-#include "lualib.h"
+#include "./src/engine/lua/include/lua.h"
+#include "./src/engine/lua/include/lauxlib.h"
+#include "./src/engine/lua/include/lualib.h"
 
 #include <stdio.h>
 #include <stdbool.h>
