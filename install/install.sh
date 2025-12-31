@@ -23,6 +23,8 @@
 # /*  											*/ 
 # /**************************************************************************************/
 
+# TODO: use configuurations install like in my directory /home/rayden/.rmp_builtin/
+
 INCLUDE_PATH="-ggdb -I../src/engine/lua/include -I../src/third_party -O3"
 
 LIB_PATH="-L../src/engine/lua/lib -l:liblua.a -lm"

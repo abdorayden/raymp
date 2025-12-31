@@ -659,6 +659,7 @@ local function setupPlugins(configObj, is_userconfig)
 
                 if is_userconfig then
                     local homePath = api.Path.new():getHomePath()
+                    package.path = package.path .. joinPath(homePath, ".rmp")
                     local singleFile, folderInit
                     if type(name) == "string" then
                         singleFile = joinPath(homePath, ".rmp", "plugins", name .. ".lua")
