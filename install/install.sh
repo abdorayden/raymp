@@ -189,6 +189,10 @@ then
 	cp ../src/future.lua 		            $LUA_SHARE
 	cp ../src/util.lua 		                $LUA_SHARE
 	cp ../src/oop.lua 		                $LUA_SHARE
+
+    cp ../src/components.lua 	            $LUA_SHARE
+    cp ../src/effects.lua 		            $LUA_SHARE
+
 	cp ../src/engine/RMPManager.lua 		$LUA_SHARE
 	cp ../src/engine/core/rmp.lua 	        $LUA_SHARE
 	# cp ../rmp /bin
