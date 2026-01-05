@@ -97,6 +97,8 @@ int rmp_engine_main(lua_State* L)
 			return 1;
 		}
 
+		printf("%s Template loaded with %zu windows\n", RMP_ENGINE_TAG, template_count);
+
 		// Expand template array from Lua table
 		int* template_refs = NULL;
 		if (template_count > 0) {
@@ -126,13 +128,26 @@ int rmp_engine_main(lua_State* L)
 		}
 		lua_pop(L, 1);
 
-		// Setup plugins
+		// CRITICAL FIX: Setup plugins and get PlugManager
 		Queue* other_plugs = NULL;
 		HashMap* plugs_cfgs = NULL;
 		int plug_manager_ref = setup_plugins(L, config_ref, is_userconfig, &other_plugs, &plugs_cfgs);
 
-		// Note: In C we don't have PlugManager as object yet, need to convert
-		// For now, we'll skip plugin manager and just run the app
+		// Extract PlugManager from ref
+		PlugManager* plug_manager = NULL;
+		if (plug_manager_ref != LUA_NOREF && plug_manager_ref != LUA_REFNIL) {
+			lua_rawgeti(L, LUA_REGISTRYINDEX, plug_manager_ref);
+			if (lua_islightuserdata(L, -1)) {
+				plug_manager = (PlugManager*)lua_touserdata(L, -1);
+			}
+			lua_pop(L, 1);
+		}
+
+		if (!plug_manager) {
+			printf("%s Warning: No plugin manager created\n", RMP_ENGINE_TAG);
+		} else {
+			printf("%s Plugin manager initialized\n", RMP_ENGINE_TAG);
+		}
 
 		// Get settings
 		int settings_ref = LUA_NOREF;
@@ -147,10 +162,12 @@ int rmp_engine_main(lua_State* L)
 		}
 		lua_pop(L, 1);
 
-		// Run the application
+		printf("%s Starting RMP application...\n", RMP_ENGINE_TAG);
+
+		// CRITICAL FIX: Pass actual PlugManager instead of NULL
 		restart = run_rmp_application(
 			L,
-			NULL, // plug_manager - TODO: implement
+			plug_manager,  // NOW PASSING ACTUAL PLUGIN MANAGER
 			template_refs,
 			template_count,
 			settings_ref,
@@ -161,7 +178,15 @@ int rmp_engine_main(lua_State* L)
 			is_userconfig
 		);
 
+		printf("%s Application loop ended. Restart: %s\n", RMP_ENGINE_TAG, restart ? "true" : "false");
+
 		// Cleanup
+		if (plug_manager) {
+			plug_manager_free(plug_manager);
+		}
+		if (plug_manager_ref != LUA_NOREF && plug_manager_ref != LUA_REFNIL) {
+			luaL_unref(L, LUA_REGISTRYINDEX, plug_manager_ref);
+		}
 		if (other_plugs) {
 			queue_free(other_plugs);
 		}
@@ -224,6 +249,8 @@ int main(int argc, char** argv)
 		}
 	}
 
+	printf("%s Initializing RMP Engine...\n", RMP_ENGINE_TAG);
+
 	// Initialize Lua state for plugin support
 	lua_State *RMP_LUA_STATE = luaL_newstate();
 	if (RMP_LUA_STATE == NULL) {
@@ -245,6 +272,8 @@ int main(int argc, char** argv)
 	lua_setfield(RMP_LUA_STATE, -2, "path");
 	lua_pop(RMP_LUA_STATE, 1);
 
+	printf("%s Loading RMP Lua API...\n", RMP_ENGINE_TAG);
+
 	// Load the RMP Lua API module
 	if (luaL_dostring(RMP_LUA_STATE, "api = require('rmp.rmp')") != LUA_OK) {
 		fprintf(stderr, "%s Failed to load RMP Lua API: %s\n", RMP_ENGINE_TAG, lua_tostring(RMP_LUA_STATE, -1));
@@ -263,6 +292,8 @@ int main(int argc, char** argv)
 	}
 	lua_pop(RMP_LUA_STATE, 1);
 
+	printf("%s Loading utility modules...\n", RMP_ENGINE_TAG);
+
 	// Load utility modules
 	if (luaL_dostring(RMP_LUA_STATE, "utils = require('rmp.util')") != LUA_OK) {
 		fprintf(stderr, "%s Failed to load RMP utilities: %s\n", RMP_ENGINE_TAG, lua_tostring(RMP_LUA_STATE, -1));
@@ -277,6 +308,8 @@ int main(int argc, char** argv)
 		lua_close(RMP_LUA_STATE);
 		return 1;
 	}
+
+	printf("%s Initializing mainFrame...\n", RMP_ENGINE_TAG);
 
 	// Initialize mainFrame global - check if api.Frame exists first
 	if (luaL_dostring(RMP_LUA_STATE,
@@ -299,8 +332,12 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
+	printf("%s Starting engine main loop...\n", RMP_ENGINE_TAG);
+
 	// Run the main engine in C
 	int result = rmp_engine_main(RMP_LUA_STATE);
+
+	printf("%s Cleaning up...\n", RMP_ENGINE_TAG);
 
 	// Final cleanup
 	if (RMP_LUA_STATE) {
@@ -311,15 +348,17 @@ int main(int argc, char** argv)
 				lua_pushvalue(RMP_LUA_STATE, -2);
 				if (lua_pcall(RMP_LUA_STATE, 1, 0, 0) != LUA_OK) {
 					fprintf(stderr, "%s Error in cleanupMainFrame: %s\n", RMP_ENGINE_TAG, lua_tostring(RMP_LUA_STATE, -1));
-					lua_pop(RMP_LUA_STATE, 1); // Remove error message
+					lua_pop(RMP_LUA_STATE, 1);
 				}
 			} else {
-				lua_pop(RMP_LUA_STATE, 1); // Remove the non-function value
+				lua_pop(RMP_LUA_STATE, 1);
 			}
 		}
-		lua_pop(RMP_LUA_STATE, 1); // Remove mainFrame table
+		lua_pop(RMP_LUA_STATE, 1);
 	}
 
 	lua_close(RMP_LUA_STATE);
+	
+	printf("%s Shutdown complete.\n", RMP_ENGINE_TAG);
 	return result;
 }
