@@ -243,7 +243,6 @@ ALWAYS_INT lua_clear(STATE) {
     #endif
 #endif
 
-// TODO: test this function on : ⣯
 // ⣯ :  by python3 btw
 //  0b11100010
 //  0b10100011
