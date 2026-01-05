@@ -2752,6 +2752,7 @@ do
     end
 end
 
+--- TODO: use the same way i handled BRAILLE to Spinners class and use builtin utf8 just like i did in Draw class
 --- enhanced draw class using unicode block characters for better resolution
 --- uses half-block characters (▀▄█) and quarter-block characters for sub-pixel rendering
 --- @class Draw
