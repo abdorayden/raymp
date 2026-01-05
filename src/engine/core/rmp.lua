@@ -2752,14 +2752,118 @@ do
     end
 end
 
+--- enhanced draw class using unicode block characters for better resolution
+--- uses half-block characters (▀▄█) and quarter-block characters for sub-pixel rendering
 --- @class Draw
 RMP.Draw = OOP.class("Draw")
 do -- Draw
-    -- TODO: draw something based on table of boolean
-    function RMP.Draw:draw(x, y, boolTable)
+    local BLOCK_CHARS  = {
+        FULL                = RMP.Bar_100_per, -- "█",
+        LOWER_HALF          = RMP.Bar_b_to_u_50_per, -- "▄",
+        LEFT_HALF           = RMP.Bar_l_to_r_50_per, -- "▌",
 
+        UPPER_HALF          = "▀", -- TODO: add this block to the api constant
+        RIGHT_HALF          = "▐", -- TODO: add this block to the api constant
+
+        UPPER_LEFT          = "▘", -- TODO: add this block to the api constant
+        UPPER_RIGHT         = "▝", -- TODO: add this block to the api constant
+        LOWER_LEFT          = "▖", -- TODO: add this block to the api constant
+        LOWER_RIGHT         = "▗", -- TODO: add this block to the api constant
+
+        LEFT_ONE_EIGHTH     = RMP.Bar_l_to_r_12_5_per, --  "▏",
+        LEFT_ONE_QUARTER    = RMP.Bar_l_to_r_25_per, --  "▎",
+        LEFT_THREE_EIGHTHS  = RMP.Bar_l_to_r_37_5_per, -- "▍",
+        LEFT_FIVE_EIGHTHS   = RMP.Bar_l_to_r_62_5_per, -- "▋",
+        LEFT_THREE_QUARTERS = RMP.Bar_l_to_r_75_per, -- "▊",
+        LEFT_SEVEN_EIGHTHS  = RMP.Bar_l_to_r_87_5_per, -- "▉",
+
+        LIGHT_SHADE         = RMP.Bar_Shading_25_per, -- "░",
+        MEDIUM_SHADE        = RMP.Bar_Shading_50_per, -- "▒",
+        DARK_SHADE          = RMP.Bar_Shading_75_per, -- "▓",
+    }
+
+    -- braille patterns for high-resolution plotting (8 dots per character)
+    -- braille unicode range: u+2800 to u+28ff
+    local BRAILLE_BASE = 0x2800
+
+    -- Braille dot positions (standard Braille layout):
+    -- 1 4
+    -- 2 5
+    -- 3 6
+    -- 7 8
+    local BRAILLE_DOTS = {
+        [1] = 0x01,
+        [2] = 0x02,
+        [3] = 0x04,
+        [4] = 0x08,
+        [5] = 0x10,
+        [6] = 0x20,
+        [7] = 0x40,
+        [8] = 0x80
+    }
+
+    function RMP.Draw:constructor(boolTable)
+        self.boolTable = boolTable or {}
+        return self
     end
 
+    --- Create a Braille character from dot pattern
+    --- @param dots table<integer, boolean> -- dot positions 1-8
+    --- @return string
+    local function createBrailleChar(dots)
+        local value = BRAILLE_BASE
+        for i = 1, 8 do
+            if dots[i] then
+                value = value + BRAILLE_DOTS[i]
+            end
+        end
+        return utf8.char(value)
+    end
+
+    ---  Set a pixel in a Braille canvas
+    --- @param canvas table -- 2D array of braille dot states
+    --- @param x number
+    --- @param y number
+    local function setBraillePixel(canvas, x, y)
+        local char_x = math.floor(x / 2)
+        local char_y = math.floor(y / 4)
+        local dot_x = x % 2
+        local dot_y = y % 4
+
+        canvas[char_y] = canvas[char_y] or {}
+        canvas[char_y][char_x] = canvas[char_y][char_x] or {}
+
+        -- Map to Braille dot position
+        local dot_index = dot_x * 4 + dot_y + 1
+        if dot_index <= 8 then
+            canvas[char_y][char_x][dot_index] = true
+        end
+    end
+
+    --- Helper: Render Braille canvas to VirtualTerminal
+    --- @param canvas table
+    --- @param vterm VirtualTerminal
+    --- @param offset_x integer
+    --- @param offset_y integer
+    --- @param fg_color FGColors
+    --- @param bg_color BGColors
+    local function renderBrailleCanvas(canvas, vterm, offset_x, offset_y, fg_color, bg_color)
+        for char_y, row in pairs(canvas) do
+            for char_x, dots in pairs(row) do
+                local braille = createBrailleChar(dots)
+                vterm:setChar(
+                    offset_x + char_x,
+                    offset_y + char_y,
+                    braille,
+                    fg_color,
+                    bg_color,
+                    nil
+                )
+            end
+        end
+    end
+
+    --- Draw a filled rectangle using full block characters
     --- @param x integer
     --- @param y integer
     --- @param width integer
@@ -2768,79 +2872,219 @@ do -- Draw
     --- @param vterm VirtualTerminal
     --- @return VirtualTerminal | nil
     function RMP.Draw:rectangle(x, y, width, height, color, vterm)
-        x = x or 0
-        x = math.floor(x)
-
-        y = y or 0
-        y = math.floor(y)
-
-        if not width or not height then
+        x = math.floor(x or 0)
+        y = math.floor(y or 0)
+        if not width or not height or width <= 0 or height <= 0 then
             return nil
         end
-
         width = math.floor(width)
         height = math.floor(height)
 
-        --- @diagnostic disable-next-line
         vterm = vterm or RMP.VirtualTerminal.new()
-        vterm:moveCursor(x, y)
 
-        for i = y, height + y do
-            for j = x, width + x do
+        -- Use full block for solid fill
+        for i = y, y + height - 1 do
+            for j = x, x + width - 1 do
                 vterm:setChar(j, i, " ", nil, color, nil)
             end
         end
-
         return vterm
     end
 
+    --- Draw a high-resolution circle using Braille characters
+    --- @param centerX integer
+    --- @param centerY integer
+    --- @param r integer
+    --- @param color FGColors
+    --- @param vterm VirtualTerminal
+    --- @return VirtualTerminal | nil
+    function RMP.Draw:circle(centerX, centerY, r, color, vterm)
+        r = math.floor(r or 5)
+        if r <= 0 then return nil end
+
+        centerX = math.floor(centerX or 0)
+        centerY = math.floor(centerY or 0)
+        vterm = vterm or RMP.VirtualTerminal.new()
+
+        -- Use Braille for high-resolution circle
+        -- Each character cell is 2x4 pixels in Braille
+        local canvas = {}
+        local scale = 2 -- Scaling factor for better resolution
+
+        -- Midpoint circle algorithm with sub-pixel precision
+        local r_scaled = r * scale
+        local cx_scaled = centerX * 2
+        local cy_scaled = centerY * 4
+
+        -- Draw filled circle using scanline algorithm
+        for y = -r_scaled, r_scaled do
+            local half_width = math.sqrt(r_scaled * r_scaled - y * y)
+            for x = -half_width, half_width do
+                local px = cx_scaled + math.floor(x)
+                local py = cy_scaled + math.floor(y)
+                setBraillePixel(canvas, px, py)
+            end
+        end
+
+        renderBrailleCanvas(canvas, vterm, 0, 0, color, nil)
+        return vterm
+    end
+
+    --- Draw a high-resolution filled circle (alternative using half-blocks)
     --- @param centerX integer
     --- @param centerY integer
     --- @param r integer
     --- @param color BGColors
     --- @param vterm VirtualTerminal
     --- @return VirtualTerminal | nil
-    function RMP.Draw:circle(centerX, centerY, r, color, vterm)
-        r = math.floor(math.floor(r) or 5)
+    function RMP.Draw:circleFilled(centerX, centerY, r, color, vterm)
+        r = math.floor(r or 5)
         if r <= 0 then return nil end
 
-        local centerX = math.floor(centerX or 0)
-        local centerY = math.floor(centerY or 0)
-
-        --- @diagnostic disable-next-line
+        centerX = math.floor(centerX or 0)
+        centerY = math.floor(centerY or 0)
         vterm = vterm or RMP.VirtualTerminal.new()
-        for y = -r, r do
-            for x = -r, r do
-                if x * x + y * y <= r * r then
-                    local term_x = x + r + 1 + centerX
-                    local term_y = y + r + 1 + centerY
-                    vterm:setChar(term_x, term_y, " ", nil, color, nil)
+
+        -- Use half-block characters for vertical sub-pixel precision
+        local r_doubled = r * 2 -- Since we have 2 vertical pixels per cell
+
+        for row = 0, r * 2 do
+            local y_top = row - r
+            local y_bottom = row - r + 0.5
+
+            -- Calculate horizontal extent at these y positions
+            local x_extent_top = 0
+            local x_extent_bottom = 0
+
+            if y_top * y_top < r * r then
+                x_extent_top = math.sqrt(r * r - y_top * y_top)
+            end
+            if y_bottom * y_bottom < r * r then
+                x_extent_bottom = math.sqrt(r * r - y_bottom * y_bottom)
+            end
+
+            local x_extent = math.max(x_extent_top, x_extent_bottom)
+
+            for col = -math.ceil(x_extent), math.ceil(x_extent) do
+                local x = col
+                local dist_top_sq = x * x + y_top * y_top
+                local dist_bottom_sq = x * x + y_bottom * y_bottom
+
+                local top_filled = dist_top_sq <= r * r
+                local bottom_filled = dist_bottom_sq <= r * r
+
+                local char = " "
+                if top_filled and bottom_filled then
+                    char = BLOCK_CHARS.FULL
+                elseif top_filled then
+                    char = BLOCK_CHARS.UPPER_HALF
+                elseif bottom_filled then
+                    char = BLOCK_CHARS.LOWER_HALF
+                else
+                    char = nil -- Don't draw
+                end
+
+                if char then
+                    vterm:setChar(
+                        centerX + col,
+                        centerY + math.floor(row / 2),
+                        char,
+                        color,
+                        nil,
+                        nil
+                    )
                 end
             end
         end
+
         return vterm
     end
 
+    --- Draw a high-resolution triangle using Braille characters
+    --- @param height integer
+    --- @param pos_x integer
+    --- @param pos_y integer
+    --- @param color FGColors
+    --- @param vterm VirtualTerminal
+    --- @return VirtualTerminal
+    function RMP.Draw:triangle(height, pos_x, pos_y, color, vterm)
+        vterm = vterm or RMP.VirtualTerminal.new()
+        height = math.floor(height)
+        if height <= 0 then return vterm end
+
+        local canvas = {}
+        local scale = 2
+
+        -- Draw filled triangle with Braille sub-pixels
+        for y = 0, height * 4 do
+            local progress = y / (height * 4)
+            local half_width = progress * height * 2
+
+            for x = -half_width, half_width do
+                local px = (pos_x * 2) + math.floor(x)
+                local py = (pos_y * 4) + y
+                setBraillePixel(canvas, px, py)
+            end
+        end
+
+        renderBrailleCanvas(canvas, vterm, 0, 0, color, nil)
+        return vterm
+    end
+
+    --- Draw a filled triangle using half-block characters
     --- @param height integer
     --- @param pos_x integer
     --- @param pos_y integer
     --- @param color BGColors
     --- @param vterm VirtualTerminal
     --- @return VirtualTerminal
-    function RMP.Draw:triangle(height, pos_x, pos_y, color, vterm)
-        --- @diagnostic disable-next-line
+    function RMP.Draw:triangleFilled(height, pos_x, pos_y, color, vterm)
         vterm = vterm or RMP.VirtualTerminal.new()
-        local char = " "
-        local height = math.floor(height)
-        for y = 0, height - 1 do
-            local spaces = height - y - 1
-            local stars = 2 * y + 1
+        height = math.floor(height)
+        if height <= 0 then return vterm end
 
-            vterm:setChar(pos_x + spaces, pos_y + y, string.rep(char, stars), nil, color, nil)
+        -- Use half-blocks for better vertical resolution
+        for row = 0, height * 2 do
+            local y_top = row / 2
+            local y_bottom = (row + 1) / 2
+
+            local width_top = (y_top / height) * height
+            local width_bottom = (y_bottom / height) * height
+
+            for col = 0, math.ceil(math.max(width_top, width_bottom) * 2) do
+                local x = col / 2 - math.max(width_top, width_bottom)
+
+                local in_top = math.abs(x) <= width_top
+                local in_bottom = math.abs(x) <= width_bottom
+
+                local char = " "
+                if in_top and in_bottom then
+                    char = BLOCK_CHARS.FULL
+                elseif in_top then
+                    char = BLOCK_CHARS.UPPER_HALF
+                elseif in_bottom then
+                    char = BLOCK_CHARS.LOWER_HALF
+                else
+                    char = nil
+                end
+
+                if char then
+                    vterm:setChar(
+                        pos_x + col - math.ceil(math.max(width_top, width_bottom)),
+                        pos_y + math.floor(row / 2),
+                        char,
+                        color,
+                        nil,
+                        nil
+                    )
+                end
+            end
         end
+
         return vterm
     end
 
+    --- Draw a line (horizontal is already optimal)
     --- @param x integer
     --- @param y integer
     --- @param width integer
@@ -2848,18 +3092,64 @@ do -- Draw
     --- @param vterm VirtualTerminal
     --- @return VirtualTerminal
     function RMP.Draw:line(x, y, width, color, vterm)
-        --- @diagnostic disable-next-line
         vterm = vterm or RMP.VirtualTerminal.new()
-        --- @diagnostic disable-next-line
-        if width then
-            vterm:moveCursor(x, y)
-            for i = x, width + x do
-                vterm:setChar(i, y, " ", nil, color, nil)
-            end
+        if not width or width <= 0 then return vterm end
+
+        x = math.floor(x)
+        y = math.floor(y)
+        width = math.floor(width)
+
+        for i = x, x + width - 1 do
+            vterm:setChar(i, y, " ", nil, color, nil)
         end
+
         return vterm
     end
 
+    --- Draw a diagonal line using Braille characters
+    --- @param x1 integer
+    --- @param y1 integer
+    --- @param x2 integer
+    --- @param y2 integer
+    --- @param color FGColors
+    --- @param vterm VirtualTerminal
+    --- @return VirtualTerminal
+    function RMP.Draw:lineDiagonal(x1, y1, x2, y2, color, vterm)
+        vterm = vterm or RMP.VirtualTerminal.new()
+
+        local canvas = {}
+
+        -- Bresenham's line algorithm adapted for Braille
+        x1, y1 = x1 * 2, y1 * 4
+        x2, y2 = x2 * 2, y2 * 4
+
+        local dx = math.abs(x2 - x1)
+        local dy = math.abs(y2 - y1)
+        local sx = x1 < x2 and 1 or -1
+        local sy = y1 < y2 and 1 or -1
+        local err = dx - dy
+
+        while true do
+            setBraillePixel(canvas, x1, y1)
+
+            if x1 == x2 and y1 == y2 then break end
+
+            local e2 = 2 * err
+            if e2 > -dy then
+                err = err - dy
+                x1 = x1 + sx
+            end
+            if e2 < dx then
+                err = err + dx
+                y1 = y1 + sy
+            end
+        end
+
+        renderBrailleCanvas(canvas, vterm, 0, 0, color, nil)
+        return vterm
+    end
+
+    --- Draw a column (vertical line is already optimal)
     --- @param x integer
     --- @param y integer
     --- @param height integer
@@ -2867,11 +3157,157 @@ do -- Draw
     --- @param vterm VirtualTerminal
     --- @return VirtualTerminal
     function RMP.Draw:column(x, y, height, color, vterm)
-        --- @diagnostic disable-next-line
         vterm = vterm or RMP.VirtualTerminal.new()
-        for i = y, height + y do
+        if not height or height <= 0 then return vterm end
+
+        x = math.floor(x)
+        y = math.floor(y)
+        height = math.floor(height)
+
+        for i = y, y + height - 1 do
             vterm:setChar(x, i, " ", nil, color, nil)
         end
+
+        return vterm
+    end
+
+    --- Draw an ellipse using Braille characters
+    --- @param centerX integer
+    --- @param centerY integer
+    --- @param radiusX integer
+    --- @param radiusY integer
+    --- @param color FGColors
+    --- @param vterm VirtualTerminal
+    --- @return VirtualTerminal
+    function RMP.Draw:ellipse(centerX, centerY, radiusX, radiusY, color, vterm)
+        vterm = vterm or RMP.VirtualTerminal.new()
+        radiusX = math.floor(radiusX or 5)
+        radiusY = math.floor(radiusY or 3)
+        if radiusX <= 0 or radiusY <= 0 then return vterm end
+
+        local canvas = {}
+
+        -- Scale for Braille resolution
+        centerX = centerX * 2
+        centerY = centerY * 4
+        radiusX = radiusX * 2
+        radiusY = radiusY * 4
+
+        -- Filled ellipse
+        for y = -radiusY, radiusY do
+            local half_width = radiusX * math.sqrt(1 - (y * y) / (radiusY * radiusY))
+            for x = -half_width, half_width do
+                setBraillePixel(canvas, centerX + math.floor(x), centerY + y)
+            end
+        end
+
+        renderBrailleCanvas(canvas, vterm, 0, 0, color, nil)
+        return vterm
+    end
+
+    --- Draw a polygon using Braille characters
+    --- @param points table<table<integer, integer>> -- {{x1, y1}, {x2, y2}, ...}
+    --- @param color FGColors
+    --- @param vterm VirtualTerminal
+    --- @return VirtualTerminal
+    function RMP.Draw:polygon(points, color, vterm)
+        vterm = vterm or RMP.VirtualTerminal.new()
+        if not points or #points < 3 then return vterm end
+
+        local canvas = {}
+
+        -- Draw edges
+        for i = 1, #points do
+            local p1 = points[i]
+            local p2 = points[i % #points + 1]
+
+            local x1, y1 = p1[1] * 2, p1[2] * 4
+            local x2, y2 = p2[1] * 2, p2[2] * 4
+
+            -- Bresenham's line
+            local dx = math.abs(x2 - x1)
+            local dy = math.abs(y2 - y1)
+            local sx = x1 < x2 and 1 or -1
+            local sy = y1 < y2 and 1 or -1
+            local err = dx - dy
+
+            while true do
+                setBraillePixel(canvas, x1, y1)
+                if x1 == x2 and y1 == y2 then break end
+
+                local e2 = 2 * err
+                if e2 > -dy then
+                    err = err - dy
+                    x1 = x1 + sx
+                end
+                if e2 < dx then
+                    err = err + dx
+                    y1 = y1 + sy
+                end
+            end
+        end
+
+        renderBrailleCanvas(canvas, vterm, 0, 0, color, nil)
+        return vterm
+    end
+
+    --- Draw a rounded rectangle using mixed characters
+    --- @param x integer
+    --- @param y integer
+    --- @param width integer
+    --- @param height integer
+    --- @param radius integer
+    --- @param color BGColors
+    --- @param vterm VirtualTerminal
+    --- @return VirtualTerminal
+    function RMP.Draw:roundedRectangle(x, y, width, height, radius, color, vterm)
+        vterm = vterm or RMP.VirtualTerminal.new()
+        x = math.floor(x)
+        y = math.floor(y)
+        width = math.floor(width)
+        height = math.floor(height)
+        radius = math.floor(radius or 2)
+
+        if width <= 0 or height <= 0 then return vterm end
+
+        -- Draw main rectangle body
+        for i = y + radius, y + height - radius - 1 do
+            for j = x, x + width - 1 do
+                vterm:setChar(j, i, " ", nil, color, nil)
+            end
+        end
+
+        -- Draw top and bottom strips
+        for i = y, y + radius - 1 do
+            for j = x + radius, x + width - radius - 1 do
+                vterm:setChar(j, i, " ", nil, color, nil)
+            end
+        end
+
+        for i = y + height - radius, y + height - 1 do
+            for j = x + radius, x + width - radius - 1 do
+                vterm:setChar(j, i, " ", nil, color, nil)
+            end
+        end
+
+        -- Draw corners (simplified - could use Braille for smoother curves)
+        local corners = {
+            { x + radius,             y + radius },              -- top-left
+            { x + width - radius - 1, y + radius },              -- top-right
+            { x + radius,             y + height - radius - 1 }, -- bottom-left
+            { x + width - radius - 1, y + height - radius - 1 }  -- bottom-right
+        }
+
+        for _, corner in ipairs(corners) do
+            for dy = -radius, radius do
+                for dx = -radius, radius do
+                    if dx * dx + dy * dy <= radius * radius then
+                        vterm:setChar(corner[1] + dx, corner[2] + dy, " ", nil, color, nil)
+                    end
+                end
+            end
+        end
+
         return vterm
     end
 end
