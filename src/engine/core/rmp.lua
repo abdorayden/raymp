@@ -267,6 +267,7 @@
 RMP = {}
 
 local io = require("io")
+local utf8 = require("utf8")
 
 local keyboard = require("rmp.keyboard")
 local rmpaudio = require("rmp.rmpaudio")
@@ -800,9 +801,8 @@ do
     function RMP.LoadingSpinner:nextFrame()
         local char = self.pattern[self.frameIndex]
         local text = self.prefix .. char .. self.suffix
-        for i = 1, #text do
-            self.vterm:setChar(self.x + i - 1, self.y, text:sub(i, i), self.fg, self.bg)
-        end
+
+        self.vterm:writeText(self.x, self.y, text, self.fg, self.bg)
 
         self.frameIndex = (self.frameIndex % #self.pattern) + 1
         return self
