@@ -260,6 +260,33 @@
 --			db:connect()
 --			local result = db:query("SELECT * FROM users")
 --			db:close()
+--
+--	V)- Callable Class Constructor (using __call metatable):
+--
+--		I)- Definition:
+--			local Person = OOP.class("Person")
+--			
+--			function Person:constructor(name, age)
+--			    self.name = name
+--			    self.age = age
+--			end
+--			
+--			function Person:introduce()
+--			    print(string.format("Hi, I'm %s and I'm %d years old", self.name, self.age))
+--			end
+--		
+--		II)- Usage (both syntaxes work):
+--			-- Traditional syntax with .new()
+--			local person1 = Person.new("Alice", 30)
+--			person1:introduce() -- Output: Hi, I'm Alice and I'm 30 years old
+--			
+--			-- Callable syntax (directly calling the class)
+--			local person2 = Person("Bob", 25)
+--			person2:introduce() -- Output: Hi, I'm Bob and I'm 25 years old
+--			
+--			-- Both create identical instances
+--			print("Is Person:", person1:instanceOf(Person)) -- Output: true
+--			print("Is Person:", person2:instanceOf(Person)) -- Output: true
 
 --- @module 'rmp.oop'
 local OOP = {}
@@ -293,8 +320,8 @@ function OOP.interface(name, ...)
 end
 
 --- @param name string
---- @param superClass table
---- @return table
+--- @param superClass? table
+--- @return table?
 function OOP.class(name, superClass, ...)
     local interfaces = { ... }
     local class = {
@@ -336,6 +363,13 @@ function OOP.class(name, superClass, ...)
 
         return self
     end
+
+    setmetatable(class, {
+        __index = superClass,
+        __call = function(cls, ...)
+            return cls.new(...)
+        end
+    })
 
     function class:implements(interface)
         for _, iface in ipairs(self.__interfaces) do
