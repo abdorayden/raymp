@@ -261,7 +261,72 @@
 --			local result = db:query("SELECT * FROM users")
 --			db:close()
 --
---	V)- Callable Class Constructor (using __call metatable):
+--	V)- Python-style Magic Methods (Operator Overloading):
+--
+--		I)- Definition:
+--			local Vector = OOP.class("Vector")
+--			
+--			function Vector:constructor(x, y)
+--			    self.x = x or 0
+--			    self.y = y or 0
+--			end
+--			
+--			-- Operator overloading using metamethods
+--			function Vector:__add(other)
+--			    return Vector(self.x + other.x, self.y + other.y)
+--			end
+--			
+--			function Vector:__sub(other)
+--			    return Vector(self.x - other.x, self.y - other.y)
+--			end
+--			
+--			function Vector:__mul(scalar)
+--			    if type(scalar) == "number" then
+--			        return Vector(self.x * scalar, self.y * scalar)
+--			    end
+--			    -- Dot product
+--			    return self.x * scalar.x + self.y * scalar.y
+--			end
+--			
+--			function Vector:__unm()
+--			    return Vector(-self.x, -self.y)
+--			end
+--			
+--			function Vector:__tostring()
+--			    return string.format("Vector(%d, %d)", self.x, self.y)
+--			end
+--			
+--			function Vector:__eq(other)
+--			    return self.x == other.x and self.y == other.y
+--			end
+--			
+--			function Vector:magnitude()
+--			    return math.sqrt(self.x * self.x + self.y * self.y)
+--			end
+--		
+--		II)- Usage:
+--			local v1 = Vector(3, 4)
+--			local v2 = Vector(1, 2)
+--			
+--			local v3 = v1 + v2  -- Uses __add
+--			print(v3)  -- Output: Vector(4, 6) (uses __tostring)
+--			
+--			local v4 = v1 - v2  -- Uses __sub
+--			print(v4)  -- Output: Vector(2, 2)
+--			
+--			local v5 = v1 * 2  -- Uses __mul (scalar)
+--			print(v5)  -- Output: Vector(6, 8)
+--			
+--			local dot = v1 * v2  -- Uses __mul (dot product)
+--			print("Dot product:", dot)  -- Output: 11
+--			
+--			local v6 = -v1  -- Uses __unm
+--			print(v6)  -- Output: Vector(-3, -4)
+--			
+--			print("Equal:", v1 == Vector(3, 4))  -- Uses __eq, Output: true
+--			print("Magnitude:", v1:magnitude())  -- Output: 5.0
+--
+--	VI)- Callable Class Constructor (using __call metatable):
 --
 --		I)- Definition:
 --			local Person = OOP.class("Person")
@@ -360,6 +425,23 @@ function OOP.class(name, superClass, ...)
         if self.constructor then
             self:constructor(...)
         end
+
+        local instanceMeta = { __index = class }
+        local metamethods = {
+            "__add", "__sub", "__mul", "__div", "__mod", "__pow",
+            "__unm", "__concat", "__len", "__eq", "__lt", "__le",
+            "__tostring", "__pairs", "__ipairs", "__gc", "__mode",
+            "__metatable", "__idiv", "__band", "__bor", "__bxor",
+            "__bnot", "__shl", "__shr"
+        }
+
+        for _, metaName in ipairs(metamethods) do
+            if class[metaName] then
+                instanceMeta[metaName] = class[metaName]
+            end
+        end
+
+        setmetatable(self, instanceMeta)
 
         return self
     end

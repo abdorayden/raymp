@@ -3,6 +3,7 @@ local OOP = require("rmp.oop")
 
 -- optimize all Components and create more
 
+--- @module 'rmp.components'
 local Components = {}
 
 -- TODO: table

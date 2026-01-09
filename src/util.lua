@@ -23,6 +23,7 @@
 
 -- UTIL module is a part of raymp engine modules
 
+--- @module 'rmp.util'
 UTIL = {}
 
 local OOP = require("rmp.oop")

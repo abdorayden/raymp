@@ -180,6 +180,7 @@ if ok then
     Promise = promise_module
 end
 
+--- @module 'rmp.future'
 local F = {}
 
 F.IFuture = OOP.interface("IFuture", "poll")
@@ -207,10 +208,11 @@ do
         return self._status == F.READY
     end
 
-    ---@param on_fulfilled function
+    ---@param on_fulfilled? function
     ---@param on_rejected function
     ---@return table
     function F.Future:tthen(on_fulfilled, on_rejected)
+        ---@diagnostic disable-next-line: undefined-field
         return F.ThenFuture.new(self, on_fulfilled, on_rejected)
     end
 
@@ -225,6 +227,7 @@ end
 F.ThenFuture = OOP.class("ThenFuture", F.Future)
 do
     function F.ThenFuture:constructor(future, on_fulfilled, on_rejected)
+        ---@diagnostic disable-next-line: undefined-field
         self:super("constructor")
         self._future = future
         self._on_fulfilled = on_fulfilled

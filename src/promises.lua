@@ -41,6 +41,7 @@ end
 schedule_impl = default_schedule
 
 
+--- @module 'rmp.promises'
 local Promise = {}
 Promise.__index = Promise
 

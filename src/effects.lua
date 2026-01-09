@@ -6,6 +6,7 @@ local components = require("rmp.components")
 -- rmp classes b detais
 -- components baynin swale7 khfaf
 
+--- @module 'rmp.effects'
 local Effects = {}
 
 return Effects
