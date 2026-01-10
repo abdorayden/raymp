@@ -262,7 +262,6 @@
 -- TODO: Notify
 -- TODO: Popup
 -- TODO: Menu
--- FIXME: check the backend framework management memorys
 
 RMP = {}
 
@@ -359,26 +358,26 @@ RMP.TextStyle           = {
 RMP.FGColors            = {
     --- @type table
     NoBrights = {
-        Black   = "\27[30m",
-        Red     = "\27[31m",
-        Green   = "\27[32m",
-        Yellow  = "\27[33m",
-        Blue    = "\27[34m",
-        Magenta = "\27[35m",
-        Cyan    = "\27[36m",
-        White   = "\27[37m"
+        Black   = RMP.colorFromHex("#000000", RMP.FG), --- "\27[30m"
+        Red     = RMP.colorFromHex("#ff0000", RMP.FG), --- "\27[31m"
+        Green   = RMP.colorFromHex("#00ff00", RMP.FG), --- "\27[32m"
+        Yellow  = RMP.colorFromHex("#ffff00", RMP.FG), --- "\27[33m"
+        Blue    = RMP.colorFromHex("#0000ff", RMP.FG), --- "\27[34m"
+        Magenta = RMP.colorFromHex("#ff00ff", RMP.FG), --- "\27[35m"
+        Cyan    = RMP.colorFromHex("#00ffff", RMP.FG), --- "\27[36m"
+        White   = RMP.colorFromHex("#ffffff", RMP.FG)  --- "\27[37m"
     },
     --- @type table
     Brights = {
         -- ForeGround bright
-        Black   = "\27[90m",
-        Red     = "\27[91m",
-        Green   = "\27[92m",
-        Yellow  = "\27[93m",
-        Blue    = "\27[94m",
-        Magenta = "\27[95m",
-        Cyan    = "\27[96m",
-        White   = "\27[97m"
+        Black   = RMP.colorFromHex("#808080", RMP.FG), --- "\27[90m"
+        Red     = RMP.colorFromHex("#FF5555", RMP.FG), --- "\27[91m"
+        Green   = RMP.colorFromHex("#32cd32", RMP.FG), --- "\27[92m"
+        Yellow  = RMP.colorFromHex("#ffeb3b", RMP.FG), --- "\27[93m"
+        Blue    = RMP.colorFromHex("#1e90ff", RMP.FG), --- "\27[94m"
+        Magenta = RMP.colorFromHex("#ff77ff", RMP.FG), --- "\27[95m"
+        Cyan    = RMP.colorFromHex("#7fffd4", RMP.FG), --- "\27[96m"
+        White   = RMP.colorFromHex("#f4f4f4", RMP.FG)  --- "\27[97m"
     }
 }
 
@@ -387,26 +386,26 @@ RMP.FGColors            = {
 RMP.BGColors            = {
     --- @type table
     NoBrights = {
-        Black   = "\27[40m",
-        Red     = "\27[41m",
-        Green   = "\27[42m",
-        Yellow  = "\27[43m",
-        Blue    = "\27[44m",
-        Magenta = "\27[45m",
-        Cyan    = "\27[46m",
-        White   = "\27[47m"
+        Black   = RMP.colorFromHex("#000000", RMP.BG), --- "\27[40m"
+        Red     = RMP.colorFromHex("#ff0000", RMP.BG), --- "\27[41m"
+        Green   = RMP.colorFromHex("#00ff00", RMP.BG), --- "\27[42m"
+        Yellow  = RMP.colorFromHex("#ffff00", RMP.BG), --- "\27[43m"
+        Blue    = RMP.colorFromHex("#0000ff", RMP.BG), --- "\27[44m"
+        Magenta = RMP.colorFromHex("#ff00ff", RMP.BG), --- "\27[45m"
+        Cyan    = RMP.colorFromHex("#00ffff", RMP.BG), --- "\27[46m"
+        White   = RMP.colorFromHex("#ffffff", RMP.BG)  --- "\27[47m"
     },
     --- @type table
     Brights = {
         -- BackGround bright
-        Black   = "\27[100m",
-        Red     = "\27[101m",
-        Green   = "\27[102m",
-        Yellow  = "\27[103m",
-        Blue    = "\27[104m",
-        Magenta = "\27[105m",
-        Cyan    = "\27[106m",
-        White   = "\27[107m"
+        Black   = RMP.colorFromHex("#808080", RMP.BG), --- "\27[100m"
+        Red     = RMP.colorFromHex("#FF5555", RMP.BG), --- "\27[101m"
+        Green   = RMP.colorFromHex("#32cd32", RMP.BG), --- "\27[102m"
+        Yellow  = RMP.colorFromHex("#ffeb3b", RMP.BG), --- "\27[103m"
+        Blue    = RMP.colorFromHex("#1e90ff", RMP.BG), --- "\27[104m"
+        Magenta = RMP.colorFromHex("#ff77ff", RMP.BG), --- "\27[105m"
+        Cyan    = RMP.colorFromHex("#7fffd4", RMP.BG), --- "\27[106m"
+        White   = RMP.colorFromHex("#f4f4f4", RMP.BG)  --- "\27[107m"
     }
 }
 -- Imojis
@@ -831,16 +830,118 @@ do -- color from hex
     --- @type string
     RMP.BG = "48"
 
-    --- @param hex string
-    --- @param fg_or_bg string
-    --- @return string
+    --- colorFromHex({ 255, 255, 255 })
+    --- colorFromHex({ r = 255, g = 255, b = 255 })
+    --- colorFromHex(0xffffff)
+    --- colorFromHex("#ffffff")
+    --- colorFromHex("ffffff")
+    --- @param hex string|table|number
+    --- @param fg_or_bg string|nil
+    --- @return string|nil
     function RMP.colorFromHex(hex, fg_or_bg)
         local fb = fg_or_bg or "38"
-        if hex:sub(1, 1) == "#" then
-            hex = hex:sub(2)
+        if type(hex) == "string" then
+            if hex:sub(1, 1) == "#" then
+                hex = hex:sub(2)
+            end
+            local r, g, b = tonumber(hex:sub(1, 2), 16), tonumber(hex:sub(3, 4), 16), tonumber(hex:sub(5, 6), 16)
+            return string.format("\27[%s;2;%d;%d;%dm", fb, r, g, b)
+        elseif type(hex) == "number" then
+            local r = math.floor(hex / 65536) % 256
+            local g = math.floor(hex / 256) % 256
+            local b = hex % 256
+            return string.format("\27[%s;2;%d;%d;%dm", fb, r, g, b)
+        elseif type(hex) == "table" and #hex == 3 then
+            return string.format("\27[%s;2;%d;%d;%dm", fb, hex.r or hex[1] or 0, hex.g or hex[2] or 0,
+                hex.b or hex[3] or 0
+            )
         end
-        local r, g, b = tonumber(hex:sub(1, 2), 16), tonumber(hex:sub(3, 4), 16), tonumber(hex:sub(5, 6), 16)
-        return string.format("\27[%s;2;%d;%d;%dm", fb, r, g, b)
+        return nil
+    end
+
+    --- colorFromHex(addHexColors("#ff00ff" , "#001818"))
+    --- @param hex1 string
+    --- @param hex2 string
+    --- @return string
+    function RMP.addHexColors(hex1, hex2)
+        local r = math.min(tonumber(hex1:sub(2, 3), 16) + tonumber(hex2:sub(2, 3), 16), 255)
+        local g = math.min(tonumber(hex1:sub(4, 5), 16) + tonumber(hex2:sub(4, 5), 16), 255)
+        local b = math.min(tonumber(hex1:sub(6, 7), 16) + tonumber(hex2:sub(6, 7), 16), 255)
+        return string.format("#%02x%02x%02x", r, g, b)
+    end
+
+    --- colorFromHsv(360 , 100 , 100 , FG)
+    --- h: 0-360 degrees
+    --- s: 0-100 percentage
+    --- v: 0-100 percentage
+    --- Returns: "#rrggbb" color
+    ---
+    --- https://fr.wikipedia.org/wiki/Teinte_saturation_lumi%C3%A8re
+    ---
+    --- the formula is :
+    ---
+    ---     step1: normalize our hsv values
+    ---         h : 0 -> 360 => h%360 : 0 -> 360
+    ---         s : 0 -> 100 => s/100 : 0 -> 1
+    ---         v : 0 -> 100 => v/100 : 0 -> 1
+    ---
+    ---     step2: calculate c , x , m
+    ---         c = (normalized_v) * (normalized_s)
+    ---         x = c * (1 - |(((normalized_h) / 60) mod 2) - 1|)
+    ---         m = (normalized_v) - c
+    ---
+    ---     step3: check our hue to choose our temporary r1 , g2 , b3 values
+    --          if hue < 60 then        r1, g1, b1 = c, x, 0
+    --          elseif hue < 120 then   r1, g1, b1 = x, c, 0
+    --          elseif hue < 180 then   r1, g1, b1 = 0, c, x
+    --          elseif hue < 240 then   r1, g1, b1 = 0, x, c
+    --          elseif hue < 300 then   r1, g1, b1 = x, 0, c
+    --          else                    r1, g1, b1 = c, 0, x
+    --
+    --      step4: calculate our rgb values and make sure that the values between 0 to 255
+    --          r = max(0, min(255, floor((r1 + m) * 255 + 0.5)))
+    --          g = max(0, min(255, floor((g1 + m) * 255 + 0.5)))
+    --          b = max(0, min(255, floor((b1 + m) * 255 + 0.5)))
+    ---
+    --- NOTE: go to `To RGB` title to find converting formula
+    --- https://en.wikipedia.org/wiki/HSL_and_HSV
+    ---
+    --- @param h number
+    --- @param s number
+    --- @param v number
+    --- @param fg_or_bg string
+    --- @return string|nil
+    function RMP.colorFromHsv(h, s, v, fg_or_bg)
+        local h_deg = h % 360
+        local s_norm = s / 100
+        local v_norm = v / 100
+
+        local c = v_norm * s_norm
+        local x = c * (1 - math.abs((h_deg / 60) % 2 - 1))
+        local m = v_norm - c
+
+        local r1, g1, b1
+
+        -- 360/6 => 0 to 6 from wikipedia formula
+        if h_deg < 60 then
+            r1, g1, b1 = c, x, 0
+        elseif h_deg < 120 then
+            r1, g1, b1 = x, c, 0
+        elseif h_deg < 180 then
+            r1, g1, b1 = 0, c, x
+        elseif h_deg < 240 then
+            r1, g1, b1 = 0, x, c
+        elseif h_deg < 300 then
+            r1, g1, b1 = x, 0, c
+        else
+            r1, g1, b1 = c, 0, x
+        end
+
+        local r = math.max(0, math.min(255, math.floor((r1 + m) * 255 + 0.5)))
+        local g = math.max(0, math.min(255, math.floor((g1 + m) * 255 + 0.5)))
+        local b = math.max(0, math.min(255, math.floor((b1 + m) * 255 + 0.5)))
+
+        return RMP.colorFromHex(string.format("#%02x%02x%02x", r, g, b), fg_or_bg)
     end
 end
 
@@ -889,7 +990,6 @@ end
 RMP.Text = OOP.class("Text", nil, RMP.Renderable)
 do -- text
     -- constructor
-    -- TODO: fix the error
     --- @param text string
     --- @param style TextStyle
     --- @param fg FGColors
@@ -1368,8 +1468,6 @@ do
             end
         end
 
-        -- TODO: make sure that processTransformDataEvents is working fine with complicated cases
-
         local put_queue = self.events:get(RMP.EventType.TransformDataPut)
         local get_queue = self.events:get(RMP.EventType.TransformDataGet)
 
@@ -1683,6 +1781,17 @@ do -- VirtualTerminal
         return self.native_vt_rmp
     end
 
+    ---  vt + vt1
+    --- similare to  vt:merge(vt1)
+    --- local _ = vt + vt1
+    --- similare to local _ = vt:merge(vt1)
+    --- @param thatTerm VirtualTerminal
+    --- @return self
+    function RMP.VirtualTerminal:__add(thatTerm)
+        -- NOTE: if u want to distroy the terminal just use meger method
+        return self:merge(thatTerm)
+    end
+
     -- these methods are used to merge two virtual terminal
     -- if there is no way to pass vterm object to function parameters
     -- so you can merge the other virtual terminal to the main object
@@ -1690,6 +1799,7 @@ do -- VirtualTerminal
     --- @param distroy boolean | nil
     --- @param offsetX integer | nil
     --- @param offsetY integer | nil
+    --- @return self
     function RMP.VirtualTerminal:merge(thatTerm, distroy, offsetX, offsetY)
         --- @diagnostic disable-next-line
         if thatTerm and thatTerm:instanceOf(RMP.VirtualTerminal) then
@@ -1746,6 +1856,7 @@ do -- VirtualTerminal
         if distroy then
             thatTerm:distroy()
         end
+        return self
     end
 
     --- @param thoseTerms table
@@ -1754,6 +1865,7 @@ do -- VirtualTerminal
         for i = 1, #thoseTerms do
             self:merge(thoseTerms[i].thatTerm, distroy, thoseTerms[i].offsetX, thoseTerms[i].offsetY)
         end
+        return self
     end
 
     function RMP.VirtualTerminal:copy()
@@ -2752,7 +2864,6 @@ do
     end
 end
 
---- TODO: use the same way i handled BRAILLE to Spinners class and use builtin utf8 just like i did in Draw class
 --- enhanced draw class using unicode block characters for better resolution
 --- uses half-block characters (▀▄█) and quarter-block characters for sub-pixel rendering
 --- @class Draw
@@ -2846,8 +2957,8 @@ do -- Draw
     --- @param vterm VirtualTerminal
     --- @param offset_x integer
     --- @param offset_y integer
-    --- @param fg_color FGColors
-    --- @param bg_color BGColors
+    --- @param fg_color? FGColors
+    --- @param bg_color? BGColors
     local function renderBrailleCanvas(canvas, vterm, offset_x, offset_y, fg_color, bg_color)
         for char_y, row in pairs(canvas) do
             for char_x, dots in pairs(row) do
@@ -2881,7 +2992,7 @@ do -- Draw
         width = math.floor(width)
         height = math.floor(height)
 
-        vterm = vterm or RMP.VirtualTerminal.new()
+        vterm = vterm or RMP.VirtualTerminal()
 
         -- Use full block for solid fill
         for i = y, y + height - 1 do
@@ -2905,7 +3016,7 @@ do -- Draw
 
         centerX = math.floor(centerX or 0)
         centerY = math.floor(centerY or 0)
-        vterm = vterm or RMP.VirtualTerminal.new()
+        vterm = vterm or RMP.VirtualTerminal()
 
         -- Use Braille for high-resolution circle
         -- Each character cell is 2x4 pixels in Braille
@@ -2944,7 +3055,7 @@ do -- Draw
 
         centerX = math.floor(centerX or 0)
         centerY = math.floor(centerY or 0)
-        vterm = vterm or RMP.VirtualTerminal.new()
+        vterm = vterm or RMP.VirtualTerminal()
 
         -- Use half-block characters for vertical sub-pixel precision
         local r_doubled = r * 2 -- Since we have 2 vertical pixels per cell
@@ -2974,6 +3085,7 @@ do -- Draw
                 local top_filled = dist_top_sq <= r * r
                 local bottom_filled = dist_bottom_sq <= r * r
 
+                --- @type string|nil
                 local char = " "
                 if top_filled and bottom_filled then
                     char = BLOCK_CHARS.FULL
@@ -3009,7 +3121,7 @@ do -- Draw
     --- @param vterm VirtualTerminal
     --- @return VirtualTerminal
     function RMP.Draw:triangle(height, pos_x, pos_y, color, vterm)
-        vterm = vterm or RMP.VirtualTerminal.new()
+        vterm = vterm or RMP.VirtualTerminal()
         height = math.floor(height)
         if height <= 0 then return vterm end
 
@@ -3040,7 +3152,7 @@ do -- Draw
     --- @param vterm VirtualTerminal
     --- @return VirtualTerminal
     function RMP.Draw:triangleFilled(height, pos_x, pos_y, color, vterm)
-        vterm = vterm or RMP.VirtualTerminal.new()
+        vterm = vterm or RMP.VirtualTerminal()
         height = math.floor(height)
         if height <= 0 then return vterm end
 
@@ -3058,6 +3170,7 @@ do -- Draw
                 local in_top = math.abs(x) <= width_top
                 local in_bottom = math.abs(x) <= width_bottom
 
+                --- @type string|nil
                 local char = " "
                 if in_top and in_bottom then
                     char = BLOCK_CHARS.FULL
@@ -3093,7 +3206,7 @@ do -- Draw
     --- @param vterm VirtualTerminal
     --- @return VirtualTerminal
     function RMP.Draw:line(x, y, width, color, vterm)
-        vterm = vterm or RMP.VirtualTerminal.new()
+        vterm = vterm or RMP.VirtualTerminal()
         if not width or width <= 0 then return vterm end
 
         x = math.floor(x)
@@ -3116,7 +3229,7 @@ do -- Draw
     --- @param vterm VirtualTerminal
     --- @return VirtualTerminal
     function RMP.Draw:lineDiagonal(x1, y1, x2, y2, color, vterm)
-        vterm = vterm or RMP.VirtualTerminal.new()
+        vterm = vterm or RMP.VirtualTerminal()
 
         local canvas = {}
 
@@ -3158,7 +3271,7 @@ do -- Draw
     --- @param vterm VirtualTerminal
     --- @return VirtualTerminal
     function RMP.Draw:column(x, y, height, color, vterm)
-        vterm = vterm or RMP.VirtualTerminal.new()
+        vterm = vterm or RMP.VirtualTerminal()
         if not height or height <= 0 then return vterm end
 
         x = math.floor(x)
@@ -3181,7 +3294,7 @@ do -- Draw
     --- @param vterm VirtualTerminal
     --- @return VirtualTerminal
     function RMP.Draw:ellipse(centerX, centerY, radiusX, radiusY, color, vterm)
-        vterm = vterm or RMP.VirtualTerminal.new()
+        vterm = vterm or RMP.VirtualTerminal()
         radiusX = math.floor(radiusX or 5)
         radiusY = math.floor(radiusY or 3)
         if radiusX <= 0 or radiusY <= 0 then return vterm end
@@ -3212,7 +3325,7 @@ do -- Draw
     --- @param vterm VirtualTerminal
     --- @return VirtualTerminal
     function RMP.Draw:polygon(points, color, vterm)
-        vterm = vterm or RMP.VirtualTerminal.new()
+        vterm = vterm or RMP.VirtualTerminal()
         if not points or #points < 3 then return vterm end
 
         local canvas = {}
@@ -3262,7 +3375,7 @@ do -- Draw
     --- @param vterm VirtualTerminal
     --- @return VirtualTerminal
     function RMP.Draw:roundedRectangle(x, y, width, height, radius, color, vterm)
-        vterm = vterm or RMP.VirtualTerminal.new()
+        vterm = vterm or RMP.VirtualTerminal()
         x = math.floor(x)
         y = math.floor(y)
         width = math.floor(width)
@@ -4211,6 +4324,13 @@ do -- Path
         self.path = path or self:getCurrentPath()
     end
 
+    -- local path = Path()
+    -- local other_path = path + "foo"
+    -- other_path:getPath()
+    function RMP.Path:__add(p)
+        return RMP.Path(RMP.Path.joinPath(self:getPath(), p))
+    end
+
     --- @param path string
     function RMP.Path:setPath(path)
         self.path = path
@@ -4314,7 +4434,8 @@ do -- Path
             match_func = function(name) return name == pattern end
         end
 
-        search_recursive = function(current_path, current_depth)
+        ---@diagnostic disable-next-line: lowercase-global
+        function search_recursive(current_path, current_depth)
             if max_depth >= 0 and current_depth > max_depth then
                 return
             end
@@ -4338,7 +4459,6 @@ do -- Path
                     (is_file_pattern and info.is_file) or
                     (not is_file_pattern and not info.is_file)
 
-                -- TODO: check match_func
                 --- @diagnostic disable-next-line
                 if should_check and match_func(info.name, info.is_file, full_path) then
                     table.insert(results, {
@@ -4666,7 +4786,7 @@ do
 
     --- @return integer | nil , string | nil
     function RMP.Socket:sendto(packet, host, port)
-        -- TODO: check if the packet is instace of Packet
+        -- TODO: check if the packet is instance of Packet
         if packet:instanceOf(RMP.Packet) then
             packet = packet:getReadableSocketByte()
         end
