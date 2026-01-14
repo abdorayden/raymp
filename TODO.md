@@ -41,3 +41,5 @@
 - [ ] create C api to communicate with engine vt 
 - [ ] add effects check : https://github.com/junkdog/tachyonfx.git
 - [ ] create separit module rmp.components and move table , code , menu and more to it
+- [ ] allow embed external apps to my tui rendrer
+- [ ] fix seg fault that happen when i call virtualterminal methods inside sound event
