@@ -426,6 +426,7 @@ function OOP.class(name, superClass, ...)
             self:constructor(...)
         end
 
+        --- @type string[]
         local instanceMeta = { __index = class }
         local metamethods = {
             "__add", "__sub", "__mul", "__div", "__mod", "__pow",
