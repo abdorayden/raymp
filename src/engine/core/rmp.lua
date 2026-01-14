@@ -322,14 +322,14 @@ do -- os detection
     end
 end
 
-RMP.quickRoutine        = function(func)
+RMP.quickRoutine = function(func)
     return coroutine.create(func)
 end
 
 -- check ansi escape code : https://en.wikipedia.org/wiki/ANSI_escape_code
 -- line style
 --- @enum TextStyle
-RMP.TextStyle           = {
+RMP.TextStyle    = {
     Strike              = "\27[9m",
     Hide                = "\27[8m",
     SlowBlink           = "\27[5m",
@@ -351,6 +351,126 @@ RMP.TextStyle           = {
 }
 
 -- colors
+
+--- @type string
+RMP.FG           = "38"
+--- @type string
+RMP.BG           = "48"
+
+--- colorFromHex({ 255, 255, 255 })
+--- colorFromHex({ r = 255, g = 255, b = 255 })
+--- colorFromHex(0xffffff)
+--- colorFromHex("#ffffff")
+--- colorFromHex("ffffff")
+--- @param hex string|table|number
+--- @param fg_or_bg string|nil
+--- @return string|nil
+function RMP.colorFromHex(hex, fg_or_bg)
+    local fb = fg_or_bg or "38"
+    if type(hex) == "string" then
+        if hex:sub(1, 1) == "#" then
+            hex = hex:sub(2)
+        end
+        local r, g, b = tonumber(hex:sub(1, 2), 16), tonumber(hex:sub(3, 4), 16), tonumber(hex:sub(5, 6), 16)
+        return string.format("\27[%s;2;%d;%d;%dm", fb, r, g, b)
+    elseif type(hex) == "number" then
+        local r = math.floor(hex / 65536) % 256
+        local g = math.floor(hex / 256) % 256
+        local b = hex % 256
+        return string.format("\27[%s;2;%d;%d;%dm", fb, r, g, b)
+    elseif type(hex) == "table" and #hex == 3 then
+        return string.format("\27[%s;2;%d;%d;%dm", fb, hex.r or hex[1] or 0, hex.g or hex[2] or 0,
+            hex.b or hex[3] or 0
+        )
+    end
+    return nil
+end
+
+--- colorFromHex(addHexColors("#ff00ff" , "#001818"))
+--- @param hex1 string
+--- @param hex2 string
+--- @return string
+function RMP.addHexColors(hex1, hex2)
+    local r = math.min(tonumber(hex1:sub(2, 3), 16) + tonumber(hex2:sub(2, 3), 16), 255)
+    local g = math.min(tonumber(hex1:sub(4, 5), 16) + tonumber(hex2:sub(4, 5), 16), 255)
+    local b = math.min(tonumber(hex1:sub(6, 7), 16) + tonumber(hex2:sub(6, 7), 16), 255)
+    return string.format("#%02x%02x%02x", r, g, b)
+end
+
+--- colorFromHsv(360 , 100 , 100 , FG)
+--- h: 0-360 degrees
+--- s: 0-100 percentage
+--- v: 0-100 percentage
+--- Returns: "#rrggbb" color
+---
+--- https://fr.wikipedia.org/wiki/Teinte_saturation_lumi%C3%A8re
+---
+--- the formula is :
+---
+---     step1: normalize our hsv values
+---         h : 0 -> 360 => h%360 : 0 -> 360
+---         s : 0 -> 100 => s/100 : 0 -> 1
+---         v : 0 -> 100 => v/100 : 0 -> 1
+---
+---     step2: calculate c , x , m
+---         c = (normalized_v) * (normalized_s)
+---         x = c * (1 - |(((normalized_h) / 60) mod 2) - 1|)
+---         m = (normalized_v) - c
+---
+---     step3: check our hue to choose our temporary r1 , g2 , b3 values
+--          if hue < 60 then        r1, g1, b1 = c, x, 0
+--          elseif hue < 120 then   r1, g1, b1 = x, c, 0
+--          elseif hue < 180 then   r1, g1, b1 = 0, c, x
+--          elseif hue < 240 then   r1, g1, b1 = 0, x, c
+--          elseif hue < 300 then   r1, g1, b1 = x, 0, c
+--          else                    r1, g1, b1 = c, 0, x
+--
+--      step4: calculate our rgb values and make sure that the values between 0 to 255
+--          r = max(0, min(255, floor((r1 + m) * 255 + 0.5)))
+--          g = max(0, min(255, floor((g1 + m) * 255 + 0.5)))
+--          b = max(0, min(255, floor((b1 + m) * 255 + 0.5)))
+---
+--- NOTE: go to `To RGB` title to find converting formula
+--- https://en.wikipedia.org/wiki/HSL_and_HSV
+---
+--- @param h number
+--- @param s number
+--- @param v number
+--- @param fg_or_bg string
+--- @return string|nil
+function RMP.colorFromHsv(h, s, v, fg_or_bg)
+    local h_deg = h % 360
+    local s_norm = s / 100
+    local v_norm = v / 100
+
+    local c = v_norm * s_norm
+    local x = c * (1 - math.abs((h_deg / 60) % 2 - 1))
+    local m = v_norm - c
+
+    local r1, g1, b1
+
+    -- 360/6 => 0 to 6 from wikipedia formula
+    if h_deg < 60 then
+        r1, g1, b1 = c, x, 0
+    elseif h_deg < 120 then
+        r1, g1, b1 = x, c, 0
+    elseif h_deg < 180 then
+        r1, g1, b1 = 0, c, x
+    elseif h_deg < 240 then
+        r1, g1, b1 = 0, x, c
+    elseif h_deg < 300 then
+        r1, g1, b1 = x, 0, c
+    else
+        r1, g1, b1 = c, 0, x
+    end
+
+    local r = math.max(0, math.min(255, math.floor((r1 + m) * 255 + 0.5)))
+    local g = math.max(0, math.min(255, math.floor((g1 + m) * 255 + 0.5)))
+    local b = math.max(0, math.min(255, math.floor((b1 + m) * 255 + 0.5)))
+
+    return RMP.colorFromHex(string.format("#%02x%02x%02x", r, g, b), fg_or_bg)
+end
+
 -- TODO: handle colors using ColorFromHex
 
 -- ForeGround
@@ -408,6 +528,9 @@ RMP.BGColors            = {
         White   = RMP.colorFromHex("#f4f4f4", RMP.BG)  --- "\27[107m"
     }
 }
+
+RMP.Default             = "\27[0m"
+
 -- Imojis
 RMP.File_pos            = "➯"
 RMP.Pause_start         = "⏯"
@@ -823,129 +946,6 @@ do
         return self.pattern
     end
 end
-
-do -- color from hex
-    --- @type string
-    RMP.FG = "38"
-    --- @type string
-    RMP.BG = "48"
-
-    --- colorFromHex({ 255, 255, 255 })
-    --- colorFromHex({ r = 255, g = 255, b = 255 })
-    --- colorFromHex(0xffffff)
-    --- colorFromHex("#ffffff")
-    --- colorFromHex("ffffff")
-    --- @param hex string|table|number
-    --- @param fg_or_bg string|nil
-    --- @return string|nil
-    function RMP.colorFromHex(hex, fg_or_bg)
-        local fb = fg_or_bg or "38"
-        if type(hex) == "string" then
-            if hex:sub(1, 1) == "#" then
-                hex = hex:sub(2)
-            end
-            local r, g, b = tonumber(hex:sub(1, 2), 16), tonumber(hex:sub(3, 4), 16), tonumber(hex:sub(5, 6), 16)
-            return string.format("\27[%s;2;%d;%d;%dm", fb, r, g, b)
-        elseif type(hex) == "number" then
-            local r = math.floor(hex / 65536) % 256
-            local g = math.floor(hex / 256) % 256
-            local b = hex % 256
-            return string.format("\27[%s;2;%d;%d;%dm", fb, r, g, b)
-        elseif type(hex) == "table" and #hex == 3 then
-            return string.format("\27[%s;2;%d;%d;%dm", fb, hex.r or hex[1] or 0, hex.g or hex[2] or 0,
-                hex.b or hex[3] or 0
-            )
-        end
-        return nil
-    end
-
-    --- colorFromHex(addHexColors("#ff00ff" , "#001818"))
-    --- @param hex1 string
-    --- @param hex2 string
-    --- @return string
-    function RMP.addHexColors(hex1, hex2)
-        local r = math.min(tonumber(hex1:sub(2, 3), 16) + tonumber(hex2:sub(2, 3), 16), 255)
-        local g = math.min(tonumber(hex1:sub(4, 5), 16) + tonumber(hex2:sub(4, 5), 16), 255)
-        local b = math.min(tonumber(hex1:sub(6, 7), 16) + tonumber(hex2:sub(6, 7), 16), 255)
-        return string.format("#%02x%02x%02x", r, g, b)
-    end
-
-    --- colorFromHsv(360 , 100 , 100 , FG)
-    --- h: 0-360 degrees
-    --- s: 0-100 percentage
-    --- v: 0-100 percentage
-    --- Returns: "#rrggbb" color
-    ---
-    --- https://fr.wikipedia.org/wiki/Teinte_saturation_lumi%C3%A8re
-    ---
-    --- the formula is :
-    ---
-    ---     step1: normalize our hsv values
-    ---         h : 0 -> 360 => h%360 : 0 -> 360
-    ---         s : 0 -> 100 => s/100 : 0 -> 1
-    ---         v : 0 -> 100 => v/100 : 0 -> 1
-    ---
-    ---     step2: calculate c , x , m
-    ---         c = (normalized_v) * (normalized_s)
-    ---         x = c * (1 - |(((normalized_h) / 60) mod 2) - 1|)
-    ---         m = (normalized_v) - c
-    ---
-    ---     step3: check our hue to choose our temporary r1 , g2 , b3 values
-    --          if hue < 60 then        r1, g1, b1 = c, x, 0
-    --          elseif hue < 120 then   r1, g1, b1 = x, c, 0
-    --          elseif hue < 180 then   r1, g1, b1 = 0, c, x
-    --          elseif hue < 240 then   r1, g1, b1 = 0, x, c
-    --          elseif hue < 300 then   r1, g1, b1 = x, 0, c
-    --          else                    r1, g1, b1 = c, 0, x
-    --
-    --      step4: calculate our rgb values and make sure that the values between 0 to 255
-    --          r = max(0, min(255, floor((r1 + m) * 255 + 0.5)))
-    --          g = max(0, min(255, floor((g1 + m) * 255 + 0.5)))
-    --          b = max(0, min(255, floor((b1 + m) * 255 + 0.5)))
-    ---
-    --- NOTE: go to `To RGB` title to find converting formula
-    --- https://en.wikipedia.org/wiki/HSL_and_HSV
-    ---
-    --- @param h number
-    --- @param s number
-    --- @param v number
-    --- @param fg_or_bg string
-    --- @return string|nil
-    function RMP.colorFromHsv(h, s, v, fg_or_bg)
-        local h_deg = h % 360
-        local s_norm = s / 100
-        local v_norm = v / 100
-
-        local c = v_norm * s_norm
-        local x = c * (1 - math.abs((h_deg / 60) % 2 - 1))
-        local m = v_norm - c
-
-        local r1, g1, b1
-
-        -- 360/6 => 0 to 6 from wikipedia formula
-        if h_deg < 60 then
-            r1, g1, b1 = c, x, 0
-        elseif h_deg < 120 then
-            r1, g1, b1 = x, c, 0
-        elseif h_deg < 180 then
-            r1, g1, b1 = 0, c, x
-        elseif h_deg < 240 then
-            r1, g1, b1 = 0, x, c
-        elseif h_deg < 300 then
-            r1, g1, b1 = x, 0, c
-        else
-            r1, g1, b1 = c, 0, x
-        end
-
-        local r = math.max(0, math.min(255, math.floor((r1 + m) * 255 + 0.5)))
-        local g = math.max(0, math.min(255, math.floor((g1 + m) * 255 + 0.5)))
-        local b = math.max(0, math.min(255, math.floor((b1 + m) * 255 + 0.5)))
-
-        return RMP.colorFromHex(string.format("#%02x%02x%02x", r, g, b), fg_or_bg)
-    end
-end
-
-RMP.Default = "\27[0m"
 
 -- TODO: for a moment
 --- @deprecated
