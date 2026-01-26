@@ -1329,6 +1329,7 @@ end
 -- EventType used to define the type of event
 -- each plugin can add event listener for a specific event type
 -- and when the event is triggered the callback function is called
+-- TODO: rename it to TunnelType
 --- @enum EventType
 RMP.EventType = {
     -- TODO: add event special for audio engine , for better controle
@@ -1359,7 +1360,11 @@ RMP.EventType = {
     --- @type integer
     Configuration = RMP.enum(), -- get access to the configurations also save a new configuration (cfg for plugins)
     --- @type integer
-    Template = RMP.enum()       -- Template Event to apply changes to the template
+    Template = RMP.enum(),      -- Template Event to apply changes to the template
+    Frame = RMP.enum(),         -- Frame Event (or actually a tunnel) is a main rendered frame so plugins have access to it
+    -- TODO: add data freq table tunnel to access it
+    DataFreq = RMP.enum()
+    -- TODO: add on exit event
 }
 
 --- @interface Event
@@ -1391,6 +1396,10 @@ do
 
         self.events:put(RMP.EventType.Template, Queue.new())
 
+        self.events:put(RMP.EventType.Frame, Queue.new())
+        -- callback : fun(data)
+        self.events:put(RMP.EventType.DataFreq, Queue.new())
+
         return self
     end
 
@@ -1407,6 +1416,28 @@ do
         end
 
         return self
+    end
+
+    function RMP.EventListener:useTunnel(event, callback)
+        return self:addEventListener(event, callback)
+    end
+
+    function RMP.EventListener:onDataGet(callback)
+        self:useTunnel(RMP.EventType.TransformDataGet, callback)
+    end
+
+    function RMP.EventListener:onDataPut(callback)
+        self:useTunnel(RMP.EventType.TransformDataPut, callback)
+    end
+
+    function RMP.EventListener:onDataFreq(callback)
+        --- @diagnostic disable-next-line
+        return self:addEventListener(RMP.EventType.DataFreq, callback)
+    end
+
+    function RMP.EventListener:onFrame(callback)
+        --- @diagnostic disable-next-line
+        return self:addEventListener(RMP.EventType.Frame, callback)
     end
 
     --- @param callback function
@@ -1451,12 +1482,28 @@ do
     --- @param config HashMap
     --- @param template table
     --- @return EventListener | nil
-    function RMP.EventListener:handleEvent(key, mouse, sound, config, template)
+    function RMP.EventListener:handleEvent(key, mouse, sound, config, template, frame, datafreq)
         local _template = self.events:get(RMP.EventType.Template)
         while not _template:isEmpty() do
             local template_callback = _template:pop()
             if template_callback and type(template_callback) == 'function' then
                 template_callback(template)
+            end
+        end
+
+        local dataFreqQueue = self.events:get(RMP.EventType.DataFreq)
+        while not dataFreqQueue:isEmpty() do
+            local dataFreqCallback = dataFreqQueue:pop()
+            if dataFreqCallback and type(dataFreqCallback) == 'function' then
+                dataFreqCallback(datafreq)
+            end
+        end
+
+        local frameQueue = self.events:get(RMP.EventType.Frame)
+        while not frameQueue:isEmpty() do
+            local frameCallback = frameQueue:pop()
+            if frameCallback and type(frameCallback) == 'function' then
+                frameCallback(frame)
             end
         end
 
@@ -1586,9 +1633,9 @@ do -- VirtualTerminal
     --- @param y integer
     --- @param text string
     --- @param width integer
-    --- @param fg FGColors
-    --- @param bg BGColors
-    --- @param style TextStyle
+    --- @param fg FGColors | nil
+    --- @param bg BGColors | nil
+    --- @param style TextStyle | nil
     --- @return VirtualTerminal | nil
     function RMP.VirtualTerminal:writeTextClipped(x, y, text, width, fg, bg, style)
         if not text then
@@ -1682,27 +1729,16 @@ do -- VirtualTerminal
         local end_x = math.min(x + width - 1, self.realWidth)
         local end_y = math.min(y + height - 1, self.realHeight)
 
-
-        self:setChar(x, y, TL, fg, bg)
-        self:setChar(end_x, y, TR, fg, bg)
-        self:setChar(x, end_y, BL, fg, bg)
-        self:setChar(end_x, end_y, BR, fg, bg)
-
-        for i = x + 1, end_x - 1 do
-            self:setChar(i, y, H, fg, bg)
-            self:setChar(i, end_y, H, fg, bg)
-        end
-
+        self:writeText(x, y, TL .. string.rep(H, end_x - x - 1) .. TR, fg, bg)
+        self:writeText(x, end_y, BL .. string.rep(H, end_x - x - 1) .. BR, fg, bg)
         for i = y + 1, end_y - 1 do
-            self:setChar(x, i, V, fg, bg)
-            self:setChar(end_x, i, V, fg, bg)
+            self:writeText(x, i, V, fg, bg)
+            self:writeText(end_x, i, V, fg, bg)
+        end
+        for i = y + 1, end_y - 1 do
+            self:writeText(x + 1, i, string.rep(" ", end_x - x - 1), nil, bg)
         end
 
-        for i = y + 1, end_y - 1 do
-            for j = x + 1, end_x - 1 do
-                self:setChar(j, i, " ", nil, bg)
-            end
-        end
         --- @type string
         local title_text = ""
         local title_fg = nil
@@ -1810,6 +1846,14 @@ do -- VirtualTerminal
             if event:instanceOf(HashMap) then
                 --- @diagnostic disable-next-line
                 local myevent = self:getEvent()
+
+                while not event:get(RMP.EventType.DataFreq):isEmpty() do
+                    myevent:get(RMP.EventType.DataFreq):push(event:get(RMP.EventType.DataFreq):pop())
+                end
+
+                while not event:get(RMP.EventType.Frame):isEmpty() do
+                    myevent:get(RMP.EventType.Frame):push(event:get(RMP.EventType.Frame):pop())
+                end
 
                 while not event:get(RMP.EventType.Focuse):isEmpty() do
                     myevent:get(RMP.EventType.Focuse):push(event:get(RMP.EventType.Focuse):pop())
@@ -1976,7 +2020,7 @@ do
     --- @param width number
     --- @param defaultText string
     --- @param cancelKey integer
-    function RMP.Input:constructor(label, x, y, width, defaultText, cancelKey)
+    function RMP.Input:constructor(label, x, y, width, defaultText, cancelKey, fg, bg)
         self.label = label or ""
         self.x = math.max(1, tonumber(x) or 1)
         self.y = math.max(1, tonumber(y) or 1)
@@ -1994,6 +2038,9 @@ do
         self.scroll_offset = 0
         --- @type number
         self.max_visible_chars = self.width - #self.label - 3
+
+        self.fg = fg
+        self.bg = bg
     end
 
     --- @param key integer
@@ -2170,7 +2217,7 @@ do
     --- @overload fun()
     function RMP.Input:render()
         self.vterm:clear()
-        self.vterm:writeText(self.x, self.y, self.label)
+        self.vterm:writeText(self.x, self.y, self.label, self.fg, self.bg)
 
         local visible_width = self.max_visible_chars
 
@@ -2182,14 +2229,14 @@ do
         --- @diagnostic disable-next-line
         displayText = displayText .. string.rep(" ", math.max(0, visible_width - #displayText))
 
-        self.vterm:writeText(self.x + #self.label, self.y, displayText)
+        self.vterm:writeText(self.x + #self.label, self.y, displayText, self.fg, self.bg)
         --- @diagnostic disable-next-line
         if self.active then
             local cursor_screen_pos = self.cursor_pos - self.scroll_offset
             if cursor_screen_pos > 0 and cursor_screen_pos <= visible_width then
                 self.vterm:writeText(
                     self.x + #self.label + cursor_screen_pos - 1, self.y,
-                    "_"
+                    "_", self.fg, self.bg
                 )
             end
         end
@@ -2364,8 +2411,6 @@ do
                 self:_handleKey(key)
             end)
         end
-
-
         self:_renderField(vterm)
 
         return self
@@ -2864,6 +2909,7 @@ do
     end
 end
 
+--- TODO: implement Draw class in C native code for better performance
 --- enhanced draw class using unicode block characters for better resolution
 --- uses half-block characters (▀▄█) and quarter-block characters for sub-pixel rendering
 --- @class Draw
@@ -2996,9 +3042,10 @@ do -- Draw
 
         -- Use full block for solid fill
         for i = y, y + height - 1 do
-            for j = x, x + width - 1 do
-                vterm:setChar(j, i, " ", nil, color, nil)
-            end
+            vterm:writeText(x, i, string.rep(" ", width - 1), nil, color, nil)
+            -- for j = x, x + width - 1 do
+            --     vterm:setChar(j, i, " ", nil, color, nil)
+            -- end
         end
         return vterm
     end
@@ -4073,37 +4120,36 @@ do
         return not not ret
     end
 
-    --------------------------------------------------------------------
-    -- FIXME: Visualization functions didn't works
-    --------------------------------------------------------------------
     function RMP.Sound:setVisualizationCallback(fn)
         if type(fn) ~= "function" then
             return false, "callback must be function"
         end
-        local ok, a, b = pcall(rmpaudio.SetVisualizationCallback, fn)
+        -- local ok, a, b = pcall(rmpaudio.SetVisualizationCallback, fn)
+        local ok, err = rmpaudio.SetVisualizationCallback(fn)
         if not ok then
-            self.last_error = "SetVisualizationCallback pcall error: " .. tostring(a)
+            self.last_error = "SetVisualizationCallback pcall error: " .. tostring(err)
             return false, self.last_error
         end
-        if a == false then
-            self.last_error = tostring(b or "SetVisualizationCallback failed")
-            return false, self.last_error
-        end
+        -- if a == false then
+        --     self.last_error = tostring(b or "SetVisualizationCallback failed")
+        --     return false, self.last_error
+        -- end
         self.visualization_callback = fn
         return true
     end
 
     function RMP.Sound:enableVisualization(bins)
         bins = tonumber(bins) or self.freq_bins
-        local ok, a, b = pcall(rmpaudio.EnableVisualization, bins)
-        if not ok then
-            self.last_error = "EnableVisualization pcall error: " .. tostring(a)
+        -- local ok, a, b = pcall(rmpaudio.EnableVisualization, bins)
+        local success, err = rmpaudio.EnableVisualization(bins)
+        if not success then
+            self.last_error = "EnableVisualization pcall error: " .. tostring(err)
             return false, self.last_error
         end
-        if a == false then
-            self.last_error = tostring(b or "EnableVisualization failed")
-            return false, self.last_error
-        end
+        -- if a == false then
+        --     self.last_error = tostring(b or "EnableVisualization failed")
+        --     return false, self.last_error
+        -- end
         self.visualization_enabled = true
         self.freq_bins = bins
         return true
@@ -4941,9 +4987,9 @@ do
     --- @param sound Sound
     --- @param config table
     --- @param template table
-    function RMP.Frame:run(key, mouse, sound, config, template)
+    function RMP.Frame:run(key, mouse, sound, config, template, datafreq)
         --- @diagnostic disable-next-line
-        self:super("handleEvent", key, mouse, sound, config, template)
+        self:super("handleEvent", key, mouse, sound, config, template, self, datafreq)
         --- @diagnostic disable-next-line
         self:super("render")
         --- @diagnostic disable-next-line
