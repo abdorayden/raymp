@@ -32,14 +32,19 @@
 #include <string.h>
 #include <stdlib.h>
 
+// #include "miniaudio.h"
 #define MINIAUDIO_IMPLEMENTATION
-#include "miniaudio.h"
+#include "../../../third_party/miniaudio.h"
 
 #include "simply.h"
 
-#include "lua.h"
-#include "lauxlib.h"
-#include "lualib.h"
+// #include "lua.h"
+// #include "lauxlib.h"
+// #include "lualib.h"
+#include "../../lua/include/lua.h"
+#include "../../lua/include/lauxlib.h"
+// NOTE: unused
+// #include "../../lua/include/lualib.h"
 
 
 // RMPAudio context structure
@@ -76,7 +81,6 @@ static void cleanup_audio_context(void);
 static void reset_decoder_position(void);
 static ma_result initialize_device(void);
 
-// the data callback
 void enhanced_data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
 	(void)pInput;
 
@@ -163,6 +167,7 @@ void enhanced_data_callback(ma_device* pDevice, void* pOutput, const void* pInpu
 					// create frequency data table
 					lua_createtable(L, (int)rAudio.freq_data_size, 0);
 					for (size_t i = 0; i < rAudio.freq_data_size; i++) {
+                        // BUG: I need to debug the freq_data if it's exists
 						lua_pushnumber(L, rAudio.freq_data[i]);
 						lua_rawseti(L, -2, (int)i + 1);
 					}
@@ -661,11 +666,6 @@ static const luaL_Reg rmp_audio_lib[] = {
 	{"GetMetadata", lua_rmp_audio_get_metadata},
 	{"GetDeviceInfo", lua_rmp_audio_get_device_info},
 
-	// Visualization
-	// FIXME: lua_rmp_audio_enable_visualization it seg fault it
-	// FIXME: lua_rmp_audio_set_visualization_callback i thing i don't need this function
-	// TODO:  lua_rmp_audio_get_frequency_data works but it need to fill the freq data
-	// TODO:  lua_rmp_audio_disable_visualization change the body with new implementation
 	{"EnableVisualization", lua_rmp_audio_enable_visualization},
 	{"DisableVisualization", lua_rmp_audio_disable_visualization},
 	{"SetVisualizationCallback", lua_rmp_audio_set_visualization_callback},
