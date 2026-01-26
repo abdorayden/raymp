@@ -44,6 +44,8 @@ local os = require("os")
 local HashMap = utils.HashMap
 local Queue = utils.Queue
 
+-- Use a set to track unique error messages efficiently
+local error_messages_set = {}
 local the_error_message = ""
 
 -- Function to color specific keywords in a string
@@ -52,23 +54,25 @@ local function coloredKeywordInString(str, keyword, color)
     return str:gsub(pattern, color .. keyword .. api.Default)
 end
 
+-- Pre-define the Lua keywords table to avoid recreating it repeatedly
+local lua_keywords = {
+    "and", "break", "do", "else", "elseif", "end", "false", "for", "function",
+    "if", "in", "local", "nil", "not", "or", "repeat", "return", "then",
+    "true", "until", "while"
+}
+
 -- Function to color Lua code keywords
 local function coloredLuaCode(str)
     if type(str) ~= "string" then
         return str
     end
 
-    local keywords = {
-        "and", "break", "do", "else", "elseif", "end", "false", "for", "function",
-        "if", "in", "local", "nil", "not", "or", "repeat", "return", "then",
-        "true", "until", "while"
-    }
-
-    for _, keyword in ipairs(keywords) do
-        str = coloredKeywordInString(str, keyword, api.FGColors.Brights.Green)
+    local result = str
+    for _, keyword in ipairs(lua_keywords) do
+        result = coloredKeywordInString(result, keyword, api.FGColors.Brights.Green)
     end
 
-    return str
+    return result
 end
 
 -- Plugin Manager class
@@ -226,7 +230,8 @@ end
 -- Logging functions
 local function logerror(err)
     local err_str = "RMP Error: " .. tostring(err)
-    if not string.find(the_error_message, err_str, 1, true) then
+    if not error_messages_set[err_str] then
+        error_messages_set[err_str] = true
         the_error_message = the_error_message .. err_str .. "\n"
     end
     error(the_error_message)
@@ -236,7 +241,8 @@ end
 
 local function lognote(note)
     local note_str = "RMP Note: " .. tostring(note)
-    if not string.find(the_error_message, note_str, 1, true) then
+    if not error_messages_set[note_str] then
+        error_messages_set[note_str] = true
         the_error_message = the_error_message .. note_str .. "\n"
     end
     error(the_error_message)
@@ -246,7 +252,8 @@ end
 
 local function logwarn(warn)
     local warn_str = "RMP Warning: " .. tostring(warn)
-    if not string.find(the_error_message, warn_str, 1, true) then
+    if not error_messages_set[warn_str] then
+        error_messages_set[warn_str] = true
         the_error_message = the_error_message .. warn_str .. "\n"
     end
     error(the_error_message)
@@ -274,20 +281,37 @@ do
             return 1
         end
 
-        local evaluated = expr
-        for k, value in pairs(context) do
-            evaluated = evaluated:gsub(k, tostring(value))
+        -- Cache compiled functions to avoid recompilation
+        if not self.compiledExpressions then
+            self.compiledExpressions = {}
         end
 
-        evaluated = evaluated:gsub("math%.floor", "math.floor")
-        evaluated = evaluated:gsub("math%.ceil", "math.ceil")
+        -- Create a key for caching based on expression and context values
+        local cacheKey = expr
+        for k, v in pairs(context) do
+            cacheKey = cacheKey .. ":" .. tostring(v)
+        end
 
-        local func = load("return " .. evaluated)
-        if func then
-            local ok, result = pcall(func)
-            if ok and type(result) == "number" then
-                return math.floor(result)
+        local cachedFunc = self.compiledExpressions[cacheKey]
+        if not cachedFunc then
+            local evaluated = expr
+            for k, value in pairs(context) do
+                evaluated = evaluated:gsub("%f[%w_]" .. k .. "%f[%W]", tostring(value)) -- More precise replacement
             end
+
+            -- Pre-compile the function
+            local func = load("return " .. evaluated)
+            if func then
+                cachedFunc = func
+                self.compiledExpressions[cacheKey] = func
+            else
+                return 1
+            end
+        end
+
+        local ok, result = pcall(cachedFunc)
+        if ok and type(result) == "number" then
+            return math.floor(result)
         end
 
         return 1
@@ -557,15 +581,21 @@ local keyToCharMap = {
     [api.KEY_CTRL_Z] = "<C-z>"
 }
 
-local function engine_render_help(frame, w, h, settings, soundCfg)
-    local function ktc(k)
+-- Pre-create a combined map that includes both the predefined mappings and fallback function
+local function createKeyToCharFunction()
+    local input = api.Input.new()
+    return function(k)
         local mapped = keyToCharMap[k]
         if mapped then
             return mapped
         else
-            return api.Input.new():keyToChar(k)
+            return input:keyToChar(k)
         end
     end
+end
+
+local function engine_render_help(frame, w, h, settings, soundCfg)
+    local ktc = createKeyToCharFunction()
 
     local helpText = {
         "RMP Help:",
@@ -650,6 +680,13 @@ local function setupPlugins(configObj, is_userconfig)
         return nil, nil
     end
 
+    -- Cache home path to avoid repeated calls
+    local homePath = nil
+    if is_userconfig then
+        homePath = api.Path.new():getHomePath()
+        package.path = package.path .. joinPath(homePath, ".rmp")
+    end
+
     for _, plug in ipairs(plugins) do
         if plug.themeWindowId and plug.isActivated and plug.names then
             local pq = Queue.new()
@@ -658,8 +695,6 @@ local function setupPlugins(configObj, is_userconfig)
                 local pluginOk, pluginModule
 
                 if is_userconfig then
-                    local homePath = api.Path.new():getHomePath()
-                    package.path = package.path .. joinPath(homePath, ".rmp")
                     local singleFile, folderInit
                     if type(name) == "string" then
                         singleFile = joinPath(homePath, ".rmp", "plugins", name .. ".lua")
@@ -704,7 +739,6 @@ local function setupPlugins(configObj, is_userconfig)
             for _, name in ipairs(plug.names) do
                 local pluginOk, pluginModule
                 if is_userconfig then
-                    local homePath = api.Path.new():getHomePath()
                     local singleFile, folderInit
                     if type(name) == "string" then
                         singleFile = joinPath(homePath, ".rmp", "plugins", name .. ".lua")
@@ -755,6 +789,12 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
 
     -- check the settings first and then the keymap
     local sound = api.Sound.new() -- empty playlist
+    sound:enableVisualization(64)
+    local data_freq_engine = nil
+
+    -- sound:setVisualizationCallback(function(freqData)
+    --     data_freq_engine = freqData
+    -- end)
 
     local inc_speed = nil
     local inc_volume = nil
@@ -860,9 +900,6 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             end
         end
 
-        -- Only call setupPlugins once per loop, not twice as in original
-        local currentPlugManager, currentOtherPlugs, currentPlugsCfgs = setupPlugins(configObj, is_userconfig)
-
         mainFrame:clear()
         local key = api.Terminal:handleKey()
 
@@ -870,6 +907,13 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             h, w = api.Terminal:getSize()
             mainFrame:resize(w, h)
         end
+
+        -- Cache sound properties to avoid repeated function calls
+        local isPlaying = sound:isPlaying()
+        local currVol = sound:getVolume()
+        local currPos = math.floor(sound:getPosition())
+        local len = math.floor(sound:getLength())
+        local currSpeed = sound:getSpeed()
 
         for windowId, switchKey in pairs(switchKeys) do
             mainFrame:addEventListener(api.EventType.Keyboard, function(inputKey)
@@ -898,19 +942,19 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             -- in case you configured pause and resume with same key
             if soundCfg.pause_sound ~= soundCfg.resume_sound then
                 if inputKey == soundCfg.pause_sound then
-                    if sound:isPlaying() then
+                    if isPlaying then
                         sound:pause()
                     end
                 end
                 if inputKey == soundCfg.resume_sound then
-                    if not sound:isPlaying() then
+                    if not isPlaying then
                         sound:play()
                         sound:resume()
                     end
                 end
             else
                 if inputKey == soundCfg.resume_sound then
-                    if not sound:isPlaying() then
+                    if not isPlaying then
                         sound:play()
                         sound:resume()
                     else
@@ -931,7 +975,6 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
                 end
             end
             if inputKey == soundCfg.vol_up then
-                local currVol = sound:getVolume()
                 if currVol < 1 then
                     if currVol + inc_volume >= 1 then
                         sound:setVolume(1)
@@ -941,7 +984,6 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
                 end
             end
             if inputKey == soundCfg.vol_down then
-                local currVol = sound:getVolume()
                 if currVol > 0 then
                     if currVol - inc_volume <= 0 then
                         sound:setVolume(0)
@@ -951,8 +993,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
                 end
             end
             if inputKey == soundCfg.seek_left then
-                if sound:isPlaying() then
-                    local currPos = math.floor(sound:getPosition())
+                if isPlaying then
                     if currPos > 0 then
                         if currPos - inc_seek <= 0 then
                             sound:seek(0)
@@ -963,9 +1004,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
                 end
             end
             if inputKey == soundCfg.seek_right then
-                if sound:isPlaying() then
-                    local currPos = math.floor(sound:getPosition())
-                    local len = math.floor(sound:getLength())
+                if isPlaying then
                     if currPos < len then
                         if currPos + inc_seek >= len then
                             sound:seek(len - 1) -- i know i know don't ask any question
@@ -976,17 +1015,17 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
                 end
             end
             if inputKey == soundCfg.speed_up then
-                local currSpeed = sound:getSpeed() + inc_speed
-                if currSpeed < 3.0 then
-                    sound:setSpeed(currSpeed)
+                local newSpeed = currSpeed + inc_speed
+                if newSpeed < 3.0 then
+                    sound:setSpeed(newSpeed)
                 else
                     sound:setSpeed(3.0)
                 end
             end
             if inputKey == soundCfg.speed_down then
-                local currSpeed = sound:getSpeed() - inc_speed
-                if currSpeed > 0.0 then
-                    sound:setSpeed(currSpeed)
+                local newSpeed = currSpeed - inc_speed
+                if newSpeed > 0.0 then
+                    sound:setSpeed(newSpeed)
                 else
                     sound:setSpeed(0.1)
                 end
@@ -998,6 +1037,10 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         end)
 
         sound:update()
+
+        if isPlaying then
+            data_freq_engine = sound:getFrequencyData()
+        end
 
         -- To work with the same table
         local windows, _ = parser:parseTemplate(template_copy)
@@ -1028,12 +1071,12 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         -- TODO: add other plugins that are not integrated to specific window id template to event
         -- TODO: rayden was here
 
-        if currentPlugsCfgs then
+        if plugs_cfgs then
             -- TODO: add settings and soundCfg keys to plugins values table configurations
 
-            currentPlugsCfgs:put("soundCfg", soundCfg)
-            currentPlugsCfgs:put("settings", settings)
-            currentPlugsCfgs:put("all", configObj)
+            plugs_cfgs:put("soundCfg", soundCfg)
+            plugs_cfgs:put("settings", settings)
+            plugs_cfgs:put("all", configObj)
         end
         ---
 
@@ -1047,11 +1090,12 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
 
         mainFrame:run(
             key,
-            nil, -- TODO: add mouse support later
+            nil,        -- TODO: add mouse support later
             sound,
-            currentPlugsCfgs,
+            plugs_cfgs, -- Use the original plugs_cfgs instead of reassigning
             -- windows is just table of windows tables
-            template_copy
+            template_copy,
+            data_freq_engine
         )
 
         if restart then
@@ -1059,6 +1103,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         end
     end
 
+    sound:disableVisualization()
     sound:cleanup()
     return restart
 end
@@ -1265,20 +1310,28 @@ end
             local display_message = message
 
             -- Text wrapping function
+            -- Optimized text wrapping function
             local function wrapText(str, width)
                 if width <= 0 then return { str } end
                 local lines = {}
                 str = str:gsub("\t", "    ")
+
                 for s in str:gmatch("[^\r\n]+") do
+                    local s_len = #s
                     local current_pos = 1
-                    while current_pos <= #s do
+
+                    while current_pos <= s_len do
                         local end_pos = current_pos + width - 1
-                        if end_pos >= #s then
+                        if end_pos >= s_len then
                             table.insert(lines, s:sub(current_pos))
                             break
                         end
+
+                        -- Find the last space within the width limit
                         local break_pos = end_pos
                         local space_found = false
+
+                        -- Search backwards for a space
                         for i = end_pos, current_pos, -1 do
                             if s:sub(i, i) == " " then
                                 break_pos = i
@@ -1286,15 +1339,19 @@ end
                                 break
                             end
                         end
+
                         if space_found and break_pos > current_pos then
+                            -- Include the space in the current line
                             table.insert(lines, s:sub(current_pos, break_pos - 1))
                             current_pos = break_pos + 1
                         else
+                            -- No space found, force break at width
                             table.insert(lines, s:sub(current_pos, end_pos))
                             current_pos = end_pos + 1
                         end
                     end
                 end
+
                 return lines
             end
 
@@ -1312,23 +1369,6 @@ end
                     mainFrame:writeText(boxX + 2, currentY, "...", api.FGColors.Brights.White,
                         api.BGColors.NoBrights.Black)
                     break
-                end
-            end
-
-            -- Draw highlighted code location
-            if file and line then
-                currentY = currentY + 1
-                if currentY < boxY + boxHeight - 3 then
-                    local separator = string.rep(api.BoxDrawing.LightBorder[2], text_width)
-                    mainFrame:writeText(boxX + 2, currentY, separator, api.FGColors.NoBrights.White,
-                        api.BGColors.NoBrights.Black)
-                    currentY = currentY + 1
-                    local location_text = "Location: "
-                    mainFrame:writeText(boxX + 2, currentY, location_text, api.FGColors.Brights.White,
-                        api.BGColors.NoBrights.Black)
-                    local highlight_text = file .. ":" .. line
-                    mainFrame:writeText(boxX + 2 + #location_text, currentY, highlight_text, api.FGColors.Brights.Yellow,
-                        api.BGColors.NoBrights.Black, api.TextStyle.Bold)
                 end
             end
 
