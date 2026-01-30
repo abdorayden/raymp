@@ -1664,108 +1664,109 @@ do -- VirtualTerminal
         return self
     end
 
-    -- TODO: use native function
-    -- --- @param title string | Text
-    -- --- @param x integer
-    -- --- @param y integer
-    -- --- @param width integer
-    -- --- @param height integer
-    -- --- @param border_style BoxDrawing
-    -- --- @param fg FGColors
-    -- --- @param bg BGColors
-    -- function RMP.VirtualTerminal:drawBox(title, x, y, width, height, border_style, fg, bg)
-    --     x      = math.floor(x or 1)
-    --     y      = math.floor(y or 1)
-    --     width  = math.floor(width or 80)
-    --     height = math.floor(height or 24)
-    --     if title and type(title) == "table" and title:instanceOf(RMP.Text) then
-    --         title = title:getText()
-    --     elseif title and type(title) == "table" then
-    --         title = title
-    --     else
-    --         title = ""
-    --     end
-    --
-    --     vt_rmp.draw_box(self.native_vt_rmp, title, x, y, width, height, border_style, fg, bg)
-    -- end
+    if true then
+        --- @param title string | Text
+        --- @param x integer
+        --- @param y integer
+        --- @param width integer
+        --- @param height integer
+        --- @param border_style BoxDrawing
+        --- @param fg FGColors
+        --- @param bg BGColors
+        function RMP.VirtualTerminal:drawBox(title, x, y, width, height, border_style, fg, bg)
+            x      = math.floor(x or 1)
+            y      = math.floor(y or 1)
+            width  = math.floor(width or 80)
+            height = math.floor(height or 24)
+            if title and type(title) == "table" and title:instanceOf(RMP.Text) then
+                title = title:getText()
+            elseif title and type(title) == "table" then
+                title = title
+            else
+                title = ""
+            end
 
-    --- @param title string | Text
-    --- @param x integer
-    --- @param y integer
-    --- @param width integer
-    --- @param height integer
-    --- @param border_style BoxDrawing
-    --- @param fg FGColors
-    --- @param bg BGColors
-    function RMP.VirtualTerminal:drawBox(title, x, y, width, height, border_style, fg, bg)
-        x        = math.floor(x or 1)
-        y        = math.floor(y or 1)
-        width    = math.floor(width or 80)
-        height   = math.floor(height or 24)
-
-        local TL = nil
-        local TR = nil
-        local BL = nil
-        local BR = nil
-        local H  = nil
-        local V  = nil
-
-        if border_style == nil or type(border_style) ~= 'table' or border_style[1] == nil then
-            TL = RMP.BoxDrawing.LightBorder[3] -- "┌" Top-left corner
-            TR = RMP.BoxDrawing.LightBorder[4] -- "┐" Top-right corner
-            BL = RMP.BoxDrawing.LightBorder[5] -- "└" Bottom-left corner
-            BR = RMP.BoxDrawing.LightBorder[6] -- "┘" Bottom-right corner
-            H  = RMP.BoxDrawing.LightBorder[1] -- "─" Horizontal line
-            V  = RMP.BoxDrawing.LightBorder[2] -- "│" Vertical line
-        else
-            TL = border_style[3]               -- "┌" Top-left corner
-            TR = border_style[4]               -- "┐" Top-right corner
-            BL = border_style[5]               -- "└" Bottom-left corner
-            BR = border_style[6]               -- "┘" Bottom-right corner
-            H  = border_style[1]               -- "─" Horizontal line
-            V  = border_style[2]               -- "│" Vertical line
+            vt_rmp.draw_box(self.native_vt_rmp, title, x, y, width, height, border_style, fg, bg)
         end
+    else
+        --- NOTE: disabled lua implementation just in case
+        --- @param title string | Text
+        --- @param x integer
+        --- @param y integer
+        --- @param width integer
+        --- @param height integer
+        --- @param border_style BoxDrawing
+        --- @param fg FGColors
+        --- @param bg BGColors
+        function RMP.VirtualTerminal:drawBox(title, x, y, width, height, border_style, fg, bg)
+            x        = math.floor(x or 1)
+            y        = math.floor(y or 1)
+            width    = math.floor(width or 80)
+            height   = math.floor(height or 24)
 
-        local end_x = math.min(x + width - 1, self.realWidth)
-        local end_y = math.min(y + height - 1, self.realHeight)
+            local TL = nil
+            local TR = nil
+            local BL = nil
+            local BR = nil
+            local H  = nil
+            local V  = nil
 
-        self:writeText(x, y, TL .. string.rep(H, end_x - x - 1) .. TR, fg, bg)
-        self:writeText(x, end_y, BL .. string.rep(H, end_x - x - 1) .. BR, fg, bg)
-        for i = y + 1, end_y - 1 do
-            self:writeText(x, i, V, fg, bg)
-            self:writeText(end_x, i, V, fg, bg)
-        end
-        for i = y + 1, end_y - 1 do
-            self:writeText(x + 1, i, string.rep(" ", end_x - x - 1), nil, bg)
-        end
+            if border_style == nil or type(border_style) ~= 'table' or border_style[1] == nil then
+                TL = RMP.BoxDrawing.LightBorder[3] -- "┌" Top-left corner
+                TR = RMP.BoxDrawing.LightBorder[4] -- "┐" Top-right corner
+                BL = RMP.BoxDrawing.LightBorder[5] -- "└" Bottom-left corner
+                BR = RMP.BoxDrawing.LightBorder[6] -- "┘" Bottom-right corner
+                H  = RMP.BoxDrawing.LightBorder[1] -- "─" Horizontal line
+                V  = RMP.BoxDrawing.LightBorder[2] -- "│" Vertical line
+            else
+                TL = border_style[3]               -- "┌" Top-left corner
+                TR = border_style[4]               -- "┐" Top-right corner
+                BL = border_style[5]               -- "└" Bottom-left corner
+                BR = border_style[6]               -- "┘" Bottom-right corner
+                H  = border_style[1]               -- "─" Horizontal line
+                V  = border_style[2]               -- "│" Vertical line
+            end
 
-        --- @type string
-        local title_text = ""
-        local title_fg = nil
-        local title_bg = nil
-        local title_style = nil
-        --- @diagnostic disable-next-line
-        if title and type(title) == "table" and title:instanceOf(RMP.Text) then
+            local end_x = math.min(x + width - 1, self.realWidth)
+            local end_y = math.min(y + height - 1, self.realHeight)
+
+            self:writeText(x, y, TL .. string.rep(H, end_x - x - 1) .. TR, fg, bg)
+            self:writeText(x, end_y, BL .. string.rep(H, end_x - x - 1) .. BR, fg, bg)
+            for i = y + 1, end_y - 1 do
+                self:writeText(x, i, V, fg, bg)
+                self:writeText(end_x, i, V, fg, bg)
+            end
+            for i = y + 1, end_y - 1 do
+                self:writeText(x + 1, i, string.rep(" ", end_x - x - 1), nil, bg)
+            end
+
+            --- @type string
+            local title_text = ""
+            local title_fg = nil
+            local title_bg = nil
+            local title_style = nil
             --- @diagnostic disable-next-line
-            title_text = title:getText()
-            title_fg = title:getFGColor()
-            title_bg = title:getBGColor()
-            title_style = title:getStyle()
-        elseif title and type(title) == "string" then
-            title_text = title
-        end
-        local available_width = width - 2
-        if #title_text > available_width then
-            title_text = title_text:sub(1, available_width)
-        end
-        local title_x = x + 1 + math.floor((available_width - #title_text) / 2)
-        local title_y = y
-        --- @diagnostic disable-next-line
-        self:writeText(title_x, title_y, title_text, title_fg, title_bg, title_style)
+            if title and type(title) == "table" and title:instanceOf(RMP.Text) then
+                --- @diagnostic disable-next-line
+                title_text = title:getText()
+                title_fg = title:getFGColor()
+                title_bg = title:getBGColor()
+                title_style = title:getStyle()
+            elseif title and type(title) == "string" then
+                title_text = title
+            end
+            local available_width = width - 2
+            if #title_text > available_width then
+                title_text = title_text:sub(1, available_width)
+            end
+            local title_x = x + 1 + math.floor((available_width - #title_text) / 2)
+            local title_y = y
+            --- @diagnostic disable-next-line
+            self:writeText(title_x, title_y, title_text, title_fg, title_bg, title_style)
 
-        self.dirty = true
+            self.dirty = true
+        end
     end
-
     function RMP.VirtualTerminal:render()
         vt_rmp.render(self.native_vt_rmp)
     end

@@ -26,8 +26,8 @@
 
 #include "../../lua/include/lua.h"
 #include "../../lua/include/lauxlib.h"
-#include "../../lua/include/lualib.h"
-#include "../../lua/include/luaconf.h"
+// #include "../../lua/include/lualib.h"
+// #include "../../lua/include/luaconf.h"
 
 #include "simply.h"
 
@@ -351,271 +351,6 @@ ALWAYS_INT lua_setchar(STATE) {
 	return 0;
 }
 
-ALWAYS_INT lua_draw_box(STATE) {
-    VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
-    size_t title_len;
-    const char* title = luaL_checklstring(L , 2 , &title_len);
-    int x = luaL_checkinteger(L, 3);
-    int y = luaL_checkinteger(L, 4);
-    int width = luaL_checkinteger(L, 5);
-    int height = luaL_checkinteger(L, 6);
-
-    // Check if border_style is provided and is a valid table with content at index 1
-    const char* h_line = "─";  // Default horizontal line (LightBorder[1])
-    const char* v_line = "│";  // Default vertical line (LightBorder[2])
-    const char* tl_corner = "┌";  // Default top-left corner (LightBorder[3])
-    const char* tr_corner = "┐";  // Default top-right corner (LightBorder[4])
-    const char* bl_corner = "└";  // Default bottom-left corner (LightBorder[5])
-    const char* br_corner = "┘";  // Default bottom-right corner (LightBorder[6])
-
-    bool use_default = true;  // default to LightBorder
-
-    if (lua_istable(L, 7)) {
-        lua_rawgeti(L, 7, 1);
-        if (lua_isstring(L, -1) && lua_tostring(L, -1) != NULL) {
-            h_line = lua_tostring(L, -1);
-
-            lua_rawgeti(L, 7, 2);
-            if (lua_isstring(L, -1)) v_line = lua_tostring(L, -1);
-            lua_pop(L, 1);
-
-            lua_rawgeti(L, 7, 3);
-            if (lua_isstring(L, -1)) tl_corner = lua_tostring(L, -1);
-            lua_pop(L, 1);
-
-            lua_rawgeti(L, 7, 4);
-            if (lua_isstring(L, -1)) tr_corner = lua_tostring(L, -1);
-            lua_pop(L, 1);
-
-            lua_rawgeti(L, 7, 5);
-            if (lua_isstring(L, -1)) bl_corner = lua_tostring(L, -1);
-            lua_pop(L, 1);
-
-            lua_rawgeti(L, 7, 6);
-            if (lua_isstring(L, -1)) br_corner = lua_tostring(L, -1);
-            lua_pop(L, 1);
-
-            use_default = false;
-        }
-        lua_pop(L, 1);
-    }
-    // If not a table or table[1] is nil, use defaults (LightBorder)
-
-    const char* fg = luaL_optstring(L, 8, "");
-    const char* bg = luaL_optstring(L, 9, "");
-
-    if (width < 1 || height < 1 || x < 1 || y < 1) {
-        return 0;
-    }
-
-    int right = x + width - 1;
-    int bottom = y + height - 1;
-
-    if (right > vt->width || bottom > vt->height) {
-        return 0;
-    }
-
-    for (int i = x; i <= right; i++) {
-        Cell* top_cell = get_cell(vt, i, y);
-        if (top_cell) {
-            if (i == x) {
-                strcpy(top_cell->ch, tl_corner);
-            } else if (i == right) {
-                strcpy(top_cell->ch, tr_corner);
-            } else {
-                strcpy(top_cell->ch, h_line);
-            }
-            strcpy(top_cell->fg, fg);
-            strcpy(top_cell->bg, bg);
-            strcpy(top_cell->style, "");
-        }
-
-        if (height > 1) {
-            Cell* bottom_cell = get_cell(vt, i, bottom);
-            if (bottom_cell) {
-                if (i == x) {
-                    strcpy(bottom_cell->ch, bl_corner);
-                } else if (i == right) {
-                    strcpy(bottom_cell->ch, br_corner);
-                } else {
-                    strcpy(bottom_cell->ch, h_line);
-                }
-                strcpy(bottom_cell->fg, fg);
-                strcpy(bottom_cell->bg, bg);
-                strcpy(bottom_cell->style, "");
-            }
-        }
-    }
-
-    for (int j = y; j <= bottom; j++) {
-        Cell* left_cell = get_cell(vt, x, j);
-        if (left_cell) {
-            if (j == y) {
-            } else if (j == bottom) {
-            } else {
-                strcpy(left_cell->ch, v_line);
-            }
-            strcpy(left_cell->fg, fg);
-            strcpy(left_cell->bg, bg);
-            strcpy(left_cell->style, "");
-        }
-
-        if (width > 1) {
-            Cell* right_cell = get_cell(vt, right, j);
-            if (right_cell) {
-                if (j == y) {
-                } else if (j == bottom) {
-                } else {
-                    strcpy(right_cell->ch, v_line);
-                }
-                strcpy(right_cell->fg, fg);
-                strcpy(right_cell->bg, bg);
-                strcpy(right_cell->style, "");
-            }
-        }
-    }
-
-    if (title_len > 0 && width > 2) {
-        int title_max_width = width - 2;
-        if ((int)title_len > title_max_width) {
-            title_len = title_max_width;
-        }
-
-        const char* title_ptr = title;
-        int title_x = x + 1;
-
-        while (title_ptr < title + title_len && title_x < right) {
-            int byte_len = 0, disp_width = 0;
-            const char* next_char = next_utf8_char_info(title_ptr, &byte_len, &disp_width);
-
-            if (byte_len <= 0) break;
-            if (title_ptr + byte_len > title + title_len) break;
-
-            if (title_x + disp_width > x + width) break;
-
-            Cell* title_cell = get_cell(vt, title_x, y);
-            if (title_cell) {
-                int copy_len = (byte_len < CH_UTF8_SIZE - 1) ? byte_len : (CH_UTF8_SIZE - 1);
-                memcpy(title_cell->ch, title_ptr, copy_len);
-                title_cell->ch[copy_len] = '\0';
-                strcpy(title_cell->fg, fg);
-                strcpy(title_cell->bg, bg);
-                strcpy(title_cell->style, "");
-
-                if (disp_width > 1) {
-                    for (int k = 1; k < disp_width; k++) {
-                        Cell* cont_cell = get_cell(vt, title_x + k, y);
-                        if (cont_cell) {
-                            cont_cell->ch[0] = '\0';
-                            strcpy(cont_cell->fg, fg);
-                            strcpy(cont_cell->bg, bg);
-                            strcpy(cont_cell->style, "");
-                        }
-                    }
-                }
-            }
-
-            title_ptr = next_char;  
-            title_x += (disp_width > 0) ? disp_width : 1;
-        }
-    }
-
-    vt->is_dirty = true;
-    return 0;
-}
-
-ALWAYS_INT lua_writetext_clipped(STATE) {
-    VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
-    int x = luaL_checkinteger(L, 2);
-    int y = luaL_checkinteger(L, 3);
-    size_t text_len;
-    const char* text = luaL_checklstring(L, 4, &text_len);
-    int max_cols = luaL_checkinteger(L, 5);
-    const char* fg = luaL_optstring(L, 6, "");
-    const char* bg = luaL_optstring(L, 7, "");
-    const char* style = luaL_optstring(L, 8, "");
-
-    int start_x = x;
-    int current_x = x;
-    const char* ptr = text;
-    const char* end = text + text_len;
-
-    while (ptr < end && current_x <= vt->width && (current_x - start_x) < max_cols) {
-        int byte_len = 0, disp_width = 0;
-        const char* next_char = next_utf8_char_info(ptr, &byte_len, &disp_width);
-        if (byte_len <= 0) break;
-        if (ptr + byte_len > end) byte_len = (int)(end - ptr);
-
-        if (disp_width == 0) {
-            int base_x = current_x - 1;
-            while (base_x >= start_x) {
-                Cell* base = get_cell(vt, base_x, y);
-                if (!base) { base_x--; continue; }
-                if (base->ch[0] == '\0') { base_x--; continue; }
-                size_t existing = strlen(base->ch);
-                int can_copy = CH_UTF8_SIZE - 1 - (int)existing;
-                if (can_copy > 0) {
-                    int to_copy = (byte_len < can_copy) ? byte_len : can_copy;
-                    memcpy(base->ch + existing, ptr, to_copy);
-                    base->ch[existing + to_copy] = '\0';
-                }
-                if (fg && fg[0]) { strncpy(base->fg, fg, sizeof(base->fg)-1); base->fg[sizeof(base->fg)-1] = '\0'; }
-                if (bg && bg[0]) { strncpy(base->bg, bg, sizeof(base->bg)-1); base->bg[sizeof(base->bg)-1] = '\0'; }
-                if (style && style[0]) { strncpy(base->style, style, sizeof(base->style)-1); base->style[sizeof(base->style)-1] = '\0'; }
-                break;
-            }
-            ptr = next_char;  
-            continue;
-        }
-
-        int consumed = current_x - start_x;
-        if (consumed + disp_width > max_cols) {
-            break;
-        }
-
-        if (current_x > vt->width) break;
-        Cell* cell = get_cell(vt, current_x, y);
-        if (cell) {
-            int to_copy = (byte_len < CH_UTF8_SIZE - 1) ? byte_len : (CH_UTF8_SIZE - 1);
-            memcpy(cell->ch, ptr, to_copy);
-            cell->ch[to_copy] = '\0';
-            strncpy(cell->fg, fg, sizeof(cell->fg)-1); cell->fg[sizeof(cell->fg)-1] = '\0';
-            strncpy(cell->bg, bg, sizeof(cell->bg)-1); cell->bg[sizeof(cell->bg)-1] = '\0';
-            strncpy(cell->style, style, sizeof(cell->style)-1); cell->style[sizeof(cell->style)-1] = '\0';
-
-            if (disp_width > 1) {
-                for (int k = 1; k < disp_width; ++k) {
-                    Cell* cont = get_cell(vt, current_x + k, y);
-                    if (!cont) break;
-                    cont->ch[0] = '\0';
-                    strncpy(cont->fg, fg, sizeof(cont->fg)-1); cont->fg[sizeof(cont->fg)-1] = '\0';
-                    strncpy(cont->bg, bg, sizeof(cont->bg)-1); cont->bg[sizeof(cont->bg)-1] = '\0';
-                    strncpy(cont->style, style, sizeof(cont->style)-1); cont->style[sizeof(cont->style)-1] = '\0';
-                }
-            }
-        }
-
-        current_x += (disp_width > 0) ? disp_width : 1;
-        ptr = next_char;  
-    }
-
-    while ((current_x - start_x) < max_cols && current_x <= vt->width) {
-        Cell* c = get_cell(vt, current_x, y);
-        if (c) {
-            strcpy(c->ch, " ");
-            c->fg[0] = '\0';
-            c->bg[0] = '\0';
-            c->style[0] = '\0';
-        }
-        current_x++;
-    }
-
-    vt->is_dirty = true;
-    int cols_written = current_x - start_x;
-    lua_pushinteger(L, cols_written);
-    return 1;
-}
-
 ALWAYS_INT lua_writetext(STATE) {
 	VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
 	int x = luaL_checkinteger(L, 2);
@@ -718,6 +453,247 @@ ALWAYS_INT lua_writetext(STATE) {
 
 	vt->is_dirty = true;
 	return 0;
+}
+
+ALWAYS_INT lua_draw_box(STATE) {
+    // rewriting draw_box lua implementation in C
+    VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
+    size_t title_len;
+    const char* title = luaL_checklstring(L, 2, &title_len);
+    int x = luaL_checkinteger(L, 3);
+    int y = luaL_checkinteger(L, 4);
+    int width = luaL_checkinteger(L, 5);
+    int height = luaL_checkinteger(L, 6);
+
+    const char* h_line = "─"; 
+    const char* v_line = "│";  
+    const char* tl_corner = "┌";
+    const char* tr_corner = "┐";
+    const char* bl_corner = "└"; 
+    const char* br_corner = "┘";  
+
+    bool use_default = true;  
+
+    if (lua_istable(L, 7)) {
+        lua_rawgeti(L, 7, 1);
+        if (lua_isstring(L, -1) && lua_tostring(L, -1) != NULL) {
+            h_line = lua_tostring(L, -1);
+
+            lua_rawgeti(L, 7, 2);
+            if (lua_isstring(L, -1)) v_line = lua_tostring(L, -1);
+            lua_pop(L, 1);
+
+            lua_rawgeti(L, 7, 3);
+            if (lua_isstring(L, -1)) tl_corner = lua_tostring(L, -1);
+            lua_pop(L, 1);
+
+            lua_rawgeti(L, 7, 4);
+            if (lua_isstring(L, -1)) tr_corner = lua_tostring(L, -1);
+            lua_pop(L, 1);
+
+            lua_rawgeti(L, 7, 5);
+            if (lua_isstring(L, -1)) bl_corner = lua_tostring(L, -1);
+            lua_pop(L, 1);
+
+            lua_rawgeti(L, 7, 6);
+            if (lua_isstring(L, -1)) br_corner = lua_tostring(L, -1);
+            lua_pop(L, 1);
+
+            use_default = false;
+        }
+        lua_pop(L, 1);
+    }
+
+    const char* fg = luaL_optstring(L, 8, "");
+    const char* bg = luaL_optstring(L, 9, "");
+
+    if (width < 1 || height < 1 || x < 1 || y < 1) {
+        return 0;
+    }
+
+    int end_x = (x + width - 1 > vt->width) ? vt->width : x + width - 1;
+    int end_y = (y + height - 1 > vt->height) ? vt->height : y + height - 1;
+
+    for (int i = x; i <= end_x; i++) {
+        Cell* top_cell = get_cell(vt, i, y);
+        if (top_cell) {
+            if (i == x) {
+                strcpy(top_cell->ch, tl_corner);
+            } else if (i == end_x) {
+                strcpy(top_cell->ch, tr_corner);
+            } else {
+                strcpy(top_cell->ch, h_line);
+            }
+            strcpy(top_cell->fg, fg);
+            strcpy(top_cell->bg, bg);
+            strcpy(top_cell->style, "");
+        }
+    }
+
+    if (height > 1) {
+        for (int i = x; i <= end_x; i++) {
+            Cell* bottom_cell = get_cell(vt, i, end_y);
+            if (bottom_cell) {
+                if (i == x) {
+                    strcpy(bottom_cell->ch, bl_corner);
+                } else if (i == end_x) {
+                    strcpy(bottom_cell->ch, br_corner);
+                } else {
+                    strcpy(bottom_cell->ch, h_line);
+                }
+                strcpy(bottom_cell->fg, fg);
+                strcpy(bottom_cell->bg, bg);
+                strcpy(bottom_cell->style, "");
+            }
+        }
+    }
+
+    for (int j = y + 1; j < end_y; j++) {
+        Cell* left_cell = get_cell(vt, x, j);
+        if (left_cell) {
+            strcpy(left_cell->ch, v_line);
+            strcpy(left_cell->fg, fg);
+            strcpy(left_cell->bg, bg);
+            strcpy(left_cell->style, "");
+        }
+
+        if (width > 1) {
+            Cell* right_cell = get_cell(vt, end_x, j);
+            if (right_cell) {
+                strcpy(right_cell->ch, v_line);
+                strcpy(right_cell->fg, fg);
+                strcpy(right_cell->bg, bg);
+                strcpy(right_cell->style, "");
+            }
+        }
+    }
+
+    for (int i = y + 1; i < end_y; i++) {
+        for (int j = x + 1; j < end_x; j++) {
+            Cell* interior_cell = get_cell(vt, j, i);
+            if (interior_cell) {
+                strcpy(interior_cell->ch, " ");
+                strcpy(interior_cell->fg, "");
+                strcpy(interior_cell->bg, bg);
+                strcpy(interior_cell->style, "");
+            }
+        }
+    }
+
+    if (title_len > 0 && width > 2) {
+        int available_width = width - 2;
+        if ((int)title_len > available_width) {
+            title_len = available_width;
+        }
+
+        int title_x = x + 1 + (available_width - (int)title_len) / 2;
+
+        for (int i = 0; i < (int)title_len && title_x + i < end_x; i++) {
+            Cell* title_cell = get_cell(vt, title_x + i, y);
+            if (title_cell) {
+                title_cell->ch[0] = title[i];
+                title_cell->ch[1] = '\0';
+                strcpy(title_cell->fg, fg);
+                strcpy(title_cell->bg, bg);
+                strcpy(title_cell->style, "");
+            }
+        }
+    }
+
+    vt->is_dirty = true;
+    return 0;
+}
+
+ALWAYS_INT lua_writetext_clipped(STATE) {
+    VirtualTerminal* vt = (VirtualTerminal*)luaL_checkudata(L, 1, VT_MT);
+    int x = luaL_checkinteger(L, 2);
+    int y = luaL_checkinteger(L, 3);
+    size_t text_len;
+    const char* text = luaL_checklstring(L, 4, &text_len);
+    int max_cols = luaL_checkinteger(L, 5);
+    const char* fg = luaL_optstring(L, 6, "");
+    const char* bg = luaL_optstring(L, 7, "");
+    const char* style = luaL_optstring(L, 8, "");
+
+    int start_x = x;
+    int current_x = x;
+    const char* ptr = text;
+    const char* end = text + text_len;
+
+    while (ptr < end && current_x <= vt->width && (current_x - start_x) < max_cols) {
+        int byte_len = 0, disp_width = 0;
+        const char* next_char = next_utf8_char_info(ptr, &byte_len, &disp_width);
+        if (byte_len <= 0) break;
+        if (ptr + byte_len > end) byte_len = (int)(end - ptr);
+
+        if (disp_width == 0) {
+            int base_x = current_x - 1;
+            while (base_x >= start_x) {
+                Cell* base = get_cell(vt, base_x, y);
+                if (!base) { base_x--; continue; }
+                if (base->ch[0] == '\0') { base_x--; continue; }
+                size_t existing = strlen(base->ch);
+                int can_copy = CH_UTF8_SIZE - 1 - (int)existing;
+                if (can_copy > 0) {
+                    int to_copy = (byte_len < can_copy) ? byte_len : can_copy;
+                    memcpy(base->ch + existing, ptr, to_copy);
+                    base->ch[existing + to_copy] = '\0';
+                }
+                if (fg && fg[0]) { strncpy(base->fg, fg, sizeof(base->fg)-1); base->fg[sizeof(base->fg)-1] = '\0'; }
+                if (bg && bg[0]) { strncpy(base->bg, bg, sizeof(base->bg)-1); base->bg[sizeof(base->bg)-1] = '\0'; }
+                if (style && style[0]) { strncpy(base->style, style, sizeof(base->style)-1); base->style[sizeof(base->style)-1] = '\0'; }
+                break;
+            }
+            ptr = next_char;  
+            continue;
+        }
+
+        int consumed = current_x - start_x;
+        if (consumed + disp_width > max_cols) {
+            break;
+        }
+
+        if (current_x > vt->width) break;
+        Cell* cell = get_cell(vt, current_x, y);
+        if (cell) {
+            int to_copy = (byte_len < CH_UTF8_SIZE - 1) ? byte_len : (CH_UTF8_SIZE - 1);
+            memcpy(cell->ch, ptr, to_copy);
+            cell->ch[to_copy] = '\0';
+            strncpy(cell->fg, fg, sizeof(cell->fg)-1); cell->fg[sizeof(cell->fg)-1] = '\0';
+            strncpy(cell->bg, bg, sizeof(cell->bg)-1); cell->bg[sizeof(cell->bg)-1] = '\0';
+            strncpy(cell->style, style, sizeof(cell->style)-1); cell->style[sizeof(cell->style)-1] = '\0';
+
+            if (disp_width > 1) {
+                for (int k = 1; k < disp_width; ++k) {
+                    Cell* cont = get_cell(vt, current_x + k, y);
+                    if (!cont) break;
+                    cont->ch[0] = '\0';
+                    strncpy(cont->fg, fg, sizeof(cont->fg)-1); cont->fg[sizeof(cont->fg)-1] = '\0';
+                    strncpy(cont->bg, bg, sizeof(cont->bg)-1); cont->bg[sizeof(cont->bg)-1] = '\0';
+                    strncpy(cont->style, style, sizeof(cont->style)-1); cont->style[sizeof(cont->style)-1] = '\0';
+                }
+            }
+        }
+
+        current_x += (disp_width > 0) ? disp_width : 1;
+        ptr = next_char;  
+    }
+
+    while ((current_x - start_x) < max_cols && current_x <= vt->width) {
+        Cell* c = get_cell(vt, current_x, y);
+        if (c) {
+            strcpy(c->ch, " ");
+            c->fg[0] = '\0';
+            c->bg[0] = '\0';
+            c->style[0] = '\0';
+        }
+        current_x++;
+    }
+
+    vt->is_dirty = true;
+    int cols_written = current_x - start_x;
+    lua_pushinteger(L, cols_written);
+    return 1;
 }
 
 ALWAYS_INT lua_merge(STATE) {
