@@ -16,6 +16,7 @@
             </div>
             <ul class="nav-menu">
                 <li><a href="#features">Features</a></li>
+                <li><a href="#rmp-framework">RMP Framework</a></li>
                 <li><a href="#documentation">Documentation</a></li>
                 <li><a href="#plugins">Plugins</a></li>
                 <li><a href="#installation">Installation</a></li>
@@ -90,9 +91,296 @@
                 <div class="about-content">
                     <h2>What is RMP?</h2>
                     <p><strong>RMP (Ray Music Player)</strong> is a high-performance, extensible framework built in C with Lua scripting for creating sophisticated terminal user interfaces. Originally conceived as a music player, RMP has evolved into a comprehensive platform for terminal-based applications.</p>
-                    
+
                     <h3>Difference Between RMP and RayMp</h3>
                     <p><strong>RayMp</strong> is a software platform that renders templates and plugins with user configurations for a better audio experience using the <strong>RMP</strong> framework. <strong>RMP</strong> is a framework with multiple classes and functions that uses C as a backend for better performance. It is used to create templates and plugins for the RayMp software and is also powerful for creating TUI applications in Lua.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="rmp-framework" class="rmp-framework">
+            <div class="container">
+                <h2>RMP Framework API Documentation</h2>
+
+                <div class="doc-section">
+                    <h3>Overview</h3>
+                    <p>The RMP framework provides a comprehensive terminal-based UI framework with audio playback capabilities. It's designed to create rich terminal applications with features like windows, text styling, drawing primitives, audio control, and more.</p>
+
+                    <h4>Framework Version</h4>
+                    <p>RMP api v1.0.0</p>
+
+                    <h4>Supported Lua Version</h4>
+                    <p>This API works with Lua version 5.4</p>
+                </div>
+
+                <div class="doc-section">
+                    <h3>Core Components</h3>
+
+                    <h4>RMP.Window</h4>
+                    <p>Terminal window management with support for creating bordered terminal windows with titles and customizable styling.</p>
+                    <pre><code class="language-lua">-- Example usage
+local window = RMP.Window.new("my_window_id")
+local vterm = window:createWindow(
+    "My Window Title",  -- title
+    50,                -- width
+    20,                -- height
+    1,                 -- x position
+    1,                 -- y position
+    RMP.FGColors.Brights.White,  -- border color
+    RMP.BGColors.NoBrights.Black, -- background color
+    RMP.BoxDrawing.LightBorder,   -- border style
+    function(x, y, xx, yy)        -- callback function
+        local vt = RMP.VirtualTerminal.new()
+        vt:writeText(x, y, "Content inside window")
+        return vt
+    end
+)</code></pre>
+
+                    <h4>RMP.Text</h4>
+                    <p>Text styling and formatting with ANSI color codes, formatting, and Unicode symbols.</p>
+                    <pre><code class="language-lua">-- Example usage
+local text = RMP.Text.new(
+    "Styled Text",
+    RMP.TextStyle.Bold,
+    RMP.FGColors.Brights.Green,
+    RMP.BGColors.NoBrights.Black
+)
+text:setPosition(5, 5)
+local vterm = text:render()
+</code></pre>
+
+                    <h4>RMP.VirtualTerminal</h4>
+                    <p>Virtual terminal buffer for drawing operations and merging multiple UI components.</p>
+                    <pre><code class="language-lua">-- Example usage
+local vterm = RMP.VirtualTerminal.new()
+vterm:writeText(10, 5, "Hello World!", RMP.FGColors.Brights.Yellow)
+vterm:drawBox("Title", 1, 1, 30, 10, RMP.BoxDrawing.LightBorder)
+</code></pre>
+
+                    <h4>RMP.Sound</h4>
+                    <p>Audio playback system with support for playlists, volume control, and playback modes.</p>
+                    <pre><code class="language-lua">-- Example usage
+local sound = RMP.Sound.new({"track1.mp3", "track2.mp3"})
+sound:setVolume(0.8)
+sound:setPlayBackMode(RMP.PlaybackMode.LOOP_PLAYLIST)
+sound:play()
+</code></pre>
+
+                    <h4>RMP.Draw</h4>
+                    <p>Drawing primitives for creating shapes, lines, and other visual elements in the terminal.</p>
+                    <pre><code class="language-lua">-- Example usage
+local draw = RMP.Draw.new()
+local vterm = RMP.VirtualTerminal.new()
+draw:rectangle(5, 5, 20, 10, RMP.BGColors.NoBrights.Blue, vterm)
+draw:circle(15, 10, 5, RMP.FGColors.Brights.Red, vterm)
+</code></pre>
+
+                    <h4>RMP.Options</h4>
+                    <p>Interactive menu system with selection capabilities.</p>
+                    <pre><code class="language-lua">-- Example usage
+local options = RMP.Options.new({"Option 1", "Option 2", "Option 3"})
+options:setColorFocus(RMP.BGColors.NoBrights.Cyan)
+options:next()
+local selected = options:getSelected()
+</code></pre>
+
+                    <h4>RMP.Scroller</h4>
+                    <p>Content scrolling mechanism for large datasets.</p>
+                    <pre><code class="language-lua">-- Example usage
+local options = RMP.Options.new({"Item 1", "Item 2", "Item 3", "Item 4", "Item 5"})
+local scroller = RMP.Scroller.new(3, options)  -- Show 3 items at a time
+scroller:nextLine()
+local visible_items = scroller:getVisible()
+</code></pre>
+                </div>
+
+                <div class="doc-section">
+                    <h3>Platform Support</h3>
+                    <p>RMP supports multiple platforms with automatic detection:</p>
+                    <ul>
+                        <li><code>RMP.PlatformType.LINUX</code> - Linux operating systems</li>
+                        <li><code>RMP.PlatformType.WINDOWS</code> - Microsoft Windows</li>
+                        <li><code>RMP.PlatformType.MAC</code> - Apple macOS</li>
+                        <li><code>RMP.PlatformType.UNKNOWN</code> - Other/unknown platform</li>
+                    </ul>
+
+                    <pre><code class="language-lua">-- Example usage
+local os_type = RMP.getOs()
+if os_type == RMP.PlatformType.LINUX then
+    print("Running on Linux")
+elseif os_type == RMP.PlatformType.WINDOWS then
+    print("Running on Windows")
+end
+</code></pre>
+                </div>
+
+                <div class="doc-section">
+                    <h3>Keyboard Keys Mapping</h3>
+                    <p>RMP provides comprehensive keyboard key mappings:</p>
+
+                    <h4>Control Keys</h4>
+                    <p><code>RMP.KEY_CTRL_A</code> through <code>RMP.KEY_CTRL_Z</code></p>
+
+                    <h4>Special Keys</h4>
+                    <p><code>RMP.KEY_ENTER</code>, <code>RMP.KEY_SPACE</code>, <code>RMP.KEY_ESCAPE</code></p>
+
+                    <h4>Arrow Keys</h4>
+                    <p><code>RMP.KEY_UP</code>, <code>RMP.KEY_DOWN</code>, <code>RMP.KEY_LEFT</code>, <code>RMP.KEY_RIGHT</code></p>
+
+                    <h4>Function Keys</h4>
+                    <p><code>RMP.KEY_F1</code> through <code>RMP.KEY_F12</code></p>
+
+                    <pre><code class="language-lua">-- Example usage in event handling
+function handleKeyEvent(key)
+    if key == RMP.KEY_SPACE then
+        -- Toggle play/pause
+    elseif key == RMP.KEY_UP then
+        -- Increase volume
+    elseif key == RMP.KEY_DOWN then
+        -- Decrease volume
+    elseif key == RMP.KEY_CTRL_C then
+        -- Exit application
+    end
+end
+</code></pre>
+                </div>
+
+                <div class="doc-section">
+                    <h3>Color Support</h3>
+                    <p>RMP supports both foreground and background colors with bright and non-bright variants:</p>
+
+                    <h4>Foreground Colors</h4>
+                    <ul>
+                        <li><code>RMP.FGColors.NoBrights.Black</code> through <code>RMP.FGColors.NoBrights.White</code></li>
+                        <li><code>RMP.FGColors.Brights.Black</code> through <code>RMP.FGColors.Brights.White</code></li>
+                    </ul>
+
+                    <h4>Background Colors</h4>
+                    <ul>
+                        <li><code>RMP.BGColors.NoBrights.Black</code> through <code>RMP.BGColors.NoBrights.White</code></li>
+                        <li><code>RMP.BGColors.Brights.Black</code> through <code>RMP.BGColors.Brights.White</code></li>
+                    </ul>
+
+                    <pre><code class="language-lua">-- Example usage
+local vterm = RMP.VirtualTerminal.new()
+vterm:writeText(1, 1, "Red text on blue background",
+    RMP.FGColors.Brights.Red,
+    RMP.BGColors.NoBrights.Blue)
+</code></pre>
+                </div>
+
+                <div class="doc-section">
+                    <h3>Text Styling Options</h3>
+                    <p>RMP provides various text styling options:</p>
+                    <ul>
+                        <li><code>RMP.TextStyle.Strike</code> - Strikethrough text</li>
+                        <li><code>RMP.TextStyle.Underline</code> - Single underline</li>
+                        <li><code>RMP.TextStyle.Bold</code> - Bold text</li>
+                        <li><code>RMP.TextStyle.Italic</code> - Italic text</li>
+                        <li><code>RMP.TextStyle.Reverse</code> - Reversed background/foreground colors</li>
+                        <li>And many more...</li>
+                    </ul>
+
+                    <pre><code class="language-lua">-- Example usage
+local text = RMP.Text.new("Bold and red",
+    RMP.TextStyle.Bold,
+    RMP.FGColors.Brights.Red)
+</code></pre>
+                </div>
+
+                <div class="doc-section">
+                    <h3>Audio Playback Modes</h3>
+                    <ul>
+                        <li><code>RMP.PlaybackMode.ONCE</code> - Play once, then stop</li>
+                        <li><code>RMP.PlaybackMode.LOOP_SINGLE</code> - Loop the current track</li>
+                        <li><code>RMP.PlaybackMode.LOOP_PLAYLIST</code> - Loop the entire playlist</li>
+                        <li><code>RMP.PlaybackMode.SHUFFLE</code> - Play tracks in random order</li>
+                    </ul>
+
+                    <pre><code class="language-lua">-- Example usage
+sound:setPlayBackMode(RMP.PlaybackMode.LOOP_PLAYLIST)
+</code></pre>
+                </div>
+
+                <div class="doc-section">
+                    <h3>Animation Patterns</h3>
+                    <p>RMP includes numerous animation patterns for loading spinners and other UI elements:</p>
+                    <ul>
+                        <li>Spinners: <code>RMP.AnimationPatterns.Spinner</code></li>
+                        <li>Dots: <code>RMP.AnimationPatterns.Dots</code></li>
+                        <li>Lines: <code>RMP.AnimationPatterns.Line</code></li>
+                        <li>Arrows: <code>RMP.AnimationPatterns.Arrow</code></li>
+                        <li>And many more categories...</li>
+                    </ul>
+
+                    <pre><code class="language-lua">-- Example usage
+local spinner = RMP.LoadingSpinner.new(10, 5)
+spinner:setPattern(RMP.AnimationPatterns.Spinner)
+spinner:nextFrame()
+</code></pre>
+                </div>
+
+                <div class="doc-section">
+                    <h3>Event Handling</h3>
+                    <p>RMP provides an event system for handling various types of events:</p>
+                    <ul>
+                        <li><code>RMP.EventType.Keyboard</code> - Keyboard input events</li>
+                        <li><code>RMP.EventType.Mouse</code> - Mouse input events</li>
+                        <li><code>RMP.EventType.Sound</code> - Audio-related events</li>
+                        <li><code>RMP.EventType.Configuration</code> - Configuration events</li>
+                        <li><code>RMP.EventType.Template</code> - Framework template events</li>
+                    </ul>
+
+                    <pre><code class="language-lua">-- Example usage
+local event_listener = RMP.EventListener.new()
+event_listener:addEventListener(RMP.EventType.Keyboard, function(key)
+    print("Key pressed: " .. key)
+end)
+</code></pre>
+                </div>
+
+                <div class="doc-section">
+                    <h3>Utility Classes</h3>
+                    <p>RMP includes several utility classes for common operations:</p>
+
+                    <h4>RMP.Path</h4>
+                    <p>Cross-platform file system operations:</p>
+                    <pre><code class="language-lua">-- Example usage
+local path = RMP.Path.new()
+local home_path = path:getHomePath()
+local files = path:listDir()
+</code></pre>
+
+                    <h4>RMP.Config</h4>
+                    <p>Configuration management:</p>
+                    <pre><code class="language-lua">-- Example usage
+local config = RMP.Config.new()
+local success, error = config:load()
+if success then
+    local settings = config:getInitFileAsObject()
+end
+</code></pre>
+
+                    <h4>RMP.Input</h4>
+                    <p>Text input handling:</p>
+                    <pre><code class="language-lua">-- Example usage
+local input = RMP.Input.new("Label: ", 1, 1, 20, "Default text")
+input:start()
+</code></pre>
+
+                    <h4>RMP.SimpleInput</h4>
+                    <p>High-level input component:</p>
+                    <pre><code class="language-lua">-- Example usage
+local input = RMP.SimpleInput.new({
+    x = 1,
+    y = 1,
+    width = 30,
+    label = "Name: ",
+    placeholder = "Enter your name"
+})
+input:focus()
+local value = input:getValue()
+</code></pre>
                 </div>
             </div>
         </section>
@@ -311,6 +599,7 @@ end</code></pre>
                 <div class="footer-section">
                     <h4>Documentation</h4>
                     <ul>
+                        <li><a href="#rmp-framework">RMP Framework</a></li>
                         <li><a href="#documentation">Getting Started</a></li>
                         <li><a href="#plugins">Plugin System</a></li>
                         <li><a href="#documentation">Configuration</a></li>
@@ -341,6 +630,11 @@ end</code></pre>
             </div>
         </div>
     </footer>
+
+    <!-- Include highlight.js for syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
 
     <script src="script.js"></script>
 </body>

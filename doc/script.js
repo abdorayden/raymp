@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.addEventListener('scroll', () => {
-    const sections = document.querySelectorAll('section');
+    const sections = document.querySelectorAll('section[id]');
     const navLinks = document.querySelectorAll('.nav-menu a');
 
     let current = '';
@@ -93,7 +93,7 @@ window.addEventListener('scroll', () => {
         const sectionTop = section.offsetTop;
         const sectionHeight = section.clientHeight;
 
-        if (pageYOffset >= (sectionTop - 200)) {
+        if (pageYOffset >= (sectionTop - 200) && pageYOffset < (sectionTop + sectionHeight - 200)) {
             current = section.getAttribute('id');
         }
     });
