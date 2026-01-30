@@ -1,1 +1,1 @@
-return require("rmp.selfrmp.plugins.digital_clock_with_effects")
+return require("rmp.builtin.plugins.digital_clock_with_effects")

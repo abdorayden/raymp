@@ -133,7 +133,7 @@ if "%~1"=="install" (
     copy "..\src\engine\core\lib\rsocket.dll" "%LUA_LIB%"
     copy "..\src\engine\core\lib\virtualterminalrmp.dll" "%LUA_LIB%"
 
-    xcopy "..\src\engine\selfrmp" "%LUA_SHARE%\selfrmp" /E /I /Y
+    xcopy "..\src\engine\builtin" "%LUA_SHARE%\builtin" /E /I /Y
 
     copy "..\src\promises.lua" "%LUA_SHARE%"
     copy "..\src\future.lua" "%LUA_SHARE%"
@@ -156,11 +156,11 @@ if "%~1"=="install-conf" (
         mkdir "%USERPROFILE%\.rmp\themes"
         mkdir "%USERPROFILE%\.rmp\plugins"
 
-        copy "..\src\engine\selfrmp\init.lua" "%USERPROFILE%\.rmp"
-        copy "..\src\engine\selfrmp\themes\tutorial.lua" "%USERPROFILE%\.rmp\themes"
-        xcopy "..\src\engine\selfrmp\plugins\tutorial_rmp" "%USERPROFILE%\.rmp\plugins\tutorial_rmp" /E /I /Y
-        xcopy "..\src\engine\selfrmp\plugins\helper_keys_tutorial" "%USERPROFILE%\.rmp\plugins\helper_keys_tutorial" /E /I /Y
-        copy "..\src\engine\selfrmp\plugins\digital_clock_with_effects.lua" "%USERPROFILE%\.rmp\plugins"
+        copy "..\src\engine\builtin\init.lua" "%USERPROFILE%\.rmp"
+        copy "..\src\engine\builtin\themes\tutorial.lua" "%USERPROFILE%\.rmp\themes"
+        xcopy "..\src\engine\builtin\plugins\tutorial_rmp" "%USERPROFILE%\.rmp\plugins\tutorial_rmp" /E /I /Y
+        xcopy "..\src\engine\builtin\plugins\helper_keys_tutorial" "%USERPROFILE%\.rmp\plugins\helper_keys_tutorial" /E /I /Y
+        copy "..\src\engine\builtin\plugins\digital_clock_with_effects.lua" "%USERPROFILE%\.rmp\plugins"
     )
     echo Install configuration completed.
     goto :eof

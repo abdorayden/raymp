@@ -1,1 +1,1 @@
-return require("rmp.selfrmp.plugins.tutorial_rmp")
+return require("rmp.builtin.plugins.tutorial_rmp")

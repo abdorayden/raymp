@@ -183,7 +183,7 @@ then
 	cp ../src/engine/core/lib/virtualterminalrmp.so $LUA_LIB
 
 	# install the local plugins and themes if the configuration dir not found on home dir
-	cp -r ../src/engine/selfrmp $LUA_SHARE
+	cp -r ../src/engine/builtin/ $LUA_SHARE
 
 	cp ../src/promises.lua 		            $LUA_SHARE
 	cp ../src/future.lua 		            $LUA_SHARE
@@ -214,11 +214,11 @@ then
 		# mkdir -p "$HOME/.rmp/themes"
 		# mkdir -p "$HOME/.rmp/plugins"
 		#
-  #       cp ../src/engine/selfrmp/init.lua "$HOME/.rmp"
-  #       cp ../src/engine/selfrmp/themes/tutorial.lua "$HOME/.rmp/themes"
-  #       cp -r ../src/engine/selfrmp/plugins/tutorial_rmp/ "$HOME/.rmp/plugins"
-  #       cp -r ../src/engine/selfrmp/plugins/helper_keys_tutorial/ "$HOME/.rmp/plugins"
-  #       cp ../src/engine/selfrmp/plugins/digital_clock_with_effects.lua "$HOME/.rmp/plugins"
+  #       cp ../src/engine/builtin/init.lua "$HOME/.rmp"
+  #       cp ../src/engine/builtin/themes/tutorial.lua "$HOME/.rmp/themes"
+  #       cp -r ../src/engine/builtin/plugins/tutorial_rmp/ "$HOME/.rmp/plugins"
+  #       cp -r ../src/engine/builtin/plugins/helper_keys_tutorial/ "$HOME/.rmp/plugins"
+  #       cp ../src/engine/builtin/plugins/digital_clock_with_effects.lua "$HOME/.rmp/plugins"
   #   fi
 elif [[ "$1" == "clean-conf" ]]
 then

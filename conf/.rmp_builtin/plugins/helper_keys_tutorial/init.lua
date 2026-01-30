@@ -1,1 +1,1 @@
-return require("rmp.selfrmp.plugins.helper_keys_tutorial")
+return require("rmp.builtin.plugins.helper_keys_tutorial")

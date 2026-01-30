@@ -712,10 +712,10 @@ local function setupPlugins(configObj, is_userconfig)
                     end
                 else
                     if type(name) == "string" then
-                        pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name) -- try to load from default selfrmp plugins
+                        pluginOk, pluginModule = pcall(require, "rmp.builtin.plugins." .. name) -- try to load from default builtin plugins
                         plugins_configurations:put(name, nil)
                     elseif type(name) == "table" then
-                        pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name[1]) -- try to load from default selfrmp plugins
+                        pluginOk, pluginModule = pcall(require, "rmp.builtin.plugins." .. name[1]) -- try to load from default builtin plugins
                         plugins_configurations:put(name[1], name[2])
                     end
                 end
@@ -757,10 +757,10 @@ local function setupPlugins(configObj, is_userconfig)
                     end
                 else
                     if type(name) == "string" then
-                        pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name) -- try to load from default selfrmp plugins
+                        pluginOk, pluginModule = pcall(require, "rmp.builtin.plugins." .. name) -- try to load from default builtin plugins
                         plugins_configurations:put(name, nil)
                     elseif type(name) == "table" then
-                        pluginOk, pluginModule = pcall(require, "rmp.selfrmp.plugins." .. name[1]) -- try to load from default selfrmp plugins
+                        pluginOk, pluginModule = pcall(require, "rmp.builtin.plugins." .. name[1]) -- try to load from default builtin plugins
                         plugins_configurations:put(name[1], name[2])
                     end
                 end
@@ -1167,8 +1167,8 @@ local function loadConfiguration()
 
         return cfgObj, template, true -- true means user config
     else
-        local defaultConfig = require("rmp.selfrmp.init")
-        local templateOk, template = pcall(require, "rmp.selfrmp.templates." .. defaultConfig.template)
+        local defaultConfig = require("rmp.builtin.init")
+        local templateOk, template = pcall(require, "rmp.builtin.templates." .. defaultConfig.template)
 
         if not templateOk then
             logerror("Error loading default template: " .. template)

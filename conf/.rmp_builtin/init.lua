@@ -34,4 +34,4 @@
 -- TODO: add callback in builtin configuration as plugins configurations so if the user loves the UI he can modifie it
 -- TODO: add this configurations at installations
 
-return require("rmp.selfrmp")
+return require("rmp.builtin")
