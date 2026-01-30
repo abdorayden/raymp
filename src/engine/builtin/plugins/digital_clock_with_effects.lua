@@ -34,7 +34,6 @@ return function(x, y, xx, yy)
     end
 
     vt:writeText(timeX, timeY, time, api.FGColors.Brights.White, api.BGColors.NoBrights.Blue, api.TextStyle.Bold)
-
     for i = 1, 10 do
         local angle = os.clock() + i * 0.6
         local radius = 5 + math.sin(os.clock() + i) * 3
