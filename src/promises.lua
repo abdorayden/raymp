@@ -24,6 +24,8 @@
 -- this is an js Promises implemented in lua
 -- the goal of this is simplify run plugins asyc
 --
+-- TODO: use uv lib as backend
+--
 -- Resources:
 -- 	- https://javascript.info/promise-basics
 --	- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise
