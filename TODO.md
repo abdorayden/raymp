@@ -33,8 +33,7 @@
 - [X] move the engine lua implementation to global module and call it with C 
 - [ ] deaubfuscate C main file to RMP
 - [ ] add some async functions to rmp framework
-- [X] create a whole tutorial that displayed when the user install raymp for the first time 
-        teaching him how to work with raymp with animations and small game
+- [X] create a whole tutorial that displayed when the user install raymp for the first time teaching him how to work with raymp with animations and small game
 - [ ] make plugins configurations are mutable so i can add another plugins at runtime
 - [ ] make sure that the buffer handle arabic and other languages correctly
 - [X] test colorFromHex and see the expected output
@@ -43,3 +42,5 @@
 - [ ] create separit module rmp.components and move table , code , menu and more to it
 - [ ] allow embed external apps to my tui rendrer
 - [ ] fix seg fault that happen when i call virtualterminal methods inside sound event
+- [ ] rewrote most lua framework to C code
+- [ ] add mouse support in keyboard.c native components and handle it differently
