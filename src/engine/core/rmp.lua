@@ -1682,14 +1682,14 @@ do -- VirtualTerminal
     end
 
     if true then
-        --- @param title string | Text
+        --- @param title string | Text | nil
         --- @param x integer
         --- @param y integer
         --- @param width integer
         --- @param height integer
         --- @param border_style BoxDrawing
-        --- @param fg FGColors
-        --- @param bg BGColors
+        --- @param fg FGColors | nil
+        --- @param bg BGColors | nil
         function RMP.VirtualTerminal:drawBox(title, x, y, width, height, border_style, fg, bg)
             x      = math.floor(x or 1)
             y      = math.floor(y or 1)
@@ -3061,14 +3061,7 @@ do -- Draw
         height = math.floor(height)
 
         vterm = vterm or RMP.VirtualTerminal()
-
-        -- Use full block for solid fill
-        for i = y, y + height - 1 do
-            vterm:writeText(x, i, string.rep(" ", width - 1), nil, color, nil)
-            -- for j = x, x + width - 1 do
-            --     vterm:setChar(j, i, " ", nil, color, nil)
-            -- end
-        end
+        vterm:drawBox(nil, x, y, width, height, RMP.BoxDrawing.NoBorder, nil, color)
         return vterm
     end
 
