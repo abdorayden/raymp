@@ -1095,7 +1095,8 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             plugs_cfgs, -- Use the original plugs_cfgs instead of reassigning
             -- windows is just table of windows tables
             template_copy,
-            data_freq_engine
+            data_freq_engine,
+            quit
         )
 
         if restart then
