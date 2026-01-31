@@ -1,6 +1,5 @@
 local api = require("rmp.rmp")
 local OOP = require("rmp.oop")
-local Util = require("rmp.util")
 
 local colorFromHex = api.colorFromHex
 
@@ -111,7 +110,8 @@ local function normalizeColorToHex(color)
     return createHexFromRGB(r, g, b)
 end
 
--- TODO: Parse a simple CSS like that applied without calling the methods directly
+-- TODO: UX is so fucking bad here
+-- TODO: save the functionalities and used them inside VirtualTerminal class
 Effects.BaseEffect = OOP.class("BaseEffect")
 do
     function Effects.BaseEffect:constructor(vterm_obj, method_name, params_config)
