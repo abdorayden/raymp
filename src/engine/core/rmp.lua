@@ -1363,8 +1363,9 @@ RMP.EventType = {
     Template = RMP.enum(),      -- Template Event to apply changes to the template
     Frame = RMP.enum(),         -- Frame Event (or actually a tunnel) is a main rendered frame so plugins have access to it
     -- TODO: add data freq table tunnel to access it
-    DataFreq = RMP.enum()
+    DataFreq = RMP.enum(),
     -- TODO: add on exit event
+    Exit = RMP.enum()
 }
 
 --- @interface Event
@@ -1400,6 +1401,8 @@ do
         -- callback : fun(data)
         self.events:put(RMP.EventType.DataFreq, Queue.new())
 
+        self.events:put(RMP.EventType.Exit, Queue.new())
+
         return self
     end
 
@@ -1420,6 +1423,10 @@ do
 
     function RMP.EventListener:useTunnel(event, callback)
         return self:addEventListener(event, callback)
+    end
+
+    function RMP.EventListener:onExit(callback)
+        self:addEventListener(RMP.EventType.Exit, callback)
     end
 
     function RMP.EventListener:onDataGet(callback)
@@ -1482,12 +1489,22 @@ do
     --- @param config HashMap
     --- @param template table
     --- @return EventListener | nil
-    function RMP.EventListener:handleEvent(key, mouse, sound, config, template, frame, datafreq)
+    function RMP.EventListener:handleEvent(key, mouse, sound, config, template, frame, datafreq, exit)
         local _template = self.events:get(RMP.EventType.Template)
         while not _template:isEmpty() do
             local template_callback = _template:pop()
             if template_callback and type(template_callback) == 'function' then
                 template_callback(template)
+            end
+        end
+
+        if exit then
+            local ext = self.events:get(RMP.EventType.Exit)
+            while not ext:isEmpty() do
+                local extCallback = ext:pop()
+                if extCallback and type(extCallback) == 'function' then
+                    extCallback()
+                end
             end
         end
 
@@ -1847,6 +1864,10 @@ do -- VirtualTerminal
             if event:instanceOf(HashMap) then
                 --- @diagnostic disable-next-line
                 local myevent = self:getEvent()
+
+                while not event:get(RMP.EventType.Exit):isEmpty() do
+                    myevent:get(RMP.EventType.Exit):push(event:get(RMP.EventType.Exit):pop())
+                end
 
                 while not event:get(RMP.EventType.DataFreq):isEmpty() do
                     myevent:get(RMP.EventType.DataFreq):push(event:get(RMP.EventType.DataFreq):pop())
@@ -4988,9 +5009,9 @@ do
     --- @param sound Sound
     --- @param config table
     --- @param template table
-    function RMP.Frame:run(key, mouse, sound, config, template, datafreq)
+    function RMP.Frame:run(key, mouse, sound, config, template, datafreq, exit)
         --- @diagnostic disable-next-line
-        self:super("handleEvent", key, mouse, sound, config, template, self, datafreq)
+        self:super("handleEvent", key, mouse, sound, config, template, self, datafreq, exit)
         --- @diagnostic disable-next-line
         self:super("render")
         --- @diagnostic disable-next-line
