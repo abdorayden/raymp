@@ -8,18 +8,16 @@
 - [X] Create readme and licence
 - [X] Change theme to templates and create an engine
 - [X] Make it compileable for windows and add more testes
-- [ ] Fix Sound and add support to access the low level api using lua
+- [X] Fix Sound and add support to access the low level api using lua
 - [X] Add events for sound engine and engine it self to make it restarted and ...
 - [-] Create repos for build-in plugins
-- [ ] Start creating the default page and introduce the first version of raymp after add engine to C
+- [-] Start creating the default page and introduce the first version of raymp after add engine to C
 - [-] Make sure that all plugins are stable
-- [ ] Edit relations between components and classes inside rmp framework
 - [X] Introduce Focuse and fix event to work with them
-- [ ] Write waves music animation with works sound frames
+- [X] Write waves music animation with works sound frames
 - [-] Introduce Table and Bar , SearchAnimations , TextField , TextArea , as a hight level components and fix Text class bugs
 - [X] Socket support with TCP,UDP implementations (optional maybe we use external libs) with asyncio support
 - [X] Implements Albome plugin and 2 diffrent themes
-- [ ] Implement a full main and rewrite RmpManager to C with default lua codes
 - [ ] With complete configuration management
 - [-] Prepare the default interface for new users or who they doesn't have configurations (simple animations , help)
 - [-] Move all plugins to external repos and implement PlugManager as plugin to manage others
@@ -31,7 +29,6 @@
 - [ ] create C api for creating plugins (better plugins performance)
 - [ ] drag and drop event
 - [X] move the engine lua implementation to global module and call it with C 
-- [ ] deaubfuscate C main file to RMP
 - [ ] add some async functions to rmp framework
 - [X] create a whole tutorial that displayed when the user install raymp for the first time teaching him how to work with raymp with animations and small game
 - [ ] make plugins configurations are mutable so i can add another plugins at runtime
