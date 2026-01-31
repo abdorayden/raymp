@@ -143,6 +143,12 @@ do
         return self
     end
 
+    function UTIL.Queue:clear()
+        self.queue = {}
+        self.readIndex = 0  -- Points to the next item to read
+        self.writeIndex = 0 -- Points to the next position to write
+    end
+
     function UTIL.Queue:push(data)
         if self.static then
             if self.writeIndex < self.staticSize then
