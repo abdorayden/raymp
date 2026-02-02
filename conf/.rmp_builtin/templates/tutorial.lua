@@ -24,4 +24,4 @@
 ---- tutorial builtin template dynamic windows for diffrent size the main window that shows
 ---  a tutorial and two helpers one shows keys and other window a simple clock animation
 
-return require("rmp.selfrmp.templates.tutorial")
+return require("rmp.builtin.templates.tutorial")

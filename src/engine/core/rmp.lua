@@ -282,6 +282,7 @@ local OOP = require("rmp.oop")
 local Promise = require("rmp.promises")
 local FutureLib = require("rmp.future")
 local Util = require("rmp.util")
+local Effects = require("rmp.effects")
 
 --- @alias HashMap table
 local HashMap = Util.HashMap
@@ -1030,6 +1031,8 @@ do -- text
         return self:asVTerm()
     end
 
+    --- TODO: add setters
+
     -- ColoredText accept text and color and return colored text
     --- @return string
     function RMP.Text:getColoredText()
@@ -1041,9 +1044,23 @@ do -- text
         return self.text
     end
 
+    --- @param text string
+    --- @return self
+    function RMP.Text:setText(text)
+        self.text = text
+        return self
+    end
+
     --- @return TextStyle
     function RMP.Text:getStyle()
         return self.style
+    end
+
+    --- @param style TextStyle
+    --- @return self
+    function RMP.Text:setStyle(style)
+        self.style = style
+        return self
     end
 
     --- @return FGColors
@@ -1051,9 +1068,23 @@ do -- text
         return self.fg
     end
 
+    --- @param fg FGColors
+    --- @return self
+    function RMP.Text:setFGColor(fg)
+        self.fg = fg
+        return self
+    end
+
     --- @return BGColors
     function RMP.Text:getBGColor()
         return self.bg
+    end
+
+    --- @param bg BGColors
+    --- @return self
+    function RMP.Text:setBGColor(bg)
+        self.bg = bg
+        return self
     end
 end
 
@@ -1361,10 +1392,13 @@ RMP.EventType = {
     Configuration = RMP.enum(), -- get access to the configurations also save a new configuration (cfg for plugins)
     --- @type integer
     Template = RMP.enum(),      -- Template Event to apply changes to the template
+    --- @type integer
     Frame = RMP.enum(),         -- Frame Event (or actually a tunnel) is a main rendered frame so plugins have access to it
     -- TODO: add data freq table tunnel to access it
+    --- @type integer
     DataFreq = RMP.enum(),
     -- TODO: add on exit event
+    --- @type integer
     Exit = RMP.enum()
 }
 
@@ -1623,6 +1657,11 @@ do -- VirtualTerminal
 
         self.native_vt_rmp = vt_rmp.init(self.realWidth, self.realHeight)
         self.cursor = { x = 1, y = 1 }
+
+        -- NOTE: style attr used for effects class
+        -- TODO: ak 3aref ;)
+        self.style = nil
+
         self:clear()
         return self
     end
@@ -1703,6 +1742,8 @@ do -- VirtualTerminal
                 title = ""
             end
 
+            --- BUG: fix title styles
+            --- TODO: handle title colors here
             vt_rmp.draw_box(self.native_vt_rmp, title, x, y, width, height, border_style, fg, bg)
         end
     else
@@ -4954,11 +4995,13 @@ do
         self.fps = fps
     end
 
+    --- BUG: calculate fps
     --- @return integer
     function RMP.Frame:getFps()
         return self.fps
     end
 
+    --- BUG: handle delta so well
     --- @return number
     function RMP.Frame:getDeltaTime()
         return 1 / self.fps -- second
