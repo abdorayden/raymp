@@ -957,6 +957,7 @@ local function moveto(x, y, ret)
     end
 end
 
+--- @deprecated
 --- @class Duration
 RMP.Duration = OOP.class("Duration")
 do
@@ -5059,6 +5060,8 @@ do
     --- @param sound Sound
     --- @param config table
     --- @param template table
+    --- @param datafreq any
+    --- @param exit boolean
     function RMP.Frame:run(key, mouse, sound, config, template, datafreq, exit)
         self.lastTime = self.currentTime
         self.currentTime = os.clock()
@@ -5084,8 +5087,11 @@ do
         self:super("render")
         --- @diagnostic disable-next-line
         self:super("clear")
+
+        local targetFrameTime = 1.0 / self.fps
+        local sleepTime = math.max(0, targetFrameTime - self.deltaTime)
         --- @diagnostic disable-next-line
-        RMP.sleep(math.floor(RMP.Duration.new(self:getDeltaTime()):fromSec()))
+        RMP.sleep(math.floor(sleepTime * 1000))
     end
 end
 
