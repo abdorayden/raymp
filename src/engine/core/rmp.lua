@@ -1736,6 +1736,7 @@ do -- VirtualTerminal
             local Tbg         = nil
             local Tstyl       = nil
             local titleText   = ""
+            --- @diagnostic disable-next-line
             if title and type(title) == "table" and title:instanceOf(RMP.Text) then
                 Tfg = title:getFGColor()
                 Tbg = title:getBGColor()
@@ -1749,7 +1750,7 @@ do -- VirtualTerminal
             end
             if isTextClass then
                 vt_rmp.draw_box(self.native_vt_rmp, "", x, y, width, height, border_style, fg, bg)
-                self:writeText(math.floor(x + #title / 2 + width / 2), y, titleText, Tfg, Tbg, Tstyl)
+                self:writeText(math.floor(x + (width / 2) - (#titleText / 2)), y, titleText, Tfg, Tbg, Tstyl)
             else
                 vt_rmp.draw_box(self.native_vt_rmp, title, x, y, width, height, border_style, fg, bg)
             end
