@@ -282,7 +282,7 @@ local OOP = require("rmp.oop")
 local Promise = require("rmp.promises")
 local FutureLib = require("rmp.future")
 local Util = require("rmp.util")
-local Effects = require("rmp.effects")
+-- local Effects = require("rmp.effects")
 
 --- @alias HashMap table
 local HashMap = Util.HashMap
@@ -471,8 +471,6 @@ function RMP.colorFromHsv(h, s, v, fg_or_bg)
 
     return RMP.colorFromHex(string.format("#%02x%02x%02x", r, g, b), fg_or_bg)
 end
-
--- TODO: handle colors using ColorFromHex
 
 -- ForeGround
 --- @enum FGColors
@@ -1030,8 +1028,6 @@ do -- text
         --- @diagnostic disable-next-line
         return self:asVTerm()
     end
-
-    --- TODO: add setters
 
     -- ColoredText accept text and color and return colored text
     --- @return string
@@ -1660,7 +1656,7 @@ do -- VirtualTerminal
 
         -- NOTE: style attr used for effects class
         -- TODO: ak 3aref ;)
-        self.style = nil
+        -- self.style = nil
 
         self:clear()
         return self
@@ -1730,21 +1726,32 @@ do -- VirtualTerminal
         --- @param fg FGColors | nil
         --- @param bg BGColors | nil
         function RMP.VirtualTerminal:drawBox(title, x, y, width, height, border_style, fg, bg)
-            x      = math.floor(x or 1)
-            y      = math.floor(y or 1)
-            width  = math.floor(width or 80)
-            height = math.floor(height or 24)
+            x                 = math.floor(x or 1)
+            y                 = math.floor(y or 1)
+            width             = math.floor(width or 80)
+            height            = math.floor(height or 24)
+            local isTextClass = false
+            local Tfg         = nil
+            local Tbg         = nil
+            local Tstyl       = nil
+            local titleText   = ""
             if title and type(title) == "table" and title:instanceOf(RMP.Text) then
-                title = title:getText()
-            elseif title and type(title) == "table" then
+                Tfg = title:getFGColor()
+                Tbg = title:getBGColor()
+                Tstyl = title:getStyle()
+                titleText = title:getText()
+                isTextClass = true
+            elseif title and type(title) == "string" then
                 title = title
             else
                 title = ""
             end
-
-            --- BUG: fix title styles
-            --- TODO: handle title colors here
-            vt_rmp.draw_box(self.native_vt_rmp, title, x, y, width, height, border_style, fg, bg)
+            if isTextClass then
+                vt_rmp.draw_box(self.native_vt_rmp, "", x, y, width, height, border_style, fg, bg)
+                self:writeText(math.floor(x + #title / 2 + width / 2), y, titleText, Tfg, Tbg, Tstyl)
+            else
+                vt_rmp.draw_box(self.native_vt_rmp, title, x, y, width, height, border_style, fg, bg)
+            end
         end
     else
         --- NOTE: disabled lua implementation just in case
@@ -1896,8 +1903,11 @@ do -- VirtualTerminal
     --- @param offsetY integer | nil
     --- @return self
     function RMP.VirtualTerminal:merge(thatTerm, distroy, offsetX, offsetY)
+        if thatTerm == nil then
+            return self
+        end
         --- @diagnostic disable-next-line
-        if thatTerm and thatTerm:instanceOf(RMP.VirtualTerminal) then
+        if thatTerm:instanceOf(RMP.VirtualTerminal) then
             vt_rmp.merge(self.native_vt_rmp, thatTerm:getVT(), offsetX or 0, offsetY or 0)
 
             --- @diagnostic disable-next-line
