@@ -4984,6 +4984,12 @@ do
         --- @diagnostic disable-next-line
         self:super("constructor", width, height)
         self.fps = 30
+        self.lastTime = 0
+        self.currentTime = 0
+        self.deltaTime = 0
+        self.frameCount = 0
+        self.fpsTimer = 0
+        self.actualFps = 0
         return self
     end
 
@@ -5005,16 +5011,14 @@ do
         self.fps = fps
     end
 
-    --- BUG: calculate fps
     --- @return integer
     function RMP.Frame:getFps()
-        return self.fps
+        return self.actualFps
     end
 
-    --- BUG: handle delta so well
     --- @return number
     function RMP.Frame:getDeltaTime()
-        return 1 / self.fps -- second
+        return self.deltaTime
     end
 
     --- @param x integer
@@ -5056,6 +5060,24 @@ do
     --- @param config table
     --- @param template table
     function RMP.Frame:run(key, mouse, sound, config, template, datafreq, exit)
+        self.lastTime = self.currentTime
+        self.currentTime = os.clock()
+
+        if self.lastTime > 0 then
+            self.deltaTime = self.currentTime - self.lastTime
+        else
+            self.deltaTime = 0
+        end
+
+        self.frameCount = self.frameCount + 1
+        self.fpsTimer = self.fpsTimer + self.deltaTime
+
+        if self.fpsTimer >= 1.0 then
+            self.actualFps = math.floor(self.frameCount / self.fpsTimer)
+            self.frameCount = 0
+            self.fpsTimer = 0
+        end
+
         --- @diagnostic disable-next-line
         self:super("handleEvent", key, mouse, sound, config, template, self, datafreq, exit)
         --- @diagnostic disable-next-line
