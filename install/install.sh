@@ -32,7 +32,7 @@ CC="gcc"
 # LIB_PATH="-L../src/engine/lua/lib -l:lua54.dll -lm"
 # CC="x86_64-w64-mingw32-gcc"
 
-FLAGS="-shared  -fPIC -Wall -Wextra"
+FLAGS="-shared  -fPIC -Wall -Wextra -ggdb"
 
 help(){
 	echo "HELP:"
@@ -93,12 +93,19 @@ then
 	rm "$LUA_LIB/sleep.so"
 	rm "$LUA_LIB/directory.so"
 	rm "$LUA_LIB/window.so"
+	rm "$LUA_LIB/platform.so"
+	rm "$LUA_LIB/virtualterminalrmp.so"
 
-	rm "$LUA_SHARE/rmp.lua"
 	rm "$LUA_SHARE/promises.lua"
 	rm "$LUA_SHARE/future.lua"
 	rm "$LUA_SHARE/util.lua"
 	rm "$LUA_SHARE/oop.lua"
+	rm "$LUA_SHARE/effects.lua"
+	rm "$LUA_SHARE/components.lua"
+
+    rm "$LUA_SHARE/rmp.lua"
+	rm "$LUA_SHARE/RMPManager.lua"
+
 
 elif [[ "$1" == "compile" ]]
 then
@@ -173,13 +180,15 @@ then
 	then
 		set -xe
 	fi
+
+
 	cp ../src/engine/core/lib/rmpaudio.so $LUA_LIB
 	cp ../src/engine/core/lib/keyboard.so $LUA_LIB
+    cp ../src/engine/core/lib/rsocket.so $LUA_LIB
 	cp ../src/engine/core/lib/sleep.so $LUA_LIB
+    cp ../src/engine/core/lib/directory.so $LUA_LIB
+    cp ../src/engine/core/lib/window.so $LUA_LIB
 	cp ../src/engine/core/lib/platform.so $LUA_LIB
-	cp ../src/engine/core/lib/directory.so $LUA_LIB
-	cp ../src/engine/core/lib/window.so $LUA_LIB
-	cp ../src/engine/core/lib/rsocket.so $LUA_LIB
 	cp ../src/engine/core/lib/virtualterminalrmp.so $LUA_LIB
 
 	# install the local plugins and themes if the configuration dir not found on home dir
@@ -189,7 +198,6 @@ then
 	cp ../src/future.lua 		            $LUA_SHARE
 	cp ../src/util.lua 		                $LUA_SHARE
 	cp ../src/oop.lua 		                $LUA_SHARE
-
     cp ../src/components.lua 	            $LUA_SHARE
     cp ../src/effects.lua 		            $LUA_SHARE
 
