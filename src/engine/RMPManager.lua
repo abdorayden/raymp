@@ -915,30 +915,20 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         local len = math.floor(sound:getLength())
         local currSpeed = sound:getSpeed()
 
-        for windowId, switchKey in pairs(switchKeys) do
-            mainFrame:addEventListener(api.EventType.Keyboard, function(inputKey)
+        mainFrame:addEventListener(api.EventType.Keyboard, function(inputKey)
+            for windowId, switchKey in pairs(switchKeys) do
                 if inputKey == switchKey then
                     parser:updatePlugin(windowId)
                 end
-            end)
-        end
-
-        -- Handle the exit key from configuration
-        mainFrame:addEventListener(api.EventType.Keyboard, function(inputKey)
+            end
             if inputKey == exit then
                 quit = true
             end
-        end)
-
-        mainFrame:addEventListener(api.EventType.Keyboard, function(key)
             if valid_restart then
-                if settings and key == settings.restart_engine then
+                if settings and inputKey == settings.restart_engine then
                     restart = true
                 end
             end
-        end)
-
-        mainFrame:addEventListener(api.EventType.Keyboard, function(inputKey)
             -- in case you configured pause and resume with same key
             if soundCfg.pause_sound ~= soundCfg.resume_sound then
                 if inputKey == soundCfg.pause_sound then
