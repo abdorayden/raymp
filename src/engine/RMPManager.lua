@@ -30,6 +30,12 @@
 -- BUG:  bg color title not working properly in window (drawBox)
 -- BUG:  make .rmp part of lua envirement
 
+--- TODO: manage the builtin plugins
+--- TODO: use builtin plugins like (notifications, error sharing, themes)
+--- TODO: also handle the error of by sharing it at runtime as notifications , leave the critical errors using this default one
+--- TODO: create a default themes and make them configurable by the engine settings
+--- TODO: create a utility builtin plugin to make it easy to work with templates and more stuff in engine
+
 local api = require("rmp.rmp")
 local utils = require("rmp.util")
 local OOP = require("rmp.oop")
