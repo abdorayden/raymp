@@ -20,6 +20,9 @@ local api = require("rmp.rmp")
 --     }
 --
 -- },
+--
+-- TODO: add dev-rmp plugin to simplify the repeated code in the plugins and themes development by providing some utility functions and a template for the plugins and themes development
+-- TODO: add plugin manager as default builtin plugin
 
 return {
     -- the default configuration of the sound
