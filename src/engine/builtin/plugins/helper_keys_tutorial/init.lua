@@ -1,6 +1,7 @@
 local api = require("rmp.rmp")
 
 local helps = nil
+
 return function(x, y, xx, yy)
     local vt = api.VirtualTerminal.new()
     vt:addEventListener(api.EventType.TransformDataGet, function(data)

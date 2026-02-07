@@ -23,13 +23,14 @@ local api = require("rmp.rmp")
 --
 -- TODO: add dev-rmp plugin to simplify the repeated code in the plugins and themes development by providing some utility functions and a template for the plugins and themes development
 -- TODO: add plugin manager as default builtin plugin
+-- TODO: make sure that the builtin plugins are handling the themes
 
 return {
     -- the default configuration of the sound
     -- settings the engine configurations
     settings = {
         fps = 60,
-        help_key = api.KEY_H,
+        help_key = api.KEY_H,         -- nil to disable help default ui
         volume = 0.5,                 -- 0 to 1
         speed = 1.0,                  -- 0.25 to 4.0
         mode = api.PlaybackMode.ONES, -- playback modes
