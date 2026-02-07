@@ -810,6 +810,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
     local exit = nil
 
     local notify_plug = nil
+    local loaded_theme = nil
 
     if settings then
         if settings.fps and type(settings.fps) == "number" and settings.fps > 0 and settings.fps <= 120 then
@@ -886,9 +887,20 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         if settings.notify then
             -- this is a function that will be called with the error message when an error occurs
             -- load builtin notify plugin
-            notify_plug = require("rmp.builtin.plugins.builtin-notify-rmp")
+            local noti_ok, noti_module = pcall(require, "rmp.builtin.plugins.builtin-notify-rmp")
+            if noti_ok and noti_module then
+                notify_plug = noti_module
+            end
         else
             -- user disactivated notifications maybe he download other notification plugin or something idk
+        end
+        if settings.theme and type(settings.theme) == "string" then
+            -- try to load the theme from builtin themes
+            local theme_ok, theme_module = pcall(require,
+                "rmp.builtin.plugins." .. "builtin-theme-" .. settings.theme .. "-rmp")
+            if theme_ok and theme_module then
+                loaded_theme = theme_module
+            end
         end
     else
         inc_speed = 0.1
@@ -1050,6 +1062,9 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
 
         -- To work with the same table
         local windows, _ = parser:parseTemplate(template_copy)
+        if loaded_theme then
+            mainFrame:add(loaded_theme(), true)
+        end
 
         for _, window in ipairs(windows) do
             mainFrame:add(window, true)
