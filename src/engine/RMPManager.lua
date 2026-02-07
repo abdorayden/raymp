@@ -933,8 +933,10 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
 
         -- To work with the same table
         local windows, _ = parser:parseTemplate(template_copy)
-        if loaded_theme then
+
+        if loaded_theme and type(loaded_theme) == "function" then
             mainFrame:add(loaded_theme(), true)
+            -- else sent error throw to notification by transfer data event
         end
 
         for _, window in ipairs(windows) do
