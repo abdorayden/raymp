@@ -809,6 +809,8 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
     local help_fn = nil
     local exit = nil
 
+    local notify_plug = nil
+
     if settings then
         if settings.fps and type(settings.fps) == "number" and settings.fps > 0 and settings.fps <= 120 then
             mainFrame:setFps(settings.fps)
@@ -879,6 +881,14 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         else
             settings.exit = api.KEY_Q
             exit = api.KEY_Q
+        end
+
+        if settings.notify then
+            -- this is a function that will be called with the error message when an error occurs
+            -- load builtin notify plugin
+            notify_plug = require("rmp.builtin.plugins.builtin-notify-rmp")
+        else
+            -- user disactivated notifications maybe he download other notification plugin or something idk
         end
     else
         inc_speed = 0.1
@@ -1062,6 +1072,13 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             end
         end
         oq = qq
+
+        -- load the plugin and add it to the main frame
+        if notify_plug and type(notify_plug) == "function" then
+            mainFrame:add(notify_plug(), true)
+        else
+            -- user may choose to disable notifications or something idk
+        end
 
         ---
         -- TODO: add other plugins that are not integrated to specific window id template to event

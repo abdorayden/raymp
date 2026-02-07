@@ -11,6 +11,7 @@ return {
         mode = api.PlaybackMode.ONES, -- playback modes
         restart_engine = api.KEY_CTRL_R,
         exit = api.KEY_Q,
+        notify = true, -- whether to show notifications
 
         -- inc or dec
         inc_speed = 0.1,
