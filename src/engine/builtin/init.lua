@@ -1,5 +1,26 @@
 local api = require("rmp.rmp")
 
+-- TODO: in case trying to integrate multiple plugins in one theme window, we can use the same themeWindowId for those plugins, and set the activate key for only one of them, and the others will be activated together with it, but they will not be activated if the themeWindowId is activated by other plugin, so we can have more flexible control over the plugins activation
+-- {
+--     themeWindowId = 2, -- if this attr is not nil or exists , the runner ignore activate
+--     isActivated = true,
+--     activate = api.KEY_E,
+--     -- this name should be the same directory and same lua file
+--     -- plugins/plug_name.lua or plugins/plug_name/init.lua
+--     switchPluginKey = api.KEY_I,
+--     names = {
+--         "matrix_digital_rain_effect",
+--         "music_waves",
+--         "text_editor",
+--         -- "tellme_yourname",
+--         "tellme_yournamev2",
+--         "digital_clock_with_effects",
+--         "3d_cube",
+--         "filebrowser"
+--     }
+--
+-- },
+
 return {
     -- the default configuration of the sound
     -- settings the engine configurations
@@ -11,8 +32,8 @@ return {
         mode = api.PlaybackMode.ONES, -- playback modes
         restart_engine = api.KEY_CTRL_R,
         exit = api.KEY_Q,
-        notify = true,     -- whether to show notifications
-        theme = "default", -- default theme [default , darkandwhite , desert , elflord] , nil to disable theme
+        notify = true, -- whether to show notifications
+        theme = nil,   -- default theme [default , darkandwhite , desert , elflord] , nil to disable theme
 
         -- inc or dec
         inc_speed = 0.1,

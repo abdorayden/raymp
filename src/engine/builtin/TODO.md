@@ -1,3 +1,2 @@
 # Builtin
-- this directory contains the default configurations with documentations and example how to work with raymp and how to download plugins and template and how to create them
-- create a simple template with nessesary plugins to work with songs
+- [ ] make sure that the theme and notification system are documented and working in case there's other developers trying to create their own themes and notifications plugins (by understanding how to handle the events to catch or share the data between plugins)
