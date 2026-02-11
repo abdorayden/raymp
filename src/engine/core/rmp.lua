@@ -263,33 +263,39 @@
 -- TODO: Popup
 -- TODO: Menu
 
-RMP = {}
+RMP                       = {}
 
-local io = require("io")
-local utf8 = require("utf8")
+local io                  = require("io")
+local utf8                = require("utf8")
 
-local keyboard = require("rmp.keyboard")
-local rmpaudio = require("rmp.rmpaudio")
-local sleep = require("rmp.sleep")
-local platform = require("rmp.platform")
-local directory = require("rmp.directory")
-local window = require("rmp.window")
-local vt_rmp = require("rmp.virtualterminalrmp")
-local rsocket = require("rmp.rsocket")
+local keyboard            = require("rmp.keyboard")
+local rmpaudio            = require("rmp.rmpaudio")
+local sleep               = require("rmp.sleep")
+local platform            = require("rmp.platform")
+local directory           = require("rmp.directory")
+local window              = require("rmp.window")
+local vt_rmp              = require("rmp.virtualterminalrmp")
+local rsocket             = require("rmp.rsocket")
 
 -- require rmp utility
-local OOP = require("rmp.oop")
-local Promise = require("rmp.promises")
-local FutureLib = require("rmp.future")
-local Util = require("rmp.util")
--- local Effects = require("rmp.effects")
+local OOP                 = require("rmp.oop")
+local Promise             = require("rmp.promises")
+local FutureLib           = require("rmp.future")
+local Util                = require("rmp.util")
+local Effects             = require("rmp.effects")
+
+local BaseEffect          = Effects.BaseEffect
+local Easing              = Effects.Easing
+local extractRGB          = Effects.extractRGB
+local createHexFromRGB    = Effects.createHexFromRGB
+local normalizeColorToHex = Effects.normalizeColorToHex
 
 --- @alias HashMap table
-local HashMap = Util.HashMap
-local Queue = Util.Queue
+local HashMap             = Util.HashMap
+local Queue               = Util.Queue
 
 --- @type integer
-local global_count_enum = -1
+local global_count_enum   = -1
 
 --- @param reset boolean | nil
 --- @param value integer | nil
@@ -1657,7 +1663,7 @@ do -- VirtualTerminal
 
         -- NOTE: style attr used for effects class
         -- TODO: ak 3aref ;)
-        -- self.style = nil
+        self.style = nil
 
         self:clear()
         return self
@@ -2475,6 +2481,7 @@ do
         self.fg_active = options.fg_active or RMP.FGColors.Brights.Cyan
         self.bg_active = options.bg_active or RMP.BGColors.NoBrights.Blue
         self.fg_error = options.fg_error or RMP.FGColors.Brights.Red
+        self.chr = options.chr or RMP.Bar_100_per
 
         return self
     end
@@ -2761,7 +2768,7 @@ do
         --- @diagnostic disable-next-line
         if self.active then
             local cursor_x = field_x + self.cursor_pos - 1
-            vterm:writeText(cursor_x, self.y, "_", RMP.FGColors.Brights.Yellow, bg)
+            vterm:writeText(cursor_x, self.y, self.chr, self.fg_normal, bg)
         end
 
 
