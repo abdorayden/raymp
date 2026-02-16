@@ -107,6 +107,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <limits.h>
 
 #define CH_UTF8_SIZE    64*2
 #define CH_STRYLE_AND_COLOR_SIZE    64
@@ -160,6 +161,11 @@ ALWAYS_INT lua_init(STATE) {
 	if (width <= 0 || height <= 0) {
 		lua_pushnil(L);
 		lua_pushstring(L, "Invalid dimensions: width and height must be positive");
+		return 2;
+	}
+	if (width > USHRT_MAX || height > USHRT_MAX) {
+		lua_pushnil(L);
+		lua_pushstring(L, "Invalid dimensions: width and height must be <= 65535");
 		return 2;
 	}
 
@@ -518,15 +524,20 @@ ALWAYS_INT lua_draw_box(STATE) {
         Cell* top_cell = get_cell(vt, i, y);
         if (top_cell) {
             if (i == x) {
-                strcpy(top_cell->ch, tl_corner);
+                strncpy(top_cell->ch, tl_corner, sizeof(top_cell->ch) - 1);
+                top_cell->ch[sizeof(top_cell->ch) - 1] = '\0';
             } else if (i == end_x) {
-                strcpy(top_cell->ch, tr_corner);
+                strncpy(top_cell->ch, tr_corner, sizeof(top_cell->ch) - 1);
+                top_cell->ch[sizeof(top_cell->ch) - 1] = '\0';
             } else {
-                strcpy(top_cell->ch, h_line);
+                strncpy(top_cell->ch, h_line, sizeof(top_cell->ch) - 1);
+                top_cell->ch[sizeof(top_cell->ch) - 1] = '\0';
             }
-            strcpy(top_cell->fg, fg);
-            strcpy(top_cell->bg, bg);
-            strcpy(top_cell->style, "");
+            strncpy(top_cell->fg, fg, sizeof(top_cell->fg) - 1);
+            top_cell->fg[sizeof(top_cell->fg) - 1] = '\0';
+            strncpy(top_cell->bg, bg, sizeof(top_cell->bg) - 1);
+            top_cell->bg[sizeof(top_cell->bg) - 1] = '\0';
+            top_cell->style[0] = '\0';
         }
     }
 
@@ -535,15 +546,20 @@ ALWAYS_INT lua_draw_box(STATE) {
             Cell* bottom_cell = get_cell(vt, i, end_y);
             if (bottom_cell) {
                 if (i == x) {
-                    strcpy(bottom_cell->ch, bl_corner);
+                    strncpy(bottom_cell->ch, bl_corner, sizeof(bottom_cell->ch) - 1);
+                    bottom_cell->ch[sizeof(bottom_cell->ch) - 1] = '\0';
                 } else if (i == end_x) {
-                    strcpy(bottom_cell->ch, br_corner);
+                    strncpy(bottom_cell->ch, br_corner, sizeof(bottom_cell->ch) - 1);
+                    bottom_cell->ch[sizeof(bottom_cell->ch) - 1] = '\0';
                 } else {
-                    strcpy(bottom_cell->ch, h_line);
+                    strncpy(bottom_cell->ch, h_line, sizeof(bottom_cell->ch) - 1);
+                    bottom_cell->ch[sizeof(bottom_cell->ch) - 1] = '\0';
                 }
-                strcpy(bottom_cell->fg, fg);
-                strcpy(bottom_cell->bg, bg);
-                strcpy(bottom_cell->style, "");
+                strncpy(bottom_cell->fg, fg, sizeof(bottom_cell->fg) - 1);
+                bottom_cell->fg[sizeof(bottom_cell->fg) - 1] = '\0';
+                strncpy(bottom_cell->bg, bg, sizeof(bottom_cell->bg) - 1);
+                bottom_cell->bg[sizeof(bottom_cell->bg) - 1] = '\0';
+                bottom_cell->style[0] = '\0';
             }
         }
     }
@@ -551,19 +567,25 @@ ALWAYS_INT lua_draw_box(STATE) {
     for (int j = y + 1; j < end_y; j++) {
         Cell* left_cell = get_cell(vt, x, j);
         if (left_cell) {
-            strcpy(left_cell->ch, v_line);
-            strcpy(left_cell->fg, fg);
-            strcpy(left_cell->bg, bg);
-            strcpy(left_cell->style, "");
+            strncpy(left_cell->ch, v_line, sizeof(left_cell->ch) - 1);
+            left_cell->ch[sizeof(left_cell->ch) - 1] = '\0';
+            strncpy(left_cell->fg, fg, sizeof(left_cell->fg) - 1);
+            left_cell->fg[sizeof(left_cell->fg) - 1] = '\0';
+            strncpy(left_cell->bg, bg, sizeof(left_cell->bg) - 1);
+            left_cell->bg[sizeof(left_cell->bg) - 1] = '\0';
+            left_cell->style[0] = '\0';
         }
 
         if (width > 1) {
             Cell* right_cell = get_cell(vt, end_x, j);
             if (right_cell) {
-                strcpy(right_cell->ch, v_line);
-                strcpy(right_cell->fg, fg);
-                strcpy(right_cell->bg, bg);
-                strcpy(right_cell->style, "");
+                strncpy(right_cell->ch, v_line, sizeof(right_cell->ch) - 1);
+                right_cell->ch[sizeof(right_cell->ch) - 1] = '\0';
+                strncpy(right_cell->fg, fg, sizeof(right_cell->fg) - 1);
+                right_cell->fg[sizeof(right_cell->fg) - 1] = '\0';
+                strncpy(right_cell->bg, bg, sizeof(right_cell->bg) - 1);
+                right_cell->bg[sizeof(right_cell->bg) - 1] = '\0';
+                right_cell->style[0] = '\0';
             }
         }
     }
@@ -572,10 +594,12 @@ ALWAYS_INT lua_draw_box(STATE) {
         for (int j = x + 1; j < end_x; j++) {
             Cell* interior_cell = get_cell(vt, j, i);
             if (interior_cell) {
-                strcpy(interior_cell->ch, " ");
-                strcpy(interior_cell->fg, "");
-                strcpy(interior_cell->bg, bg);
-                strcpy(interior_cell->style, "");
+                interior_cell->ch[0] = ' ';
+                interior_cell->ch[1] = '\0';
+                interior_cell->fg[0] = '\0';
+                strncpy(interior_cell->bg, bg, sizeof(interior_cell->bg) - 1);
+                interior_cell->bg[sizeof(interior_cell->bg) - 1] = '\0';
+                interior_cell->style[0] = '\0';
             }
         }
     }
@@ -593,9 +617,11 @@ ALWAYS_INT lua_draw_box(STATE) {
             if (title_cell) {
                 title_cell->ch[0] = title[i];
                 title_cell->ch[1] = '\0';
-                strcpy(title_cell->fg, fg);
-                strcpy(title_cell->bg, bg);
-                strcpy(title_cell->style, "");
+                strncpy(title_cell->fg, fg, sizeof(title_cell->fg) - 1);
+                title_cell->fg[sizeof(title_cell->fg) - 1] = '\0';
+                strncpy(title_cell->bg, bg, sizeof(title_cell->bg) - 1);
+                title_cell->bg[sizeof(title_cell->bg) - 1] = '\0';
+                title_cell->style[0] = '\0';
             }
         }
     }
@@ -846,6 +872,11 @@ ALWAYS_INT lua_resize(STATE) {
 	if (new_width <= 0 || new_height <= 0) {
 		lua_pushboolean(L, 0);
 		lua_pushstring(L, "Invalid dimensions: width and height must be positive");
+		return 2;
+	}
+	if (new_width > USHRT_MAX || new_height > USHRT_MAX) {
+		lua_pushboolean(L, 0);
+		lua_pushstring(L, "Invalid dimensions: width and height must be <= 65535");
 		return 2;
 	}
 
