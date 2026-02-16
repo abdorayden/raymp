@@ -130,8 +130,8 @@ local function engine_render_help(frame, w, h, settings, soundCfg)
 end
 local settings = nil
 local soundCfg = nil
+local vt       = api.VirtualTerminal(1, 1)
 return function()
-    local vt   = api.VirtualTerminal.new()
     local h, w = api.Terminal:getSize()
 
     vt:onConfiguration(function(cfg)
@@ -141,7 +141,11 @@ return function()
         end
     end)
     if settings and soundCfg then
-        engine_render_help(vt, w, h, settings, soundCfg)
+        vt:onFrame(function(frame)
+            if frame then
+                engine_render_help(frame, w, h, settings, soundCfg)
+            end
+        end)
     end
     return vt
 end

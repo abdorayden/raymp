@@ -132,9 +132,9 @@ if false then
     notificationQueue:push({ message = "test error", status = "message", duration = 15 })
 end
 
-return function()
-    local vt = VirtualTerminal()
+local vt = VirtualTerminal(1, 1)
 
+return function()
     vt:addEventListener(api.EventType.TransformDataGet, function(data)
         if data and data.theme then
             tha_theme = data.theme
@@ -154,7 +154,12 @@ return function()
         add_notification(noti.message, noti.status, noti.duration)
     end
     prune_old_notifications()
-    render_notifications(vt)
+
+    vt:onFrame(function(frame)
+        if frame then
+            render_notifications(frame)
+        end
+    end)
     --
     --- TODO: create a beautiful popup with diffrent status and add animations to it like noice in nvim
 
