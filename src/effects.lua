@@ -1,10 +1,7 @@
-local api = require("rmp.rmp")
 local OOP = require("rmp.oop")
 
-local colorFromHex = api.colorFromHex
-
 -- TODO: later
-local components = require("rmp.components")
+-- local components = require("rmp.components")
 
 -- how about css styles on TUI applications huh ...
 --
@@ -114,13 +111,16 @@ end
 -- TODO: save the functionalities and used them inside VirtualTerminal class
 Effects.BaseEffect = OOP.class("BaseEffect")
 do
-    function Effects.BaseEffect:constructor(vterm_obj, method_name, params_config)
+    function Effects.BaseEffect:constructor(vterm_obj, method_name, params_config, colorFromHexCallback, FG, BG)
         self.vterm = vterm_obj
         self.method_name = method_name
         self.forrendering = vterm_obj[method_name]
         self.params_config = params_config
         self.original_params = {}
         self.current_params = {}
+        self.colorFromHexCallback = colorFromHexCallback
+        self.FG = FG
+        self.BG = BG
 
         -- deep copy params
         for i, v in ipairs(params_config.values) do
@@ -131,7 +131,7 @@ do
         -- track which params can be animated
         self.animatable_indices = params_config.animatable or {}
         self.color_index = params_config.color_index
-        self.color_mode = params_config.color_as and api.FG or api.BG
+        self.color_mode = params_config.color_as and self.FG or self.BG
 
         -- animation state
         self.animation_state = {
@@ -623,7 +623,7 @@ do
             self.current_params[4] = w
             self.current_params[5] = h
             if self.color_index then
-                self.current_params[self.color_index] = colorFromHex(color, self.color_mode)
+                self.current_params[self.color_index] = self.colorFromHexCallback(color, self.color_mode)
             end
             return self.forRendering(self.vterm, table.unpack(self.current_params))
         end
