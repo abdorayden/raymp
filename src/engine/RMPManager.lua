@@ -24,6 +24,8 @@
 -- Complete RMP engine with error handling, plugin management, template parsing and layout engine
 -- Enhanced version of rmpv1 with better structure and modularity
 
+-- TODO: add more optimisation and controle for the engine
+
 -- TODO: rewrite all engine to C for better performance and lower memory usage
 -- NOTE: plugins should create VirtualTerminal inside returned function
 -- BUG:  program stops if lua access nil obj or something (add system logs)
@@ -403,7 +405,7 @@ do
             if currentPlugin and type(currentPlugin) == "function" then
                 local pluginResult = currentPlugin(innerX, innerY, innerXX, innerYY)
                 if pluginResult then
-                    childVterm:merge(pluginResult, true)
+                    childVterm:merge(pluginResult)
                 end
             end
 
@@ -411,7 +413,7 @@ do
                 for _, childConfig in ipairs(windowConfig.children) do
                     local childWindow = self:createWindow(childConfig, context, mainFrame)
                     if childWindow then
-                        childVterm:merge(childWindow, true)
+                        childVterm:merge(childWindow)
                     end
                 end
             end
@@ -419,7 +421,7 @@ do
             if windowConfig.content and type(windowConfig.content) == "function" then
                 local contentResult = windowConfig.content(innerX, innerY, innerXX, innerYY, context)
                 if contentResult then
-                    childVterm:merge(contentResult, true)
+                    childVterm:merge(contentResult)
                 end
             end
 
@@ -935,7 +937,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         local windows, _ = parser:parseTemplate(template_copy)
 
         if loaded_theme and type(loaded_theme) == "function" then
-            mainFrame:add(loaded_theme(), true)
+            mainFrame:add(loaded_theme())
             -- else sent error throw to notification by transfer data event
         end
 
@@ -946,7 +948,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         if render_help then
             local h_ok, h_obj = pcall(require, "rmp.builtin.plugins.builtin-help-rmp")
             if h_ok and h_obj and type(h_obj) == "function" then
-                mainFrame:add(h_obj(), true)
+                mainFrame:add(h_obj())
             end
         else
             -- in case the user load external plugin
@@ -958,12 +960,11 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             local plug = oq:pop()
             if plug then
                 if type(plug) == "function" then
-                    mainFrame:add(plug(), true)
+                    mainFrame:add(plug())
                     qq:push(plug)
                 elseif type(plug) == "table" then
                     -- TODO: other plugins are configured , add their configurations to Config event
-
-                    mainFrame:add(plug[1](), true)
+                    mainFrame:add(plug[1]())
                     qq:push(plug)
                 end
             end
@@ -972,7 +973,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
 
         -- load the plugin and add it to the main frame
         if notify_plug and type(notify_plug) == "function" then
-            mainFrame:add(notify_plug(), true)
+            mainFrame:add(notify_plug())
         else
             -- user may choose to disable notifications or something idk
         end
