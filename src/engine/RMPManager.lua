@@ -272,9 +272,10 @@ end
 -- Template parser with layout engine
 local TemplateParser = OOP.class("TemplateParser")
 do
-    function TemplateParser:constructor(template, plugManager)
+    function TemplateParser:constructor(template, plugManager, frame)
         self.template = template
         self.plugManager = plugManager
+        self.mainFrame = frame or mainFrame
         self.windowCache = {}
         self.pluginCache = {}
         self.lastTerminalSize = { w = 0, h = 0 }
@@ -374,7 +375,7 @@ do
         )
     end
 
-    function TemplateParser:createWindow(windowConfig, context, mainFrame)
+    function TemplateParser:createWindow(windowConfig, context, frame)
         if not windowConfig or windowConfig.type ~= "Window" then
             return nil
         end
@@ -385,6 +386,7 @@ do
             end
         end
 
+        local targetFrame = frame or self.mainFrame or mainFrame
         local width = self:evaluateExpression(windowConfig.width, context)
         local height = self:evaluateExpression(windowConfig.height, context)
         local x = self:evaluateExpression(windowConfig.x, context)
@@ -406,35 +408,30 @@ do
         end
 
         local callback = function(innerX, innerY, innerXX, innerYY)
-            local childVterm = api.VirtualTerminal.new()
-
             if currentPlugin and type(currentPlugin) == "function" then
                 local pluginResult = currentPlugin(innerX, innerY, innerXX, innerYY)
                 if pluginResult then
-                    childVterm:merge(pluginResult)
+                    targetFrame:merge(pluginResult)
                 end
             end
 
             if windowConfig.children then
                 for _, childConfig in ipairs(windowConfig.children) do
-                    local childWindow = self:createWindow(childConfig, context, mainFrame)
-                    if childWindow then
-                        childVterm:merge(childWindow)
-                    end
+                    self:createWindow(childConfig, context, targetFrame)
                 end
             end
 
             if windowConfig.content and type(windowConfig.content) == "function" then
                 local contentResult = windowConfig.content(innerX, innerY, innerXX, innerYY, context)
                 if contentResult then
-                    childVterm:merge(contentResult)
+                    targetFrame:merge(contentResult)
                 end
             end
 
-            return childVterm
+            return nil
         end
 
-        local window = api.Window.new(windowConfig.id):createWindow(
+        api.Window.new(windowConfig.id, targetFrame):createWindow(
             title,
             width,
             height,
@@ -446,14 +443,14 @@ do
             callback
         )
 
-        return window
+        return nil
     end
 
     function TemplateParser:getTemplate()
         return self.template
     end
 
-    function TemplateParser:parseTemplate(template)
+    function TemplateParser:parseTemplate(template, frame)
         if not template then
             if not self.template or type(self.template) ~= "table" then
                 return {}
@@ -464,13 +461,11 @@ do
 
         local context = self:createContext()
         local windows = {}
+        local targetFrame = frame or self.mainFrame or mainFrame
 
         for _, windowConfig in ipairs(self.template) do
             if windowConfig.type == "Window" then
-                local window = self:createWindow(windowConfig, context, nil)
-                if window then
-                    table.insert(windows, window)
-                end
+                self:createWindow(windowConfig, context, targetFrame)
             end
         end
 
@@ -790,7 +785,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
 
     mainFrame:initMainFrame()
 
-    local parser = TemplateParser.new(template, plugManager)
+    local parser = TemplateParser.new(template, plugManager, mainFrame)
     local switchKeys = parser:getPluginSwitchKeys()
     local quit = false
     local oq = otherPlugs
