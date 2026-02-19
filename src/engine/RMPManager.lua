@@ -292,6 +292,7 @@ do
         -- Cache compiled functions to avoid recompilation
         if not self.compiledExpressions then
             self.compiledExpressions = {}
+            self.compiledExpressionsSize = 0
         end
 
         -- Create a key for caching based on expression and context values
@@ -310,8 +311,13 @@ do
             -- Pre-compile the function
             local func = load("return " .. evaluated)
             if func then
+                if self.compiledExpressionsSize > 256 then
+                    self.compiledExpressions = {}
+                    self.compiledExpressionsSize = 0
+                end
                 cachedFunc = func
                 self.compiledExpressions[cacheKey] = func
+                self.compiledExpressionsSize = self.compiledExpressionsSize + 1
             else
                 return 1
             end
@@ -942,7 +948,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         end
 
         for _, window in ipairs(windows) do
-            mainFrame:add(window, true)
+            mainFrame:add(window)
         end
 
         if render_help then

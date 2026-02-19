@@ -1597,6 +1597,24 @@ do
             end
         end
 
+        if not key then
+            local kq = self.events:get(RMP.EventType.Keyboard)
+            while not kq:isEmpty() do
+                kq:pop()
+            end
+            local fq = self.events:get(RMP.EventType.Focuse)
+            while not fq:isEmpty() do
+                fq:pop()
+            end
+        end
+
+        if not mouse then
+            local mq = self.events:get(RMP.EventType.Mouse)
+            while not mq:isEmpty() do
+                mq:pop()
+            end
+        end
+
         --- @diagnostic disable-next-line
         if key then
             if not self.events:get(RMP.EventType.Focuse):isEmpty() then
@@ -1996,6 +2014,7 @@ do -- VirtualTerminal
     function RMP.VirtualTerminal:copy()
         --- @diagnostic disable-next-line
         local copy = RMP.VirtualTerminal.new()
+        vt_rmp.distroy(copy.native_vt_rmp)
         copy.native_vt_rmp = vt_rmp.copy(self.native_vt_rmp)
         return copy
     end
