@@ -371,7 +371,8 @@ do
             value,
             textConfig.style,
             textConfig.foregroundColor,
-            textConfig.backgroundColor
+            textConfig.backgroundColor,
+            mainFrame
         )
     end
 
@@ -1018,8 +1019,239 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
 end
 
 
+-- Updated RMP.Config class with cross-platform support
+-- TODO: move class Config to the engine
+--- @class Config
+local Config = OOP.class("Config")
+do -- Config
+    -- Get cross-platform config directory name
+    --- @return string
+    local function getConfigDirName()
+        local os_type = RMP.getOs()
+        if os_type == RMP.PlatformType.WINDOWS then
+            return ".rmp" -- or could use "RMP" for Windows
+        else
+            return ".rmp"
+        end
+    end
+
+    --- @return self | nil
+    function Config:constructor()
+        self.cfgObj = nil
+        self.isValidFile = false
+        self.isError = nil
+        self.os_type = RMP.getOs()
+        self.path_sep = api.Path.getPathSeparator()
+
+        --- @diagnostic disable-next-line
+        self.currentPath = api.Path.new()
+        --- @diagnostic disable-next-line
+        self.homePath = api.Path.new(self.currentPath:getHomePath())
+
+        -- Cross-platform config directory
+        local configDirName = getConfigDirName()
+
+        if not self.homePath:find(configDirName, false) then
+            self.isError = configDirName .. " directory not found in home dir"
+            return nil
+        end
+
+        -- Use cross-platform path joining
+        local configPath = api.Path.joinPath(self.homePath:getPath(), configDirName)
+        --- @diagnostic disable-next-line
+        self.configurationPath = api.Path.new(configPath)
+
+        if not self.configurationPath:find("init.lua", true) then
+            self.isError = "init.lua not found in " .. configDirName .. " dir"
+            return nil
+        end
+
+        -- Cross-platform path for init.lua
+        local initPath = api.Path.joinPath(configPath, "init.lua")
+        --- @diagnostic disable-next-line
+        self.initPath = api.Path.new(initPath)
+        self.isValidFile = true
+
+        return self
+    end
+
+    --- @return boolean , string | nil
+    function Config:load() -- (boolean , Error)
+        --- @diagnostic disable-next-line
+        if not self.isValidFile then
+            return false, self.isError
+        end
+
+        if not self.cfgObj then
+            local ok, res = pcall(function()
+                return dofile(self.initPath:getPath())
+            end)
+
+            if not ok then
+                self.isError = "failed to load init.lua configuration file: " .. tostring(res)
+                return false, self.isError
+            end
+
+            if type(res) ~= "table" then
+                self.isError = "init.lua file must return a table, check documentation"
+                return false, self.isError
+            end
+            self.cfgObj = res
+        end
+        return true, nil
+    end
+
+    -- Cross-platform theme path resolution
+    --- @param themeName string
+    function Config:getThemePath(themeName)
+        if not themeName or type(themeName) ~= "string" then
+            return nil, nil
+        end
+
+        local configPath = self.configurationPath:getPath()
+        return api.Path.joinPath(configPath, "templates", themeName .. ".lua")
+    end
+
+    -- Cross-platform plugin path resolution
+    --- @param pluginName string
+    --- @return string | nil , string | nil
+    function Config:getPluginPath(pluginName)
+        if not pluginName or type(pluginName) ~= "string" then
+            return nil, nil
+        end
+
+        local configPath = self.configurationPath:getPath()
+        -- Try single file first
+        local singleFile = api.Path.joinPath(configPath, "plugins", pluginName .. ".lua")
+        -- Try folder with init.lua
+        local folderInit = api.Path.joinPath(configPath, "plugins", pluginName, "init.lua")
+
+        return singleFile, folderInit
+    end
+
+    -- Helper method to get installation paths
+    --- @return table
+    function Config:getInstallationPaths()
+        local paths = {}
+
+        if self.os_type == api.PlatformType.WINDOWS then
+            -- Windows installation paths
+            table.insert(paths, api.Path.joinPath("C:", "Program Files", "RMP"))
+            table.insert(paths, api.Path.joinPath("C:", "Program Files (x86)", "RMP"))
+            -- User local installation
+            local appdata = os.getenv("APPDATA")
+            if appdata then
+                table.insert(paths, api.Path.joinPath(appdata, "RMP"))
+            end
+        elseif self.os_type == api.PlatformType.LINUX then
+            -- Linux installation paths
+            table.insert(paths, "/usr/local/share/rmp")
+            table.insert(paths, "/usr/share/rmp")
+            table.insert(paths, api.Path.joinPath(self.homePath:getPath(), ".local", "share", "rmp"))
+        elseif self.os_type == api.PlatformType.MAC then
+            -- macOS installation paths
+            table.insert(paths, "/usr/local/share/rmp")
+            table.insert(paths, "/Applications/RMP.app/Contents/Resources")
+            table.insert(paths, api.Path.joinPath(self.homePath:getPath(), "Library", "Application Support", "RMP"))
+        end
+
+        return paths
+    end
+
+    --- @return boolean
+    function Config:isValidConfig()
+        return self.isValidFile
+    end
+
+    --- @return table | nil
+    function Config:getInitFileAsObject()
+        --- @diagnostic disable-next-line
+        if self.cfgObj and type(self.cfgObj) == "table" then
+            return self.cfgObj
+        end
+        return nil
+    end
+
+    --- @return string | nil
+    function Config:getThemesAsObject()
+        --- @diagnostic disable-next-line
+        if self.cfgObj and self.cfgObj.template and type(self.cfgObj.template) == "string" then
+            return self.cfgObj.template
+        end
+        return nil
+    end
+
+    --- @return table | nil
+    function Config:getSoundKeyMaps()
+        --- @diagnostic disable-next-line
+        if self.cfgObj and self.cfgObj.soundMap and type(self.cfgObj.soundMap) == "table" then
+            return self.cfgObj.soundMap
+        end
+        return {}
+    end
+
+    --- @return table | nil
+    function Config:getAllPlugins()
+        if not self.cfgObj or not self.cfgObj.plugins or type(self.cfgObj.plugins) ~= "table" then
+            return {}
+        end
+        return self.cfgObj.plugins
+    end
+
+    --- @param id integer
+    --- @return table | string | nil , string | nil
+    function Config:getPluginFromThemeWindowId(id)
+        if not self.cfgObj or not self.cfgObj.plugins or type(self.cfgObj.plugins) ~= "table" then
+            return nil
+        end
+
+        id = id or 0
+
+        for _, obj in ipairs(self.cfgObj.plugins) do
+            if obj.themeWindowId and obj.isActivated and obj.name then
+                if id == obj.themeWindowId then
+                    local singleFile, folderInit = self:getPluginPath(obj.name)
+
+                    local ok, res = pcall(function()
+                        -- Try single file first
+                        if singleFile and folderInit and type(singleFile) == "string" and type(folderInit) == "string" then
+                            local file = io.open(singleFile, "r")
+                            if file then
+                                file:close()
+                                return dofile(singleFile), nil
+                            end
+
+                            -- Try folder with init.lua
+                            file = io.open(folderInit, "r")
+                            if file then
+                                file:close()
+                                return dofile(folderInit), nil
+                            end
+
+                            return nil
+                        end
+                    end)
+
+                    if ok and res then
+                        return res, nil
+                    else
+                        return nil, "Warning: Failed to load plugin '" .. obj.name .. "': " .. tostring(res)
+                    end
+                end
+            end
+        end
+
+        return nil, nil
+    end
+
+    --- @return string | nil
+    function Config:getLoadError()
+        return self.isError
+    end
+end
+
 local function loadConfiguration()
-    local config = api.Config.new()
+    local config = Config()
 
     if config:isValidConfig() then
         local ok, err = config:load()
@@ -1197,7 +1429,7 @@ end
 
             -- Title and box
             local box_title = api.Text.new(" RMP Engine Error ", api.TextStyle.Bold, api.FGColors.Brights.White,
-                api.BGColors.NoBrights.Red)
+                api.BGColors.NoBrights.Red, mainFrame)
             mainFrame:drawBox(
                 box_title,
                 boxX, boxY, boxWidth, boxHeight,
