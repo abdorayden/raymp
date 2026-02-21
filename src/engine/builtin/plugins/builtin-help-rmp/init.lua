@@ -131,6 +131,7 @@ end
 local settings = nil
 local soundCfg = nil
 local vt       = api.VirtualTerminal(1, 1)
+
 return function()
     local h, w = api.Terminal:getSize()
 

@@ -37,9 +37,8 @@ local function apply(tha_template)
     end
 end
 
+local vt = api.VirtualTerminal.new(1, 1)
 return function()
-    local vt = api.VirtualTerminal.new(1, 1)
-
     vt:onTemplate(function(template)
         if template then
             apply(template)

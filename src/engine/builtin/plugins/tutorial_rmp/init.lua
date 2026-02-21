@@ -481,10 +481,11 @@ local function syntaxHighlightLua(codeLine)
     return tokens
 end
 
+local vterm = api.VirtualTerminal.new()
+
 return function(x, y, xx, yy)
     local w = xx - x - 1
     local h = yy - y - 1
-    local vterm = api.VirtualTerminal.new()
 
     local current_time = os.time()
     local elapsed_time = current_time - animation_start_time
