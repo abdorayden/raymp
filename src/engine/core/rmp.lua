@@ -1684,6 +1684,14 @@ do -- VirtualTerminal
         self.style = nil
 
         self:clear()
+
+        if false then
+            local file, _ = io.open("/home/rayden/prog/github/raymp_test", "a")
+            if file then
+                file:write("initialized\n")
+            end
+        end
+
         return self
     end
 
@@ -2755,6 +2763,7 @@ do
     end
 
     function RMP.SimpleInput:_renderField(vterm)
+        local vterm = vterm or RMP.VirtualTerminal()
         --- @diagnostic disable-next-line
         if self.label ~= "" then
             vterm:writeText(self.x, self.y, self.label, self.fg_normal, self.bg_normal)
