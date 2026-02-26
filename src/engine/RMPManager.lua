@@ -427,13 +427,19 @@ local function addNestedPaths(base_path, max_depth)
     package.path = package.path .. ";" .. base_path .. "/?.lua"
     package.path = package.path .. ";" .. base_path .. "/?/init.lua"
 
+    package.cpath = package.cpath .. ";" .. base_path .. "/?.so"
+    package.cpath = package.cpath .. ";" .. base_path .. "/?/init.so"
+
     for depth = 1, max_depth do
         local pattern = base_path
+        local cpattern = base_path
         for i = 1, depth do
             pattern = pattern .. "/?"
         end
         pattern = pattern .. "/?.lua"
+        cpattern = cpattern .. "/?.so"
         package.path = package.path .. ";" .. pattern
+        package.cpath = package.cpath .. ";" .. pattern
     end
 end
 
@@ -486,28 +492,20 @@ local function setupPlugins(configObj, is_userconfig)
                 local pluginOk, pluginModule
 
                 if is_userconfig then
-                    local singleFile, folderInit
                     if type(name) == "string" then
-                        singleFile = joinPath(homePath, ".rmp", "plugins", name .. ".lua")
-                        folderInit = joinPath(homePath, ".rmp", "plugins", name, "init.lua")
                         plugins_configurations:put(name, nil)
                     elseif type(name) == "table" then
-                        singleFile = joinPath(homePath, ".rmp", "plugins", name[1] .. ".lua")
-                        folderInit = joinPath(homePath, ".rmp", "plugins", name[1], "init.lua")
-                        plugins_configurations:put(name[1], name[2])
+                        plugins_configurations:put(name[1], name.config or name[2])
                     end
 
-                    pluginOk, pluginModule = pcall(dofile, singleFile)
-                    if not pluginOk then
-                        pluginOk, pluginModule = pcall(dofile, folderInit)
-                    end
+                    pluginOk, pluginModule = pcall(require, type(name) == "table" and name[1] or name)
                 else
                     if type(name) == "string" then
                         pluginOk, pluginModule = pcall(require, "rmp.builtin.plugins." .. name) -- try to load from default builtin plugins
                         plugins_configurations:put(name, nil)
                     elseif type(name) == "table" then
                         pluginOk, pluginModule = pcall(require, "rmp.builtin.plugins." .. name[1]) -- try to load from default builtin plugins
-                        plugins_configurations:put(name[1], name[2])
+                        plugins_configurations:put(name[1], name.config or name[2])
                     end
                 end
 
@@ -519,7 +517,6 @@ local function setupPlugins(configObj, is_userconfig)
                     elseif type(name) == "table" then
                         logwarn("Could not load plugin '" .. name[1] .. "': " .. tostring(pluginModule) .. "\n")
                     end
-                    -- os.exit(1)
                 end
             end
 
@@ -530,22 +527,13 @@ local function setupPlugins(configObj, is_userconfig)
             for _, name in ipairs(plug.names) do
                 local pluginOk, pluginModule
                 if is_userconfig then
-                    local singleFile, folderInit
                     if type(name) == "string" then
-                        singleFile = joinPath(homePath, ".rmp", "plugins", name .. ".lua")
-                        folderInit = joinPath(homePath, ".rmp", "plugins", name, "init.lua")
                         plugins_configurations:put(name, nil)
                     elseif type(name) == "table" then
-                        -- first index is plugin name the second is configuration
-                        singleFile = joinPath(homePath, ".rmp", "plugins", name[1] .. ".lua")
-                        folderInit = joinPath(homePath, ".rmp", "plugins", name[1], "init.lua")
-                        plugins_configurations:put(name[1], name[2])
+                        plugins_configurations:put(name[1], name.config or name[2])
                     end
 
-                    pluginOk, pluginModule = pcall(dofile, singleFile)
-                    if not pluginOk then
-                        pluginOk, pluginModule = pcall(dofile, folderInit)
-                    end
+                    pluginOk, pluginModule = pcall(require, type(name) == "string" and name or name[1])
                 else
                     if type(name) == "string" then
                         pluginOk, pluginModule = pcall(require, "rmp.builtin.plugins." .. name) -- try to load from default builtin plugins
@@ -563,7 +551,6 @@ local function setupPlugins(configObj, is_userconfig)
                     elseif type(name) == "table" then
                         logwarn("Could not load global plugin '" .. name[1] .. "': " .. tostring(pluginModule) .. "\n")
                     end
-                    -- os.exit(1)
                 end
             end
         end
