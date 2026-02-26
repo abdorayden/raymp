@@ -360,19 +360,6 @@ do
             end
         end
 
-        -- FIXME: add script execution in the context of the template
-        -- TODO: pass class components to the script function
-        -- TODO: came back
-        if type(self.template.script) == "function" then
-            -- the context here should be an instance of Components class
-            -- and the script should called every frame to update the components data
-            -- also the script should return the updated components data
-            local success, err = pcall(self.template.script, context)
-            if not success then
-                logwarn("Error executing script in template: " .. tostring(err))
-            end
-        end
-
         return windows, context
     end
 
@@ -447,9 +434,9 @@ end
 -- TODO: add priority of the plugin
 
 local function setupPlugins(configObj, is_userconfig)
-    -- TODO: use Path class from rmp framework
-    -- api.Path.joinPath(api.Path():getHomePath(), ".rmp", "plugins")
-    addNestedPaths(os.getenv("HOME") .. "/.rmp/plugins", 5)
+    local path = api.Path()
+    addNestedPaths(path.joinPath(path:getHomePath(), ".rmp", "plugins") .. path.getPathSeparator(), 5)
+
     local plugs = HashMap.new()
     local plugins = configObj.plugins or {}
     local otherPlugs = Queue.new() -- this is for global plugins not attached to any window
