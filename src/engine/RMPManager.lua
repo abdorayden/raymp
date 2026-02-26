@@ -478,21 +478,22 @@ local function setupPlugins(configObj, is_userconfig)
             for _, name in ipairs(plug.names) do
                 local pluginOk, pluginModule
 
+                local pluginName = type(name) == "table" and (name.name or name[1]) or name
                 if is_userconfig then
                     if type(name) == "string" then
                         plugins_configurations:put(name, nil)
                     elseif type(name) == "table" then
-                        plugins_configurations:put(name[1], name.config or name[2])
+                        plugins_configurations:put(pluginName, name.config or name[2])
                     end
 
-                    pluginOk, pluginModule = pcall(require, type(name) == "table" and name[1] or name)
+                    pluginOk, pluginModule = pcall(require, pluginName)
                 else
                     if type(name) == "string" then
                         pluginOk, pluginModule = pcall(require, "rmp.builtin.plugins." .. name) -- try to load from default builtin plugins
                         plugins_configurations:put(name, nil)
                     elseif type(name) == "table" then
-                        pluginOk, pluginModule = pcall(require, "rmp.builtin.plugins." .. name[1]) -- try to load from default builtin plugins
-                        plugins_configurations:put(name[1], name.config or name[2])
+                        pluginOk, pluginModule = pcall(require, "rmp.builtin.plugins." .. pluginName) -- try to load from default builtin plugins
+                        plugins_configurations:put(pluginName, name.config or name[2])
                     end
                 end
 
@@ -502,7 +503,7 @@ local function setupPlugins(configObj, is_userconfig)
                     if type(name) == "string" then
                         logwarn("Could not load plugin '" .. name .. "': " .. tostring(pluginModule) .. "\n")
                     elseif type(name) == "table" then
-                        logwarn("Could not load plugin '" .. name[1] .. "': " .. tostring(pluginModule) .. "\n")
+                        logwarn("Could not load plugin '" .. pluginName .. "': " .. tostring(pluginModule) .. "\n")
                     end
                 end
             end
@@ -513,21 +514,22 @@ local function setupPlugins(configObj, is_userconfig)
         elseif plug.isActivated and plug.names and plug.themeWindowId == nil then
             for _, name in ipairs(plug.names) do
                 local pluginOk, pluginModule
+                local pluginName = type(name) == "table" and (name.name or name[1]) or name
                 if is_userconfig then
                     if type(name) == "string" then
                         plugins_configurations:put(name, nil)
                     elseif type(name) == "table" then
-                        plugins_configurations:put(name[1], name.config or name[2])
+                        plugins_configurations:put(pluginName, name.config or name[2])
                     end
 
-                    pluginOk, pluginModule = pcall(require, type(name) == "string" and name or name[1])
+                    pluginOk, pluginModule = pcall(require, pluginName)
                 else
                     if type(name) == "string" then
                         pluginOk, pluginModule = pcall(require, "rmp.builtin.plugins." .. name) -- try to load from default builtin plugins
                         plugins_configurations:put(name, nil)
                     elseif type(name) == "table" then
-                        pluginOk, pluginModule = pcall(require, "rmp.builtin.plugins." .. name[1]) -- try to load from default builtin plugins
-                        plugins_configurations:put(name[1], name[2])
+                        pluginOk, pluginModule = pcall(require, "rmp.builtin.plugins." .. pluginName) -- try to load from default builtin plugins
+                        plugins_configurations:put(pluginName, name.config or name[2])
                     end
                 end
                 if pluginOk and pluginModule then
@@ -536,7 +538,7 @@ local function setupPlugins(configObj, is_userconfig)
                     if type(name) == "string" then
                         logwarn("Could not load global plugin '" .. name .. "': " .. tostring(pluginModule) .. "\n")
                     elseif type(name) == "table" then
-                        logwarn("Could not load global plugin '" .. name[1] .. "': " .. tostring(pluginModule) .. "\n")
+                        logwarn("Could not load global plugin '" .. pluginName .. "': " .. tostring(pluginModule) .. "\n")
                     end
                 end
             end
