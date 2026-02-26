@@ -262,6 +262,8 @@
 -- TODO: Notify
 -- TODO: Popup
 -- TODO: Menu
+-- TODO: handle ssl/tls to a socket
+-- TODO: handle Mouse
 
 RMP                       = {}
 

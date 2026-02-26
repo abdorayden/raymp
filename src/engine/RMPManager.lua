@@ -131,110 +131,6 @@ local ComponentType = {
     Text = "Text"
 }
 
--- Component class to represent a single component
-local Component = OOP.class("Component")
-do
-    function Component:constructor(comp)
-        -- it can be nil
-        self.x = comp.x
-        self.y = comp.y
-        self.width = comp.width
-        self.height = comp.height
-        self.foregroundColor = comp.foregroundColor
-        self.backgroundColor = comp.backgroundColor
-        self.type = comp.type
-        self.title = comp.title
-
-        self.children = comp.children
-
-        if self.children and type(self.children) == "table" then
-            -- work with children
-            return self
-        end
-
-        if type(self.title) == "string" then
-            return self
-        elseif type(self.title) == "table" and self.title:instanceOf(api.Text) then
-            return self
-        end
-
-        if self.type == ComponentType.Window then
-            -- handle functions (dynamic, condition)
-            return self
-        elseif self.type == ComponentType.Text then
-            -- handle functions (dynamic, condition)
-            return self
-        else
-            -- unreachable
-            return self
-        end
-    end
-end
-
--- Components manager class for all components in the application
-local Components = OOP.class("Components")
-do
-    function Components:constructor(templeArray)
-        self.templeArray = templeArray
-        -- Use a hash map to store components by id
-        -- key id
-        -- value Component
-        self.components = HashMap.new()
-        self:_fillHashMap()
-    end
-
-    function Components:toArray()
-        return self.templeArray
-    end
-
-    function Components:save()
-        -- Move from HashMap to templeArray
-        -- after the modifications that applied on the hash map we have to save it back to templeArray
-        return self
-    end
-
-    function Components:_fillHashMap()
-        for _, component in ipairs(self.templeArray) do
-            if component.id then
-                self.components:put(component.id, Component.new(component))
-            end
-        end
-    end
-
-    -- @param id: string - unique identifier for the component
-    -- @param component: table - the component data
-    function Components:createComponent(id, component)
-        if id and component then
-            self.components:put(id, Component.new(component))
-        end
-    end
-
-    -- @param id: string - unique identifier for the component
-    -- @return: table or nil - the component data or nil if not found
-    function Components:getComponent(id)
-        if id and self.components:get(id) then
-            return self.components:get(id)
-        end
-        return nil
-    end
-
-    function Components:updateComponent(id, newComponent)
-        if id and self.components:get(id) then
-            -- Assuming Component has a set method or we update fields directly
-            local comp = self.components:get(id)
-            for k, v in pairs(newComponent) do
-                comp[k] = v
-            end
-        end
-    end
-
-    function Components:removeComponent(id)
-        if id and self.components:get(id) then
-            self.components:remove(id) -- Using HashMap's remove method instead of direct assignment
-        end
-    end
-end
-
 -- Logging functions
 local function logerror(err)
     local err_str = "RMP Error: " .. tostring(err)
@@ -243,8 +139,6 @@ local function logerror(err)
         the_error_message = the_error_message .. err_str .. "\n"
     end
     error(the_error_message)
-    -- io.write(api.BGColors.Brights.Red ..
-    --     api.FGColors.Brights.Yellow .. "RMP Error:" .. api.Default .. " " .. tostring(err) .. "\n")
 end
 
 local function lognote(note)
@@ -254,8 +148,6 @@ local function lognote(note)
         the_error_message = the_error_message .. note_str .. "\n"
     end
     error(the_error_message)
-    -- io.write(api.BGColors.Brights.Blue ..
-    --     api.FGColors.Brights.White .. "RMP Note:" .. api.Default .. " " .. tostring(note) .. "\n")
 end
 
 local function logwarn(warn)
@@ -265,15 +157,13 @@ local function logwarn(warn)
         the_error_message = the_error_message .. warn_str .. "\n"
     end
     error(the_error_message)
-    -- io.write(api.BGColors.Brights.Yellow ..
-    --     api.FGColors.Brights.Black .. "RMP Warning:" .. api.Default .. " " .. tostring(warn) .. "\n")
 end
 
 -- Template parser with layout engine
 local TemplateParser = OOP.class("TemplateParser")
 do
     function TemplateParser:constructor(template, plugManager, frame)
-        self.template = template
+        self.template = template or {}
         self.plugManager = plugManager
         self.mainFrame = frame or mainFrame
         self.windowCache = {}
@@ -533,9 +423,29 @@ do
     end
 end
 
+local function addNestedPaths(base_path, max_depth)
+    package.path = package.path .. ";" .. base_path .. "/?.lua"
+    package.path = package.path .. ";" .. base_path .. "/?/init.lua"
+
+    for depth = 1, max_depth do
+        local pattern = base_path
+        for i = 1, depth do
+            pattern = pattern .. "/?"
+        end
+        pattern = pattern .. "/?.lua"
+        package.path = package.path .. ";" .. pattern
+    end
+end
+
+-- Use it (max_depth of 5 should cover most needs)
+-- TODO: add priority of the plugin
+
 local function setupPlugins(configObj, is_userconfig)
+    -- TODO: use Path class from rmp framework
+    -- api.Path.joinPath(api.Path():getHomePath(), ".rmp", "plugins")
+    addNestedPaths(os.getenv("HOME") .. "/.rmp/plugins", 5)
     local plugs = HashMap.new()
-    local plugins = configObj.plugins
+    local plugins = configObj.plugins or {}
     local otherPlugs = Queue.new() -- this is for global plugins not attached to any window
     local plugins_configurations = HashMap.new()
 
