@@ -54,9 +54,51 @@ local os = require("os")
 local HashMap = utils.HashMap
 local Queue = utils.Queue
 
--- Use a set to track unique error messages efficiently
-local error_messages_set = {}
-local the_error_message = ""
+-- Logging state
+local log_entries = {}
+local log_index = {}
+local log_seq = 0
+local pending_notifications = Queue.new()
+
+-- Text wrapping utility
+local function wrapText(str, width)
+    if width <= 0 then return { str } end
+    local lines = {}
+    str = (str or ""):gsub("\t", "    ")
+
+    for s in str:gmatch("[^\r\n]+") do
+        local s_len = #s
+        local current_pos = 1
+
+        while current_pos <= s_len do
+            local end_pos = current_pos + width - 1
+            if end_pos >= s_len then
+                table.insert(lines, s:sub(current_pos))
+                break
+            end
+
+            local break_pos = end_pos
+            local space_found = false
+            for i = end_pos, current_pos, -1 do
+                if s:sub(i, i) == " " then
+                    break_pos = i
+                    space_found = true
+                    break
+                end
+            end
+
+            if space_found and break_pos > current_pos then
+                table.insert(lines, s:sub(current_pos, break_pos - 1))
+                current_pos = break_pos + 1
+            else
+                table.insert(lines, s:sub(current_pos, end_pos))
+                current_pos = end_pos + 1
+            end
+        end
+    end
+
+    return lines
+end
 
 -- Function to color specific keywords in a string
 local function coloredKeywordInString(str, keyword, color)
@@ -133,32 +175,165 @@ local ComponentType = {
     Text = "Text"
 }
 
--- Logging functions
-local function logerror(err)
-    local err_str = "RMP Error: " .. tostring(err)
-    if not error_messages_set[err_str] then
-        error_messages_set[err_str] = true
-        the_error_message = the_error_message .. err_str .. "\n"
+-- Logging functions (non-blocking, nvim-like)
+local function add_log(level, message)
+    local prefix
+    if level == "error" then
+        prefix = "RMP Error: "
+    elseif level == "warning" then
+        prefix = "RMP Warning: "
+    else
+        prefix = "RMP Note: "
     end
-    error(the_error_message)
+
+    local full = prefix .. tostring(message)
+    local key = level .. ":" .. full
+    local entry = log_index[key]
+    if entry then
+        entry.count = entry.count + 1
+        entry.time = os.time()
+        return
+    end
+
+    log_seq = log_seq + 1
+    entry = {
+        id = log_seq,
+        level = level,
+        message = full,
+        count = 1,
+        time = os.time()
+    }
+    log_entries[#log_entries + 1] = entry
+    log_index[key] = entry
+
+    if level ~= "note" then
+        pending_notifications:push({
+            message = full,
+            status = level == "error" and "error" or "warning",
+            duration = 6
+        })
+    end
+end
+
+local function logerror(err)
+    add_log("error", err)
 end
 
 local function lognote(note)
-    local note_str = "RMP Note: " .. tostring(note)
-    if not error_messages_set[note_str] then
-        error_messages_set[note_str] = true
-        the_error_message = the_error_message .. note_str .. "\n"
-    end
-    error(the_error_message)
+    add_log("note", note)
 end
 
 local function logwarn(warn)
-    local warn_str = "RMP Warning: " .. tostring(warn)
-    if not error_messages_set[warn_str] then
-        error_messages_set[warn_str] = true
-        the_error_message = the_error_message .. warn_str .. "\n"
+    add_log("warning", warn)
+end
+
+local function logfatal(err, skip_add)
+    local msg = "RMP Error: " .. tostring(err)
+    if not skip_add then
+        add_log("error", err)
     end
-    error(the_error_message)
+    error(msg)
+end
+
+local function drain_notifications()
+    local out = {}
+    while not pending_notifications:isEmpty() do
+        out[#out + 1] = pending_notifications:pop()
+    end
+    return out
+end
+
+local function reset_logs()
+    log_entries = {}
+    log_index = {}
+    log_seq = 0
+    pending_notifications = Queue.new()
+end
+
+local function build_log_lines(width)
+    local lines = {}
+    for i = #log_entries, 1, -1 do
+        local entry = log_entries[i]
+        local stamp = os.date("%H:%M:%S", entry.time)
+        local count = entry.count > 1 and (" (x" .. entry.count .. ")") or ""
+        local text = "[" .. stamp .. "] " .. entry.message .. count
+
+        local color
+        if entry.level == "error" then
+            color = api.FGColors.Brights.Red
+        elseif entry.level == "warning" then
+            color = api.FGColors.Brights.Yellow
+        else
+            color = api.FGColors.Brights.Cyan
+        end
+
+        local wrapped = wrapText(text, width)
+        for _, line in ipairs(wrapped) do
+            lines[#lines + 1] = { text = line, color = color }
+        end
+    end
+    return lines
+end
+
+local function render_log_overlay(frame, scroll, messages_key)
+    local h, w = api.Terminal:getSize()
+    local boxWidth = math.min(math.floor(w * 0.9), 120)
+    local boxHeight = math.floor(h * 0.8)
+    if w < 60 then boxWidth = w end
+    if h < 20 then boxHeight = h end
+    local boxX = math.floor((w - boxWidth) / 2)
+    local boxY = math.floor((h - boxHeight) / 2)
+
+    local box_title = api.Text.new(
+        " RMP Messages ",
+        api.TextStyle.Bold,
+        api.FGColors.Brights.White,
+        api.BGColors.NoBrights.Blue,
+        frame
+    )
+    frame:drawBox(
+        box_title,
+        boxX, boxY, boxWidth, boxHeight,
+        api.BoxDrawing.RoundedCorners,
+        api.FGColors.Brights.Blue,
+        api.BGColors.NoBrights.Black
+    )
+
+    local text_width = boxWidth - 4
+    local lines = build_log_lines(text_width)
+    local visible_height = boxHeight - 5
+    local max_scroll = math.max(0, #lines - visible_height)
+    if scroll > max_scroll then
+        scroll = max_scroll
+    elseif scroll < 0 then
+        scroll = 0
+    end
+
+    local start = math.max(1, #lines - visible_height - scroll + 1)
+    local stop = math.min(#lines, start + visible_height - 1)
+
+    local currentY = boxY + 2
+    if #lines == 0 then
+        frame:writeText(boxX + 2, currentY, "No messages.", api.FGColors.Brights.White,
+            api.BGColors.NoBrights.Black)
+    else
+        for i = start, stop do
+            local line = lines[i]
+            frame:writeText(boxX + 2, currentY, line.text, line.color, api.BGColors.NoBrights.Black)
+            currentY = currentY + 1
+        end
+    end
+
+    local hint = "Messages: Up/Down to scroll, Esc to close"
+    if messages_key then
+        hint = "Messages: Up/Down to scroll, Esc or messages key to close"
+    end
+    local prompt_x = math.max(1, boxX + 2)
+    local prompt_y = boxY + boxHeight - 2
+    frame:writeText(prompt_x, prompt_y, hint, api.FGColors.Brights.Black,
+        api.BGColors.NoBrights.White)
+
+    return max_scroll
 end
 
 -- Template parser with layout engine
@@ -463,6 +638,7 @@ local function setupPlugins(configObj, is_userconfig)
         lognote(coloredLuaCode("	    },"))
         lognote(coloredLuaCode("	}"))
         lognote(coloredLuaCode("}"))
+        logfatal("Invalid plugins configuration.", true)
         return nil, nil
     end
 
@@ -552,7 +728,6 @@ end
 
 local function runRMPApplication(plugManager, template, settings, otherPlugs, soundCfg, plugs_cfgs, configObj,
                                  is_userconfig)
-    the_error_message = ""
     local h, w = api.Terminal:getSize()
     mainFrame:clear()
 
@@ -571,6 +746,10 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
     local valid_restart = false
     local help_fn = nil
     local exit = nil
+    local messages_key = nil
+    local show_logs = false
+    local log_scroll = 0
+    local log_scroll_max = 0
 
     local notify_plug = nil
     local loaded_theme = nil
@@ -617,6 +796,15 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             -- NOTE: if help key is not configured it will be disabled so no default
             -- TODO: create help plugin
             help_fn = nil
+        end
+
+        if settings.messages_key == false then
+            messages_key = nil
+        elseif settings.messages_key and type(settings.messages_key) == "number" then
+            messages_key = settings.messages_key
+        else
+            settings.messages_key = api.KEY_M
+            messages_key = api.KEY_M
         end
 
         if settings.inc_speed and type(settings.inc_speed) == "number" and settings.inc_speed > 0 and settings.inc_speed <= 50 then
@@ -670,6 +858,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         inc_volume = 0.1
         inc_seek = 5
         exit = api.KEY_Q
+        messages_key = api.KEY_M
     end
 
     mainFrame:initMainFrame()
@@ -707,6 +896,35 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         local currSpeed = sound:getSpeed()
 
         mainFrame:addEventListener(api.EventType.Keyboard, function(inputKey)
+            if messages_key and inputKey == messages_key then
+                show_logs = not show_logs
+                log_scroll = 0
+                return
+            end
+
+            if show_logs then
+                if inputKey == api.KEY_UP then
+                    if log_scroll_max then
+                        log_scroll = math.min(log_scroll + 1, log_scroll_max)
+                    end
+                    return
+                end
+                if inputKey == api.KEY_DOWN then
+                    if log_scroll_max then
+                        log_scroll = math.max(log_scroll - 1, 0)
+                    end
+                    return
+                end
+                if inputKey == api.KEY_ESCAPE then
+                    show_logs = false
+                    return
+                end
+                if inputKey == exit then
+                    quit = true
+                end
+                return
+            end
+
             for windowId, switchKey in pairs(switchKeys) do
                 if inputKey == switchKey then
                     parser:updatePlugin(windowId)
@@ -866,6 +1084,19 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             mainFrame:add(notify_plug())
         else
             -- user may choose to disable notifications or something idk
+        end
+
+        local notis = drain_notifications()
+        if settings and settings.notify then
+            for _, noti in ipairs(notis) do
+                mainFrame:addEventListener(api.EventType.TransformDataPut, function()
+                    return { notification = noti }
+                end)
+            end
+        end
+
+        if show_logs then
+            log_scroll_max = render_log_overlay(mainFrame, log_scroll, messages_key)
         end
 
         ---
@@ -1144,7 +1375,7 @@ local function loadConfiguration()
     if config:isValidConfig() then
         local ok, err = config:load()
         if not ok then
-            logerror("loading user configuration: " .. err)
+            logfatal("loading user configuration: " .. err)
             return nil, nil, nil
         end
 
@@ -1160,6 +1391,7 @@ local function loadConfiguration()
             lognote(coloredLuaCode("	    template = 'your_theme_name',"))
             lognote(coloredLuaCode("	    ..."))
             lognote(coloredLuaCode("	}"))
+            logfatal("Invalid theme name in configuration.", true)
             return nil, nil, nil
         end
 
@@ -1191,6 +1423,7 @@ local function loadConfiguration()
             lognote(coloredLuaCode("	    },"))
             lognote(coloredLuaCode("	    ..."))
             lognote(coloredLuaCode("	}"))
+            logfatal("loading user template: Not found or " .. template, true)
             return nil, nil, nil
         end
 
@@ -1200,7 +1433,7 @@ local function loadConfiguration()
         local templateOk, template = pcall(require, "rmp.builtin.templates." .. defaultConfig.template)
 
         if not templateOk then
-            logerror("Error loading default template: " .. template)
+            logfatal("Error loading default template: " .. template)
             return nil
         end
 
@@ -1213,6 +1446,7 @@ end
     -- Load configuration
     local restart = true
     while restart do
+        reset_logs()
         local ok, error = pcall(function()
             restart = false -- Reset restart flag
 
@@ -1222,6 +1456,7 @@ end
                 -- TODO: assuming default path windows and linux
                 lognote("check your configuration file or try to reset it by deleting ~/.rmp/config.lua")
                 lognote("see the errors above for more details.")
+                logfatal("Failed to load configuration. Exiting.", true)
                 -- os.exit(1)
             end
 
@@ -1285,6 +1520,7 @@ end
                 logerror("Failed to setup plugins. Exiting.")
                 lognote("check your plugins configuration.")
                 lognote("see the errors above for more details.")
+                logfatal("Failed to setup plugins. Exiting.", true)
                 -- os.exit(1)
             end
 
@@ -1337,51 +1573,13 @@ end
                 end
             end
             local display_message = message
-
-            -- Text wrapping function
-            -- Optimized text wrapping function
-            local function wrapText(str, width)
-                if width <= 0 then return { str } end
-                local lines = {}
-                str = str:gsub("\t", "    ")
-
-                for s in str:gmatch("[^\r\n]+") do
-                    local s_len = #s
-                    local current_pos = 1
-
-                    while current_pos <= s_len do
-                        local end_pos = current_pos + width - 1
-                        if end_pos >= s_len then
-                            table.insert(lines, s:sub(current_pos))
-                            break
-                        end
-
-                        -- Find the last space within the width limit
-                        local break_pos = end_pos
-                        local space_found = false
-
-                        -- Search backwards for a space
-                        for i = end_pos, current_pos, -1 do
-                            if s:sub(i, i) == " " then
-                                break_pos = i
-                                space_found = true
-                                break
-                            end
-                        end
-
-                        if space_found and break_pos > current_pos then
-                            -- Include the space in the current line
-                            table.insert(lines, s:sub(current_pos, break_pos - 1))
-                            current_pos = break_pos + 1
-                        else
-                            -- No space found, force break at width
-                            table.insert(lines, s:sub(current_pos, end_pos))
-                            current_pos = end_pos + 1
-                        end
-                    end
+            if #log_entries > 0 then
+                local combined = {}
+                for _, entry in ipairs(log_entries) do
+                    local count = entry.count > 1 and (" (x" .. entry.count .. ")") or ""
+                    combined[#combined + 1] = entry.message .. count
                 end
-
-                return lines
+                display_message = table.concat(combined, "\n")
             end
 
             local text_width = boxWidth - 4

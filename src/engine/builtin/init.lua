@@ -36,8 +36,9 @@ return {
         mode = api.PlaybackMode.ONES, -- playback modes
         restart_engine = api.KEY_CTRL_R,
         exit = api.KEY_Q,
-        notify = true, -- whether to show notifications
-        theme = nil,   -- default theme [default , darkandwhite , desert , elflord] , nil to disable theme
+        messages_key = api.KEY_M, -- show logged messages/errors
+        notify = true,            -- whether to show notifications
+        theme = nil,              -- default theme [default , darkandwhite , desert , elflord] , nil to disable theme
 
         -- inc or dec
         inc_speed = 0.1,
