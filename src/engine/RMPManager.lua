@@ -47,6 +47,9 @@ local OOP = require("rmp.oop")
 local mainFrame = api.Frame.new()
 
 local joinPath = api.Path.joinPath
+local colorFromHex = api.colorFromHex
+local FG = api.FG
+local BG = api.BG
 
 local io = require("io")
 local os = require("os")
@@ -98,33 +101,6 @@ local function wrapText(str, width)
     end
 
     return lines
-end
-
--- Function to color specific keywords in a string
-local function coloredKeywordInString(str, keyword, color)
-    local pattern = "%f[%w_]" .. keyword .. "%f[%W]"
-    return str:gsub(pattern, color .. keyword .. api.Default)
-end
-
--- Pre-define the Lua keywords table to avoid recreating it repeatedly
-local lua_keywords = {
-    "and", "break", "do", "else", "elseif", "end", "false", "for", "function",
-    "if", "in", "local", "nil", "not", "or", "repeat", "return", "then",
-    "true", "until", "while"
-}
-
--- Function to color Lua code keywords
-local function coloredLuaCode(str)
-    if type(str) ~= "string" then
-        return str
-    end
-
-    local result = str
-    for _, keyword in ipairs(lua_keywords) do
-        result = coloredKeywordInString(result, keyword, api.FGColors.Brights.Green)
-    end
-
-    return result
 end
 
 -- Plugin Manager class
@@ -250,7 +226,30 @@ local function reset_logs()
     pending_notifications = Queue.new()
 end
 
-local function build_log_lines(width)
+local function get_theme_colors(theme)
+    local bg = theme and colorFromHex(theme.BackGround, BG) or api.BGColors.NoBrights.Black
+    local border = theme and colorFromHex(theme.BorderColor, FG) or api.FGColors.NoBrights.White
+    local title_fg = theme and colorFromHex(theme.TitleText, FG) or api.FGColors.Brights.White
+    local title_bg = theme and colorFromHex(theme.TitleBackGround, BG) or bg
+    local primary = theme and colorFromHex(theme.PrimaryContent, FG) or api.FGColors.Brights.Cyan
+    local secondary = theme and colorFromHex(theme.SecondaryContent, FG) or api.FGColors.Brights.Green
+    local accent = theme and colorFromHex(theme.AccentElements, FG) or api.FGColors.Brights.Red
+    local highlight = theme and colorFromHex(theme.Highlight, FG) or api.FGColors.Brights.Yellow
+    local muted = theme and colorFromHex(theme.MutedElements, FG) or api.FGColors.NoBrights.White
+    return {
+        bg = bg,
+        border = border,
+        title_fg = title_fg,
+        title_bg = title_bg,
+        primary = primary,
+        secondary = secondary,
+        accent = accent,
+        highlight = highlight,
+        muted = muted
+    }
+end
+
+local function build_log_lines(width, colors)
     local lines = {}
     for i = #log_entries, 1, -1 do
         local entry = log_entries[i]
@@ -260,11 +259,11 @@ local function build_log_lines(width)
 
         local color
         if entry.level == "error" then
-            color = api.FGColors.Brights.Red
+            color = colors and colors.accent or api.FGColors.Brights.Red
         elseif entry.level == "warning" then
-            color = api.FGColors.Brights.Yellow
+            color = colors and colors.highlight or api.FGColors.Brights.Yellow
         else
-            color = api.FGColors.Brights.Cyan
+            color = colors and colors.secondary or api.FGColors.Brights.Cyan
         end
 
         local wrapped = wrapText(text, width)
@@ -275,7 +274,8 @@ local function build_log_lines(width)
     return lines
 end
 
-local function render_log_overlay(frame, scroll, messages_key)
+local function render_log_overlay(frame, scroll, messages_key, theme)
+    local colors = get_theme_colors(theme)
     local h, w = api.Terminal:getSize()
     local boxWidth = math.min(math.floor(w * 0.9), 120)
     local boxHeight = math.floor(h * 0.8)
@@ -287,20 +287,20 @@ local function render_log_overlay(frame, scroll, messages_key)
     local box_title = api.Text.new(
         " RMP Messages ",
         api.TextStyle.Bold,
-        api.FGColors.Brights.White,
-        api.BGColors.NoBrights.Blue,
+        colors.title_fg,
+        colors.title_bg,
         frame
     )
     frame:drawBox(
         box_title,
         boxX, boxY, boxWidth, boxHeight,
         api.BoxDrawing.RoundedCorners,
-        api.FGColors.Brights.Blue,
-        api.BGColors.NoBrights.Black
+        colors.border,
+        colors.bg
     )
 
     local text_width = boxWidth - 4
-    local lines = build_log_lines(text_width)
+    local lines = build_log_lines(text_width, colors)
     local visible_height = boxHeight - 5
     local max_scroll = math.max(0, #lines - visible_height)
     if scroll > max_scroll then
@@ -314,12 +314,11 @@ local function render_log_overlay(frame, scroll, messages_key)
 
     local currentY = boxY + 2
     if #lines == 0 then
-        frame:writeText(boxX + 2, currentY, "No messages.", api.FGColors.Brights.White,
-            api.BGColors.NoBrights.Black)
+        frame:writeText(boxX + 2, currentY, "No messages.", colors.muted, colors.bg)
     else
         for i = start, stop do
             local line = lines[i]
-            frame:writeText(boxX + 2, currentY, line.text, line.color, api.BGColors.NoBrights.Black)
+            frame:writeText(boxX + 2, currentY, line.text, line.color, colors.bg)
             currentY = currentY + 1
         end
     end
@@ -330,8 +329,7 @@ local function render_log_overlay(frame, scroll, messages_key)
     end
     local prompt_x = math.max(1, boxX + 2)
     local prompt_y = boxY + boxHeight - 2
-    frame:writeText(prompt_x, prompt_y, hint, api.FGColors.Brights.Black,
-        api.BGColors.NoBrights.White)
+    frame:writeText(prompt_x, prompt_y, hint, colors.title_fg, colors.title_bg)
 
     return max_scroll
 end
@@ -623,21 +621,21 @@ local function setupPlugins(configObj, is_userconfig)
         logerror("Invalid plugins configuration.")
         lognote("plugins should be a table of plugin configurations.")
         lognote("Example plugins configuration:")
-        lognote(coloredLuaCode("return {"))
-        lognote(coloredLuaCode("    	..."))
-        lognote(coloredLuaCode("	plugins = {"))
-        lognote(coloredLuaCode("	    {"))
-        lognote(coloredLuaCode("	        themeWindowId = 'main',"))
-        lognote(coloredLuaCode("	        switchPluginKey = api.KEY_TAB,"))
-        lognote(coloredLuaCode("	        names = {'plugin1', 'plugin2'},"))
-        lognote(coloredLuaCode("	        isActivated = true,"))
-        lognote(coloredLuaCode("	    },"))
-        lognote(coloredLuaCode("	    {"))
-        lognote(coloredLuaCode("	        names = {'globalPlugin'},"))
-        lognote(coloredLuaCode("	        isActivated = true,"))
-        lognote(coloredLuaCode("	    },"))
-        lognote(coloredLuaCode("	}"))
-        lognote(coloredLuaCode("}"))
+        lognote("return {")
+        lognote("    	...")
+        lognote("	plugins = {")
+        lognote("	    {")
+        lognote("	        themeWindowId = 'main',")
+        lognote("	        switchPluginKey = api.KEY_TAB,")
+        lognote("	        names = {'plugin1', 'plugin2'},")
+        lognote("	        isActivated = true,")
+        lognote("	    },")
+        lognote("	    {")
+        lognote("	        names = {'globalPlugin'},")
+        lognote("	        isActivated = true,")
+        lognote("	    },")
+        lognote("	}")
+        lognote("}")
         logfatal("Invalid plugins configuration.", true)
         return nil, nil
     end
@@ -750,6 +748,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
     local show_logs = false
     local log_scroll = 0
     local log_scroll_max = 0
+    local log_theme = nil
 
     local notify_plug = nil
     local loaded_theme = nil
@@ -871,6 +870,18 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
     local render_help = false
 
     local template_copy = parser:getTemplate()
+
+    local function make_log_overlay_vt()
+        local vt = api.VirtualTerminal(1, 1)
+
+        vt:onFrame(function(frame)
+            if frame and show_logs then
+                log_scroll_max = render_log_overlay(frame, log_scroll, messages_key, log_theme)
+            end
+        end)
+
+        return vt
+    end
 
     while not quit do
         if plugs_cfgs then
@@ -1095,8 +1106,15 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             end
         end
 
+        mainFrame:addEventListener(api.EventType.TransformDataGet, function(data)
+            if data and data.theme then
+                log_theme = data.theme
+            end
+        end)
+
+        -- render log overlay last
         if show_logs then
-            log_scroll_max = render_log_overlay(mainFrame, log_scroll, messages_key)
+            mainFrame:add(make_log_overlay_vt())
         end
 
         ---
@@ -1386,11 +1404,11 @@ local function loadConfiguration()
             logerror("Invalid theme name in configuration.")
             logerror("template should be required on the configuration.")
             lognote("Example template:")
-            lognote(coloredLuaCode("	return {"))
-            lognote(coloredLuaCode("	    ..."))
-            lognote(coloredLuaCode("	    template = 'your_theme_name',"))
-            lognote(coloredLuaCode("	    ..."))
-            lognote(coloredLuaCode("	}"))
+            lognote("	return {")
+            lognote("	    ...")
+            lognote("	    template = 'your_theme_name',")
+            lognote("	    ...")
+            lognote("	}")
             logfatal("Invalid theme name in configuration.", true)
             return nil, nil, nil
         end
@@ -1401,28 +1419,28 @@ local function loadConfiguration()
             logerror("loading user template: Not found or " .. template)
             logerror("template should be a lua file that returns a table.")
             lognote("Example template:")
-            lognote(coloredLuaCode("	return {"))
-            lognote(coloredLuaCode("	    {"))
-            lognote(coloredLuaCode("	        type = 'Window',"))
-            lognote(coloredLuaCode("	        id = 'main',"))
-            lognote(coloredLuaCode("	        width = 'w',"))
-            lognote(coloredLuaCode("	        height = 'h',"))
-            lognote(coloredLuaCode("	        x = 0,"))
-            lognote(coloredLuaCode("	        y = 0,"))
-            lognote(coloredLuaCode("	        border = true,"))
-            lognote(coloredLuaCode("	        title = {"))
-            lognote(coloredLuaCode("	            type = 'Text',"))
-            lognote(coloredLuaCode("	            value = 'My RMP Theme',"))
-            lognote(coloredLuaCode("	            style = 'bold',"))
-            lognote(coloredLuaCode("	            foregroundColor = 'yellow',"))
-            lognote(coloredLuaCode("	            backgroundColor = 'blue',"))
-            lognote(coloredLuaCode("	        },"))
-            lognote(coloredLuaCode("	        children = {"))
-            lognote(coloredLuaCode("	            ..."))
-            lognote(coloredLuaCode("	        },"))
-            lognote(coloredLuaCode("	    },"))
-            lognote(coloredLuaCode("	    ..."))
-            lognote(coloredLuaCode("	}"))
+            lognote("	return {")
+            lognote("	    {")
+            lognote("	        type = 'Window',")
+            lognote("	        id = 'main',")
+            lognote("	        width = 'w',")
+            lognote("	        height = 'h',")
+            lognote("	        x = 0,")
+            lognote("	        y = 0,")
+            lognote("	        border = true,")
+            lognote("	        title = {")
+            lognote("	            type = 'Text',")
+            lognote("	            value = 'My RMP Theme',")
+            lognote("	            style = 'bold',")
+            lognote("	            foregroundColor = 'yellow',")
+            lognote("	            backgroundColor = 'blue',")
+            lognote("	        },")
+            lognote("	        children = {")
+            lognote("	            ...")
+            lognote("	        },")
+            lognote("	    },")
+            lognote("	    ...")
+            lognote("	}")
             logfatal("loading user template: Not found or " .. template, true)
             return nil, nil, nil
         end
@@ -1454,10 +1472,9 @@ end
             if not configObj or not template then
                 logerror("Failed to load configuration. Exiting.")
                 -- TODO: assuming default path windows and linux
-                lognote("check your configuration file or try to reset it by deleting ~/.rmp/config.lua")
+                lognote("check your configuration file or try to reset it by deleting ~/.rmp/")
                 lognote("see the errors above for more details.")
                 logfatal("Failed to load configuration. Exiting.", true)
-                -- os.exit(1)
             end
 
             if configObj then
