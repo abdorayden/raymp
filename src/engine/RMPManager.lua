@@ -38,6 +38,8 @@
 --- TODO: create a default themes and make them configurable by the engine settings
 --- TODO: create a utility builtin plugin to make it easy to work with templates and more stuff in engine
 
+--- TODO: share the logs to catch them with builtin plugins instead of showing stupid popup
+
 local api = require("rmp.rmp")
 local utils = require("rmp.util")
 local OOP = require("rmp.oop")
