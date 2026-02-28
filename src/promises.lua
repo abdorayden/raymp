@@ -34,13 +34,44 @@
 
 local tasks = {}
 local schedule_impl
+local uv = nil
+local using_uv = false
 
 local function default_schedule(ms, fn)
     local t = os.clock() + (ms / 1000)
     table.insert(tasks, { time = t, cb = fn })
 end
 
-schedule_impl = default_schedule
+local function uv_schedule(ms, fn)
+    local handle
+    handle = uv.timer_start(ms, function()
+        for i = #tasks, 1, -1 do
+            if tasks[i] == handle then
+                table.remove(tasks, i)
+                break
+            end
+        end
+        fn()
+    end)
+    table.insert(tasks, handle)
+end
+
+local function select_default_scheduler()
+    if uv then
+        using_uv = true
+        schedule_impl = uv_schedule
+    else
+        using_uv = false
+        schedule_impl = default_schedule
+    end
+end
+
+local ok_uv, uv_mod = pcall(require, "rmp.uv")
+if ok_uv then
+    uv = uv_mod
+end
+
+select_default_scheduler()
 
 
 --- @module 'rmp.promises'
@@ -268,35 +299,44 @@ function Promise.await(promise)
 end
 
 function Promise.runner()
-    local now = os.clock()
-    local executed = false
-    for i = #tasks, 1, -1 do
-        if now >= tasks[i].time then
-            local cb = tasks[i].cb
-            table.remove(tasks, i)
-            local success, err = pcall(cb)
-            if not success then
-                print("Error in scheduled task: " .. tostring(err))
+    if using_uv and uv then
+        local active = uv.run("nowait")
+        return active ~= 0
+    else
+        local now = os.clock()
+        local executed = false
+        for i = #tasks, 1, -1 do
+            if now >= tasks[i].time then
+                local cb = tasks[i].cb
+                table.remove(tasks, i)
+                local success, err = pcall(cb)
+                if not success then
+                    print("Error in scheduled task: " .. tostring(err))
+                end
+                executed = true
             end
-            executed = true
         end
+        return executed
     end
-    return executed
 end
 
 function Promise.run()
     local ok, err = pcall(function()
-        while #tasks > 0 do
-            local executed = Promise.runner()
-            if not executed then
-                local minTime = math.huge
-                for _, task in ipairs(tasks) do
-                    minTime = math.min(minTime, task.time)
-                end
-                local waitTime = math.max(0, minTime - os.clock())
-                if waitTime > 0 and waitTime < 0.1 then
-                    local target = os.clock() + waitTime
-                    while os.clock() < target do end
+        if using_uv and uv then
+            uv.run("default")
+        else
+            while #tasks > 0 do
+                local executed = Promise.runner()
+                if not executed then
+                    local minTime = math.huge
+                    for _, task in ipairs(tasks) do
+                        minTime = math.min(minTime, task.time)
+                    end
+                    local waitTime = math.max(0, minTime - os.clock())
+                    if waitTime > 0 and waitTime < 0.1 then
+                        local target = os.clock() + waitTime
+                        while os.clock() < target do end
+                    end
                 end
             end
         end
@@ -313,8 +353,9 @@ end
 
 function Promise.setScheduler(new_scheduler)
     if new_scheduler == nil then
-        schedule_impl = default_schedule
+        select_default_scheduler()
     elseif type(new_scheduler) == "function" then
+        using_uv = false
         schedule_impl = new_scheduler
     else
         error("scheduler must be a function or nil")

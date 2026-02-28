@@ -26,6 +26,8 @@
 INCLUDE_PATH="-ggdb -I../src/engine/lua/include -I../src/third_party -O3"
 
 LIB_PATH="-L../src/engine/lua/lib -l:liblua.a -lm"
+LIBUV_PATH=""
+LIBUV_CFLAGS=""
 CC="gcc"
 
 # windows version using mingw
@@ -95,6 +97,7 @@ then
 	rm "$LUA_LIB/window.so"
 	rm "$LUA_LIB/platform.so"
 	rm "$LUA_LIB/virtualterminalrmp.so"
+	rm "$LUA_LIB/uv.so"
 
 	rm "$LUA_SHARE/promises.lua"
 	rm "$LUA_SHARE/future.lua"
@@ -113,6 +116,14 @@ then
 	if [[ "$2" == "-v" ]]
 	then
 		set -xe
+	fi
+
+	if command -v pkg-config >/dev/null 2>&1 && pkg-config --exists libuv; then
+		LIBUV_PATH="$(pkg-config --libs libuv)"
+		LIBUV_CFLAGS="$(pkg-config --cflags libuv)"
+	else
+		LIBUV_PATH="-L../src/third_party/libuv-package/lib -l:libuv.a -lpthread -ldl"
+		LIBUV_CFLAGS="-I../src/third_party/libuv-package/include"
 	fi
 
 	$CC \
@@ -162,6 +173,14 @@ then
 		-o ../src/engine/core/lib/rsocket.so ../src/engine/core/src/rsocket.c \
 		$INCLUDE_PATH	\
 		$LIB_PATH
+		
+	$CC \
+		$FLAGS\
+		-o ../src/engine/core/lib/uv.so ../src/engine/core/src/uv.c \
+		$INCLUDE_PATH	\
+		$LIBUV_CFLAGS \
+		$LIB_PATH \
+		$LIBUV_PATH
 
 	$CC \
 		-Wall \
@@ -184,12 +203,13 @@ then
 
 	cp ../src/engine/core/lib/rmpaudio.so $LUA_LIB
 	cp ../src/engine/core/lib/keyboard.so $LUA_LIB
-    cp ../src/engine/core/lib/rsocket.so $LUA_LIB
+	cp ../src/engine/core/lib/rsocket.so $LUA_LIB
 	cp ../src/engine/core/lib/sleep.so $LUA_LIB
     cp ../src/engine/core/lib/directory.so $LUA_LIB
     cp ../src/engine/core/lib/window.so $LUA_LIB
 	cp ../src/engine/core/lib/platform.so $LUA_LIB
 	cp ../src/engine/core/lib/virtualterminalrmp.so $LUA_LIB
+	cp ../src/engine/core/lib/uv.so $LUA_LIB
 
 	# install the local plugins and themes if the configuration dir not found on home dir
 	cp -r ../src/engine/builtin/ $LUA_SHARE
