@@ -914,13 +914,13 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             end
 
             if show_logs then
-                if inputKey == api.KEY_UP then
+                if inputKey == api.KEY_UP or inputKey == api.KEY_K then
                     if log_scroll_max then
                         log_scroll = math.min(log_scroll + 1, log_scroll_max)
                     end
                     return
                 end
-                if inputKey == api.KEY_DOWN then
+                if inputKey == api.KEY_DOWN or inputKey == api.KEY_J then
                     if log_scroll_max then
                         log_scroll = math.max(log_scroll - 1, 0)
                     end
