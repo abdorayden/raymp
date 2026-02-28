@@ -170,6 +170,7 @@ ALWAYS_INT uv_run_lua(STATE) {
 }
 
 ALWAYS_INT uv_stop_lua(STATE) {
+    (void)L;
     uv_stop(uv_default_loop());
     return 0;
 }
@@ -451,10 +452,50 @@ ALWAYS_INT uv_fs_writefile_lua(STATE) {
 typedef struct {
     lua_State *L;
     int cb_ref;
+    int on_stdout_ref;
+    int on_stderr_ref;
     uv_process_t process;
+    uv_pipe_t stdout_pipe;
+    uv_pipe_t stderr_pipe;
+    int capture;
+    int exited;
+    int stdout_closed;
+    int stderr_closed;
+    int stdout_eof;
+    int stderr_eof;
+    int callback_done;
+    int process_closed;
+    int64_t exit_status;
+    int term_signal;
+    char *stdout_buf;
+    size_t stdout_len;
+    size_t stdout_cap;
+    char *stderr_buf;
+    size_t stderr_len;
+    size_t stderr_cap;
     char **args;
     int argc;
 } UVProcess;
+
+static void uv_process_append(char **buf, size_t *len, size_t *cap, const char *data, size_t n) {
+    size_t need = *len + n;
+    if (need + 1 > *cap) {
+        size_t newcap = (*cap == 0) ? 4096 : (*cap * 2);
+        while (newcap < need + 1) {
+            newcap *= 2;
+        }
+        char *nb = (char *)realloc(*buf, newcap);
+        if (!nb) {
+            return;
+        }
+        *buf = nb;
+        *cap = newcap;
+    }
+    if (*buf && *cap >= need + 1) {
+        memcpy(*buf + *len, data, n);
+        *len = need;
+    }
+}
 
 static void uv_process_free(UVProcess *proc) {
     if (!proc) {
@@ -471,33 +512,160 @@ static void uv_process_free(UVProcess *proc) {
         luaL_unref(proc->L, LUA_REGISTRYINDEX, proc->cb_ref);
         proc->cb_ref = LUA_NOREF;
     }
+    if (proc->on_stdout_ref != LUA_NOREF) {
+        luaL_unref(proc->L, LUA_REGISTRYINDEX, proc->on_stdout_ref);
+        proc->on_stdout_ref = LUA_NOREF;
+    }
+    if (proc->on_stderr_ref != LUA_NOREF) {
+        luaL_unref(proc->L, LUA_REGISTRYINDEX, proc->on_stderr_ref);
+        proc->on_stderr_ref = LUA_NOREF;
+    }
+    if (proc->stdout_buf) {
+        free(proc->stdout_buf);
+        proc->stdout_buf = NULL;
+    }
+    if (proc->stderr_buf) {
+        free(proc->stderr_buf);
+        proc->stderr_buf = NULL;
+    }
     free(proc);
+}
+
+static void uv_process_maybe_free(UVProcess *proc) {
+    if (!proc) {
+        return;
+    }
+    if (proc->process_closed && proc->stdout_closed && proc->stderr_closed) {
+        uv_process_free(proc);
+    }
 }
 
 static void uv_process_on_close(uv_handle_t *handle) {
     UVProcess *proc = (UVProcess *)handle->data;
-    uv_process_free(proc);
+    proc->process_closed = 1;
+    uv_process_maybe_free(proc);
+}
+
+static void uv_process_finalize(UVProcess *proc);
+
+static void uv_pipe_on_close(uv_handle_t *handle) {
+    UVProcess *proc = (UVProcess *)handle->data;
+    if (handle == (uv_handle_t *)&proc->stdout_pipe) {
+        proc->stdout_closed = 1;
+    } else if (handle == (uv_handle_t *)&proc->stderr_pipe) {
+        proc->stderr_closed = 1;
+    }
+    if (proc->exited && proc->stdout_closed && proc->stderr_closed) {
+        uv_process_finalize(proc);
+    }
+    uv_process_maybe_free(proc);
+}
+
+static void uv_process_finalize(UVProcess *proc) {
+    if (proc->callback_done) {
+        return;
+    }
+    proc->callback_done = 1;
+    lua_State *L = proc->L;
+    lua_rawgeti(L, LUA_REGISTRYINDEX, proc->cb_ref);
+    lua_pushnil(L);
+    lua_pushinteger(L, (lua_Integer)proc->exit_status);
+    lua_pushinteger(L, (lua_Integer)proc->term_signal);
+    if (proc->capture) {
+        if (proc->stdout_buf) {
+            lua_pushlstring(L, proc->stdout_buf, proc->stdout_len);
+        } else {
+            lua_pushliteral(L, "");
+        }
+        if (proc->stderr_buf) {
+            lua_pushlstring(L, proc->stderr_buf, proc->stderr_len);
+        } else {
+            lua_pushliteral(L, "");
+        }
+    } else {
+        lua_pushnil(L);
+        lua_pushnil(L);
+    }
+    if (lua_pcall(L, 5, 0, 0) != LUA_OK) {
+        lua_pop(L, 1);
+    }
+}
+
+static void uv_alloc_cb_impl(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
+    (void)handle;
+    buf->base = (char *)malloc(suggested_size);
+    buf->len = suggested_size;
+}
+
+static void uv_process_on_stdout_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
+    UVProcess *proc = (UVProcess *)stream->data;
+    if (nread > 0) {
+        if (proc->on_stdout_ref != LUA_NOREF) {
+            lua_State *L = proc->L;
+            lua_rawgeti(L, LUA_REGISTRYINDEX, proc->on_stdout_ref);
+            lua_pushlstring(L, buf->base, (size_t)nread);
+            if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+                lua_pop(L, 1);
+            }
+        }
+        if (proc->capture) {
+            uv_process_append(&proc->stdout_buf, &proc->stdout_len, &proc->stdout_cap, buf->base, (size_t)nread);
+        }
+    } else if (nread < 0) {
+        if (!proc->stdout_eof) {
+            proc->stdout_eof = 1;
+            uv_close((uv_handle_t *)&proc->stdout_pipe, uv_pipe_on_close);
+        }
+    }
+    if (buf && buf->base) {
+        free(buf->base);
+    }
+}
+
+static void uv_process_on_stderr_read(uv_stream_t *stream, ssize_t nread, const uv_buf_t *buf) {
+    UVProcess *proc = (UVProcess *)stream->data;
+    if (nread > 0) {
+        if (proc->on_stderr_ref != LUA_NOREF) {
+            lua_State *L = proc->L;
+            lua_rawgeti(L, LUA_REGISTRYINDEX, proc->on_stderr_ref);
+            lua_pushlstring(L, buf->base, (size_t)nread);
+            if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+                lua_pop(L, 1);
+            }
+        }
+        if (proc->capture) {
+            uv_process_append(&proc->stderr_buf, &proc->stderr_len, &proc->stderr_cap, buf->base, (size_t)nread);
+        }
+    } else if (nread < 0) {
+        if (!proc->stderr_eof) {
+            proc->stderr_eof = 1;
+            uv_close((uv_handle_t *)&proc->stderr_pipe, uv_pipe_on_close);
+        }
+    }
+    if (buf && buf->base) {
+        free(buf->base);
+    }
 }
 
 static void uv_process_on_exit(uv_process_t *handle, int64_t exit_status, int term_signal) {
     UVProcess *proc = (UVProcess *)handle->data;
-    lua_State *L = proc->L;
-    lua_rawgeti(L, LUA_REGISTRYINDEX, proc->cb_ref);
-    lua_pushnil(L);
-    lua_pushinteger(L, (lua_Integer)exit_status);
-    lua_pushinteger(L, (lua_Integer)term_signal);
-    if (lua_pcall(L, 3, 0, 0) != LUA_OK) {
-        lua_pop(L, 1);
-    }
+    proc->exited = 1;
+    proc->exit_status = exit_status;
+    proc->term_signal = term_signal;
 
+    if (proc->stdout_closed && proc->stderr_closed) {
+        uv_process_finalize(proc);
+    }
     uv_close((uv_handle_t *)handle, uv_process_on_close);
 }
 
 ALWAYS_INT uv_spawn_lua(STATE) {
     const char *file = luaL_checkstring(L, 1);
     int arg_index = 2;
+    int options_index = 0;
 
     if (lua_type(L, arg_index) == LUA_TTABLE) {
+        options_index = arg_index;
         arg_index++;
     }
     luaL_checktype(L, arg_index, LUA_TFUNCTION);
@@ -508,15 +676,69 @@ ALWAYS_INT uv_spawn_lua(STATE) {
     }
     proc->L = L;
     proc->cb_ref = LUA_NOREF;
+    proc->on_stdout_ref = LUA_NOREF;
+    proc->on_stderr_ref = LUA_NOREF;
+    proc->capture = 0;
+    proc->exited = 0;
+    proc->stdout_closed = 1;
+    proc->stderr_closed = 1;
+    proc->stdout_eof = 1;
+    proc->stderr_eof = 1;
+    proc->callback_done = 0;
+    proc->process_closed = 0;
+    proc->exit_status = 0;
+    proc->term_signal = 0;
+    proc->stdout_buf = NULL;
+    proc->stdout_len = 0;
+    proc->stdout_cap = 0;
+    proc->stderr_buf = NULL;
+    proc->stderr_len = 0;
+    proc->stderr_cap = 0;
     proc->args = NULL;
     proc->argc = 0;
 
     lua_pushvalue(L, arg_index);
     proc->cb_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
-    int has_args = lua_type(L, 2) == LUA_TTABLE;
+    int is_opts = 0;
+    int has_args = 0;
     int argc = 1;
-    if (has_args) {
+
+    if (options_index != 0) {
+        lua_getfield(L, options_index, "capture");
+        if (!lua_isnil(L, -1)) {
+            is_opts = 1;
+        }
+        proc->capture = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+
+        lua_getfield(L, options_index, "on_stdout");
+        if (lua_type(L, -1) == LUA_TFUNCTION) {
+            is_opts = 1;
+            proc->on_stdout_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+        } else {
+            lua_pop(L, 1);
+        }
+
+        lua_getfield(L, options_index, "on_stderr");
+        if (lua_type(L, -1) == LUA_TFUNCTION) {
+            is_opts = 1;
+            proc->on_stderr_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+        } else {
+            lua_pop(L, 1);
+        }
+
+        lua_getfield(L, options_index, "args");
+        if (lua_type(L, -1) == LUA_TTABLE) {
+            is_opts = 1;
+            has_args = 1;
+            argc += (int)lua_rawlen(L, -1);
+        }
+        lua_pop(L, 1);
+    }
+
+    if (!is_opts && lua_type(L, 2) == LUA_TTABLE) {
+        has_args = 1;
         argc += (int)lua_rawlen(L, 2);
     }
 
@@ -534,16 +756,27 @@ ALWAYS_INT uv_spawn_lua(STATE) {
 
     int out = 1;
     if (has_args) {
-        for (int i = 1; i <= (int)lua_rawlen(L, 2); i++) {
-            lua_rawgeti(L, 2, i);
+        int args_index = 2;
+        if (is_opts) {
+            lua_getfield(L, options_index, "args");
+            args_index = lua_gettop(L);
+        }
+        for (int i = 1; i <= (int)lua_rawlen(L, args_index); i++) {
+            lua_rawgeti(L, args_index, i);
             const char *arg = luaL_checkstring(L, -1);
             proc->args[out] = strdup(arg);
             lua_pop(L, 1);
             if (!proc->args[out]) {
+                if (is_opts) {
+                    lua_pop(L, 1);
+                }
                 uv_process_free(proc);
                 return luaL_error(L, "failed to allocate args");
             }
             out++;
+        }
+        if (is_opts) {
+            lua_pop(L, 1);
         }
     }
 
@@ -556,6 +789,29 @@ ALWAYS_INT uv_spawn_lua(STATE) {
     options.args = proc->args;
     options.exit_cb = uv_process_on_exit;
 
+    int want_stdio = (proc->capture || proc->on_stdout_ref != LUA_NOREF || proc->on_stderr_ref != LUA_NOREF);
+    uv_stdio_container_t stdio[3];
+    if (want_stdio) {
+        proc->stdout_closed = 0;
+        proc->stderr_closed = 0;
+        proc->stdout_eof = 0;
+        proc->stderr_eof = 0;
+
+        uv_pipe_init(uv_default_loop(), &proc->stdout_pipe, 0);
+        uv_pipe_init(uv_default_loop(), &proc->stderr_pipe, 0);
+        proc->stdout_pipe.data = proc;
+        proc->stderr_pipe.data = proc;
+
+        stdio[0].flags = UV_IGNORE;
+        stdio[1].flags = UV_CREATE_PIPE | UV_WRITABLE_PIPE;
+        stdio[1].data.stream = (uv_stream_t *)&proc->stdout_pipe;
+        stdio[2].flags = UV_CREATE_PIPE | UV_WRITABLE_PIPE;
+        stdio[2].data.stream = (uv_stream_t *)&proc->stderr_pipe;
+
+        options.stdio = stdio;
+        options.stdio_count = 3;
+    }
+
     proc->process.data = proc;
 
     int rc = uv_spawn(uv_default_loop(), &proc->process, &options);
@@ -564,11 +820,18 @@ ALWAYS_INT uv_spawn_lua(STATE) {
         uv_push_error(L, "spawn", rc);
         lua_pushnil(L);
         lua_pushnil(L);
-        if (lua_pcall(L, 3, 0, 0) != LUA_OK) {
+        lua_pushnil(L);
+        lua_pushnil(L);
+        if (lua_pcall(L, 5, 0, 0) != LUA_OK) {
             lua_pop(L, 1);
         }
         uv_process_free(proc);
         return 0;
+    }
+
+    if (want_stdio) {
+        uv_read_start((uv_stream_t *)&proc->stdout_pipe, uv_alloc_cb_impl, uv_process_on_stdout_read);
+        uv_read_start((uv_stream_t *)&proc->stderr_pipe, uv_alloc_cb_impl, uv_process_on_stderr_read);
     }
 
     return 0;

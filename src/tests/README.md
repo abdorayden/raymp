@@ -8,6 +8,7 @@ This directory contains unit and integration tests for the Future library and as
 2. **test_future_integration.lua** - Integration tests for complex scenarios and interactions
 3. **test_uv.lua** - Unit tests for the libuv Lua bindings (`rmp.uv`)
 4. **test_promises_uv.lua** - Integration tests for Promise scheduler (libuv or fallback)
+5. **uv_integration/** - More involved integration tests (libuv + sockets)
 
 ## Running Tests:
 
@@ -29,6 +30,13 @@ lua tests/test_uv.lua
 To run the Promise scheduler tests:
 ```bash
 lua tests/test_promises_uv.lua
+```
+
+To run the more involved integration tests:
+```bash
+lua tests/uv_integration/test_uv_spawn.lua
+lua tests/uv_integration/test_uv_fs_multi.lua
+lua tests/uv_integration/test_rsocket_tcp.lua
 ```
 
 ## Test Coverage:

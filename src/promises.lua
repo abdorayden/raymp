@@ -36,6 +36,7 @@ local tasks = {}
 local schedule_impl
 local uv = nil
 local using_uv = false
+local rsocket = nil
 
 local function default_schedule(ms, fn)
     local t = os.clock() + (ms / 1000)
@@ -69,6 +70,11 @@ end
 local ok_uv, uv_mod = pcall(require, "rmp.uv")
 if ok_uv then
     uv = uv_mod
+end
+
+local ok_socket, rsocket_mod = pcall(require, "rmp.rsocket")
+if ok_socket then
+    rsocket = rsocket_mod
 end
 
 select_default_scheduler()
@@ -132,6 +138,10 @@ function Promise.timeout(ms)
     return Promise.new(function(resolve)
         Promise.schedule(ms, resolve)
     end)
+end
+
+function Promise.sleep(ms)
+    return Promise.timeout(ms)
 end
 
 function Promise:tthen(onFulfilled, onRejected)
@@ -218,6 +228,134 @@ end
 function Promise.reject(reason)
     return Promise.new(function(_, reject)
         reject(reason)
+    end)
+end
+
+function Promise.readFile(path)
+    return Promise.new(function(resolve, reject)
+        if uv then
+            uv.fs_readfile(path, function(err, data)
+                if err then
+                    reject(err)
+                else
+                    resolve(data)
+                end
+            end)
+        else
+            local f, err = io.open(path, "rb")
+            if not f then
+                reject(err)
+                return
+            end
+            local data = f:read("*a")
+            f:close()
+            resolve(data or "")
+        end
+    end)
+end
+
+function Promise.writeFile(path, data)
+    return Promise.new(function(resolve, reject)
+        if uv then
+            uv.fs_writefile(path, data, function(err, bytes)
+                if err then
+                    reject(err)
+                else
+                    resolve(bytes)
+                end
+            end)
+        else
+            local f, err = io.open(path, "wb")
+            if not f then
+                reject(err)
+                return
+            end
+            f:write(data)
+            f:close()
+            resolve(#tostring(data))
+        end
+    end)
+end
+
+local function shell_quote(arg)
+    if arg == "" then
+        return "''"
+    end
+    if not arg:find("[^%w%-%._/:]") then
+        return arg
+    end
+    return "'" .. arg:gsub("'", "'\\''") .. "'"
+end
+
+function Promise.spawn(file, args_or_opts)
+    return Promise.new(function(resolve, reject)
+        if uv then
+            local opts = nil
+            if type(args_or_opts) == "table" then
+                if args_or_opts.args or args_or_opts.on_stdout or args_or_opts.on_stderr or args_or_opts.capture then
+                    opts = args_or_opts
+                else
+                    opts = { args = args_or_opts }
+                end
+            end
+
+            if opts then
+                uv.spawn(file, opts, function(err, status, signal, stdout, stderr)
+                    if err then
+                        reject(err)
+                    else
+                        resolve({ status = status, signal = signal, stdout = stdout, stderr = stderr })
+                    end
+                end)
+            else
+                uv.spawn(file, function(err, status, signal, stdout, stderr)
+                    if err then
+                        reject(err)
+                    else
+                        resolve({ status = status, signal = signal, stdout = stdout, stderr = stderr })
+                    end
+                end)
+            end
+        else
+            local cmd = shell_quote(file)
+            local args = args_or_opts
+            if type(args_or_opts) == "table" and (args_or_opts.args or args_or_opts.on_stdout or args_or_opts.on_stderr or args_or_opts.capture) then
+                args = args_or_opts.args
+            end
+            if type(args) == "table" then
+                for _, a in ipairs(args) do
+                    cmd = cmd .. " " .. shell_quote(tostring(a))
+                end
+            end
+            local ok, why, code = os.execute(cmd)
+            if ok == nil then
+                reject(why or "spawn failed")
+            else
+                local status = code or 0
+                resolve({ status = status, signal = 0, stdout = nil, stderr = nil })
+            end
+        end
+    end)
+end
+
+function Promise.tcpConnect(host, port)
+    return Promise.new(function(resolve, reject)
+        if not rsocket then
+            reject("rmp.rsocket not available")
+            return
+        end
+        local sock, err = rsocket.new("tcp")
+        if not sock then
+            reject(err)
+            return
+        end
+        local ok, err2 = sock:connect(host, port)
+        if not ok then
+            sock:close()
+            reject(err2)
+            return
+        end
+        resolve(sock)
     end)
 end
 
