@@ -662,7 +662,12 @@ local function setupPlugins(configObj, is_userconfig)
                         plugins_configurations:put(pluginName, name.config or name[2])
                     end
 
-                    pluginOk, pluginModule = pcall(require, pluginName)
+                    if type(pluginName) == "string" then
+                        pluginOk, pluginModule = pcall(require, pluginName)
+                    elseif type(pluginName) == "function" then
+                        pluginModule = pluginName
+                        pluginOk = true
+                    end
                 else
                     if type(name) == "string" then
                         pluginOk, pluginModule = pcall(require, "rmp.builtin.plugins." .. name) -- try to load from default builtin plugins
@@ -698,7 +703,12 @@ local function setupPlugins(configObj, is_userconfig)
                         plugins_configurations:put(pluginName, name.config or name[2])
                     end
 
-                    pluginOk, pluginModule = pcall(require, pluginName)
+                    if type(pluginName) == "string" then
+                        pluginOk, pluginModule = pcall(require, pluginName)
+                    elseif type(pluginName) == "function" then
+                        pluginModule = pluginName
+                        pluginOk = true
+                    end
                 else
                     if type(name) == "string" then
                         pluginOk, pluginModule = pcall(require, "rmp.builtin.plugins." .. name) -- try to load from default builtin plugins
