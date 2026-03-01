@@ -50,6 +50,8 @@ local joinPath = api.Path.joinPath
 local colorFromHex = api.colorFromHex
 local FG = api.FG
 local BG = api.BG
+local Text = api.Text
+local TextStyle = api.TextStyle
 
 local io = require("io")
 local os = require("os")
@@ -284,9 +286,9 @@ local function render_log_overlay(frame, scroll, messages_key, theme)
     local boxX = math.floor((w - boxWidth) / 2)
     local boxY = math.floor((h - boxHeight) / 2)
 
-    local box_title = api.Text.new(
+    local box_title = Text(
         " RMP Messages ",
-        api.TextStyle.Bold,
+        TextStyle.Bold,
         colors.title_fg,
         colors.title_bg,
         frame
@@ -334,6 +336,7 @@ local function render_log_overlay(frame, scroll, messages_key, theme)
     return max_scroll
 end
 
+-- TODO: handle callback function directly from the template components (Window)
 -- Template parser with layout engine
 local TemplateParser = OOP.class("TemplateParser")
 do
@@ -432,7 +435,7 @@ do
             end
         end
 
-        return api.Text.new(
+        return Text(
             value,
             textConfig.style,
             textConfig.foregroundColor,
@@ -881,6 +884,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
 
     local template_copy = parser:getTemplate()
 
+    -- internal plugin
     local function make_log_overlay_vt()
         local vt = api.VirtualTerminal(1, 1)
 
@@ -1122,10 +1126,10 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             end
         end)
 
-        -- render log overlay last
         if show_logs then
-            mainFrame:add(make_log_overlay_vt())
+            mainFrame:add(make_log_overlay_vt(), true)
         end
+
 
         ---
         -- TODO: add other plugins that are not integrated to specific window id template to event
@@ -1579,7 +1583,7 @@ end
             local boxY = math.floor((h - boxHeight) / 2)
 
             -- Title and box
-            local box_title = api.Text.new(" RMP Engine Error ", api.TextStyle.Bold, api.FGColors.Brights.White,
+            local box_title = Text(" RMP Engine Error ", TextStyle.Bold, api.FGColors.Brights.White,
                 api.BGColors.NoBrights.Red, mainFrame)
             mainFrame:drawBox(
                 box_title,
