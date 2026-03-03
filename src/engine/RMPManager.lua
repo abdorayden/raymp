@@ -650,6 +650,8 @@ local function setupPlugins(configObj, is_userconfig)
         package.path = package.path .. joinPath(homePath, ".rmp")
     end
 
+    -- TODO: sort the plugins by a priority field if it's exists
+
     for _, plug in ipairs(plugins) do
         if plug.themeWindowId and plug.isActivated and plug.names then
             local pq = Queue.new()

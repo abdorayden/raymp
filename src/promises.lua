@@ -45,7 +45,7 @@ end
 
 local function uv_schedule(ms, fn)
     local handle
-    handle = uv.timer_start(ms, function()
+    handle = uv and uv.timer_start(ms, function()
         for i = #tasks, 1, -1 do
             if tasks[i] == handle then
                 table.remove(tasks, i)
@@ -54,7 +54,10 @@ local function uv_schedule(ms, fn)
         end
         fn()
     end)
-    table.insert(tasks, handle)
+
+    if handle then
+        table.insert(tasks, handle)
+    end
 end
 
 local function select_default_scheduler()
