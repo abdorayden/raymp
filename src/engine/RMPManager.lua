@@ -614,6 +614,7 @@ end
 local function setupPlugins(configObj, is_userconfig)
     local path = api.Path()
     addNestedPaths(path.joinPath(path:getHomePath(), ".rmp", "plugins") .. path.getPathSeparator(), 5)
+    addNestedPaths(path.joinPath(path:getHomePath(), ".rmp") .. path.getPathSeparator(), 5)
 
     local plugs = HashMap.new()
     local plugins = configObj.plugins or {}
@@ -644,13 +645,44 @@ local function setupPlugins(configObj, is_userconfig)
     end
 
     -- Cache home path to avoid repeated calls
-    local homePath = nil
-    if is_userconfig then
-        homePath = api.Path.new():getHomePath()
-        package.path = package.path .. joinPath(homePath, ".rmp")
+    -- local homePath = nil
+    -- if is_userconfig then
+    --     homePath = api.Path():getHomePath()
+    --     package.path = package.path .. joinPath(homePath, ".rmp")
+    -- end
+
+    -- Sort plugins by priority if provided on active entries.
+    local should_sort = false
+    for _, plug in ipairs(plugins) do
+        if type(plug) == "table" and plug.isActivated and plug.names and plug.priority ~= nil then
+            should_sort = true
+            break
+        end
     end
 
-    -- TODO: sort the plugins by a priority field if it's exists
+    if should_sort then
+        local decorated = {}
+        for idx, plug in ipairs(plugins) do
+            local prio = 0
+            if type(plug) == "table" and plug.priority ~= nil and type(plug.priority) == "number" then
+                prio = plug.priority
+            end
+            decorated[idx] = { idx = idx, priority = prio, plug = plug }
+        end
+
+        table.sort(decorated, function(a, b)
+            if a.priority == b.priority then
+                return a.idx < b.idx
+            end
+            return a.priority < b.priority
+        end)
+
+        local sorted = {}
+        for i, item in ipairs(decorated) do
+            sorted[i] = item.plug
+        end
+        plugins = sorted
+    end
 
     for _, plug in ipairs(plugins) do
         if plug.themeWindowId and plug.isActivated and plug.names then
