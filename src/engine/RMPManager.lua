@@ -1128,12 +1128,16 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             if plug then
                 if type(plug) == "function" then
                     mainFrame:add(plug())
-                    qq:push(plug)
                 elseif type(plug) == "table" then
-                    -- TODO: other plugins are configured , add their configurations to Config event
-                    mainFrame:add(plug[1]())
-                    qq:push(plug)
+                    if plug.update then
+                        mainFrame:add(plug.update())
+                    elseif plug.poll then
+                        mainFrame:add(plug.poll())
+                    elseif plug.render then
+                        mainFrame:add(plug.render())
+                    end
                 end
+                qq:push(plug)
             end
         end
         oq = qq
