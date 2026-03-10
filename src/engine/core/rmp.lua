@@ -2034,6 +2034,15 @@ do -- VirtualTerminal
     end
 end
 
+RMP.VirtualTerminalEffect = OOP.class("VirtualTerminalEffect", RMP.VirtualTerminal)
+do
+    function RMP.VirtualTerminalEffect.constructor(self, width, height)
+        --- @diagnostic disable-next-line
+        self:super("constructor", width, height)
+    end
+end
+
+
 -- NOTE: Terminal class uses ansii escape code i need to create shared library to handle terminal for each platform
 -- Terminal class used to handle terminal operations
 
