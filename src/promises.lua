@@ -1,5 +1,5 @@
 -- /*********************************************************************************************/
--- /*  Copyright (c) 2025 Ray Den 								*/
+-- /*  Copyright (c) 2025-2026 Ray Den 								*/
 -- /*  												*/
 -- /*  Permission is hereby granted, free of charge, to any person obtaining a copy 		*/
 -- /*  of this software and associated documentation files (the "Software"), to deal 		*/
@@ -31,6 +31,7 @@
 --	- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise
 
 -- TODO: handle my own event loop
+-- use socket and system implementations from uv it self
 
 local tasks = {}
 local schedule_impl

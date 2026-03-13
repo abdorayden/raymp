@@ -856,6 +856,8 @@ static const luaL_Reg uv_lib[] = {
     {"fs_readfile", uv_fs_readfile_lua},
     {"fs_writefile", uv_fs_writefile_lua},
     {"spawn", uv_spawn_lua},
+    // TODO: add more APIs (tcp socket etc.)
+    // and update it in promises as well
     {NULL, NULL}
 };
 
