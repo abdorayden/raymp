@@ -195,14 +195,60 @@ void enhanced_data_callback(ma_device* pDevice, void* pOutput, const void* pInpu
 }
 
 static void record_data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
-	(void)pDevice;
 	(void)pOutput;
-
+ 
 	if (!rAudio.is_recording || pInput == NULL) {
 		return;
 	}
-
+ 
 	ma_encoder_write_pcm_frames(&rAudio.record_encoder, pInput, frameCount, NULL);
+ 
+	if (rAudio.enable_visualization && rAudio.freq_data && frameCount > 0) {
+		if (pDevice->capture.format == ma_format_f32) {
+			const float* samples = (const float*)pInput;
+			ma_uint32 channels = pDevice->capture.channels;
+ 
+			memset(rAudio.freq_data, 0, rAudio.freq_data_size * sizeof(float));
+ 
+			size_t samples_per_bin = ((size_t)frameCount * channels) / rAudio.freq_data_size;
+			if (samples_per_bin > 0) {
+				for (size_t bin = 0; bin < rAudio.freq_data_size; bin++) {
+					float sum = 0.0f;
+					size_t start_idx = bin * samples_per_bin;
+					size_t end_idx = start_idx + samples_per_bin;
+ 
+					for (size_t i = start_idx; i < end_idx && i < (size_t)frameCount * channels; i++) {
+						sum += fabsf(samples[i]);
+					}
+ 
+					rAudio.freq_data[bin] = sum / samples_per_bin;
+				}
+			}
+ 
+			if (rAudio.visualization_callback_ref != LUA_NOREF && rAudio.callback_lua_state) {
+				lua_State* L = rAudio.callback_lua_state;
+				int top = lua_gettop(L);
+ 
+				lua_rawgeti(L, LUA_REGISTRYINDEX, rAudio.visualization_callback_ref);
+ 
+				if (lua_isfunction(L, -1)) {
+					lua_createtable(L, (int)rAudio.freq_data_size, 0);
+					for (size_t i = 0; i < rAudio.freq_data_size; i++) {
+						lua_pushnumber(L, rAudio.freq_data[i]);
+						lua_rawseti(L, -2, (int)i + 1);
+					}
+ 
+					if (lua_pcall(L, 1, 0, 0) != LUA_OK) {
+						lua_pop(L, 1);
+					}
+				} else {
+					lua_pop(L, 1);
+				}
+ 
+				lua_settop(L, top);
+			}
+		}
+	}
 }
 
 static void cleanup_audio_context(void) {
@@ -690,8 +736,7 @@ ALWAYS_INT lua_rmp_audio_enable_record(STATE){
 	deviceConfig.capture.format = ma_format_f32;
 	deviceConfig.capture.channels = channels;
 	deviceConfig.sampleRate = sample_rate;
-	// deviceConfig.dataCallback = record_data_callback;
-	deviceConfig.dataCallback = enhanced_data_callback;
+	deviceConfig.dataCallback = record_data_callback;
     
 	deviceConfig.pUserData = &rAudio;
 
