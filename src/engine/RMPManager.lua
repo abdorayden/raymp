@@ -608,38 +608,17 @@ local function addNestedPaths(base_path, max_depth)
     end
 end
 
--- Use it (max_depth of 5 should cover most needs)
--- TODO: add priority of the plugin
-
 local function setupPlugins(configObj, is_userconfig)
     local path = api.Path()
-    addNestedPaths(path.joinPath(path:getHomePath(), ".rmp", "plugins") .. path.getPathSeparator(), 5)
     addNestedPaths(path.joinPath(path:getHomePath(), ".rmp") .. path.getPathSeparator(), 5)
+    addNestedPaths(path.joinPath(path:getHomePath(), ".rmp", "plugins") .. path.getPathSeparator(), 5)
 
-    local plugs = HashMap.new()
+    local plugs = HashMap()
     local plugins = configObj.plugins or {}
-    local otherPlugs = Queue.new() -- this is for global plugins not attached to any window
-    local plugins_configurations = HashMap.new()
+    local otherPlugs = Queue() -- this is for global plugins not attached to any window
+    local plugins_configurations = HashMap()
 
     if not plugins or type(plugins) ~= "table" then
-        logerror("Invalid plugins configuration.")
-        lognote("plugins should be a table of plugin configurations.")
-        lognote("Example plugins configuration:")
-        lognote("return {")
-        lognote("    	...")
-        lognote("	plugins = {")
-        lognote("	    {")
-        lognote("	        themeWindowId = 'main',")
-        lognote("	        switchPluginKey = api.KEY_TAB,")
-        lognote("	        names = {'plugin1', 'plugin2'},")
-        lognote("	        isActivated = true,")
-        lognote("	    },")
-        lognote("	    {")
-        lognote("	        names = {'globalPlugin'},")
-        lognote("	        isActivated = true,")
-        lognote("	    },")
-        lognote("	}")
-        lognote("}")
         logfatal("Invalid plugins configuration.", true)
         return nil, nil
     end
@@ -1121,20 +1100,40 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             -- in case the user load external plugin
         end
 
-        local qq = Queue.new()
+        local qq = Queue()
 
         while oq and not oq:isEmpty() do
             local plug = oq:pop()
             if plug then
                 if type(plug) == "function" then
-                    mainFrame:add(plug())
+                    local ok, vt = pcall(plug)
+                    if ok and vt then
+                        mainFrame:add(vt)
+                    else
+                        logfatal("Error loading plugin: " .. vt)
+                    end
                 elseif type(plug) == "table" then
                     if plug.update then
-                        mainFrame:add(plug.update())
+                        local ok, vt = pcall(plug.update)
+                        if ok and vt then
+                            mainFrame:add(vt)
+                        else
+                            logfatal("Error loading plugin: " .. vt)
+                        end
                     elseif plug.poll then
-                        mainFrame:add(plug.poll())
+                        local ok, vt = pcall(plug.poll)
+                        if ok and vt then
+                            mainFrame:add(vt)
+                        else
+                            logfatal("Error loading plugin: " .. vt)
+                        end
                     elseif plug.render then
-                        mainFrame:add(plug.render())
+                        local ok, vt = pcall(plug.render)
+                        if ok and vt then
+                            mainFrame:add(vt)
+                        else
+                            logfatal("Error loading plugin: " .. vt)
+                        end
                     end
                 end
                 qq:push(plug)
@@ -1517,6 +1516,8 @@ end
     local restart = true
     while restart do
         reset_logs()
+        --- TODO: error handling is shit
+        --- make sure that error plugins must be at runtime
         local ok, error = pcall(function()
             restart = false -- Reset restart flag
 
@@ -1529,9 +1530,7 @@ end
                 logfatal("Failed to load configuration. Exiting.", true)
             end
 
-            if configObj then
-                local soundCfg = configObj.soundMap
-            end
+            local soundCfg = configObj and configObj.soundMap or nil
 
             if soundCfg == nil then --- use the default
                 soundCfg = {
