@@ -73,6 +73,12 @@ typedef struct {
 	ma_uint64 total_length;
 	ma_bool32 playback_finished;
 
+	// recording state
+	ma_device record_device;
+	ma_encoder record_encoder;
+	ma_bool32 is_recording;
+	ma_bool32 is_record_device_active;
+
 } RmpAudioCtx;
 
 static RmpAudioCtx rAudio = {0};
@@ -167,7 +173,6 @@ void enhanced_data_callback(ma_device* pDevice, void* pOutput, const void* pInpu
 					// create frequency data table
 					lua_createtable(L, (int)rAudio.freq_data_size, 0);
 					for (size_t i = 0; i < rAudio.freq_data_size; i++) {
-                        // BUG: I need to debug the freq_data if it's exists
 						lua_pushnumber(L, rAudio.freq_data[i]);
 						lua_rawseti(L, -2, (int)i + 1);
 					}
@@ -189,7 +194,29 @@ void enhanced_data_callback(ma_device* pDevice, void* pOutput, const void* pInpu
 	}
 }
 
+static void record_data_callback(ma_device* pDevice, void* pOutput, const void* pInput, ma_uint32 frameCount) {
+	(void)pDevice;
+	(void)pOutput;
+
+	if (!rAudio.is_recording || pInput == NULL) {
+		return;
+	}
+
+	ma_encoder_write_pcm_frames(&rAudio.record_encoder, pInput, frameCount, NULL);
+}
+
 static void cleanup_audio_context(void) {
+	if (rAudio.is_record_device_active) {
+		ma_device_stop(&rAudio.record_device);
+		ma_device_uninit(&rAudio.record_device);
+		rAudio.is_record_device_active = MA_FALSE;
+	}
+
+	if (rAudio.is_recording) {
+		ma_encoder_uninit(&rAudio.record_encoder);
+		rAudio.is_recording = MA_FALSE;
+	}
+
 	if (rAudio.is_device_active) {
 		ma_device_uninit(&rAudio.device);
 		rAudio.is_device_active = MA_FALSE;
@@ -628,6 +655,92 @@ ALWAYS_INT lua_rmp_audio_get_frequency_data(STATE) {
 	return 1;
 }
 
+ALWAYS_INT lua_rmp_audio_enable_record(STATE){
+	if (!rAudio.is_initialized) {
+		lua_pushboolean(L, 0);
+		lua_pushstring(L, "RMPAudio system not initialized");
+		return 2;
+	}
+
+	if (rAudio.is_recording || rAudio.is_record_device_active) {
+		lua_pushboolean(L, 0);
+		lua_pushstring(L, "Recording already active");
+		return 2;
+	}
+
+	const char* filepath = luaL_checkstring(L, 1);
+	ma_uint32 sample_rate = (ma_uint32)luaL_optinteger(L, 2, 44100);
+	ma_uint32 channels = (ma_uint32)luaL_optinteger(L, 3, 2);
+
+	if (sample_rate == 0 || channels == 0) {
+		lua_pushboolean(L, 0);
+		lua_pushstring(L, "Invalid recording configuration");
+		return 2;
+	}
+
+	ma_encoder_config encConfig = ma_encoder_config_init(ma_encoding_format_wav, ma_format_f32, channels, sample_rate);
+	ma_result result = ma_encoder_init_file(filepath, &encConfig, &rAudio.record_encoder);
+	if (result != MA_SUCCESS) {
+		lua_pushboolean(L, 0);
+		lua_pushstring(L, "Failed to initialize recording encoder");
+		return 2;
+	}
+
+	ma_device_config deviceConfig = ma_device_config_init(ma_device_type_capture);
+	deviceConfig.capture.format = ma_format_f32;
+	deviceConfig.capture.channels = channels;
+	deviceConfig.sampleRate = sample_rate;
+	// deviceConfig.dataCallback = record_data_callback;
+	deviceConfig.dataCallback = enhanced_data_callback;
+    
+	deviceConfig.pUserData = &rAudio;
+
+	result = ma_device_init(&rAudio.context, &deviceConfig, &rAudio.record_device);
+	if (result != MA_SUCCESS) {
+		ma_encoder_uninit(&rAudio.record_encoder);
+		lua_pushboolean(L, 0);
+		lua_pushstring(L, "Failed to initialize recording device");
+		return 2;
+	}
+
+	result = ma_device_start(&rAudio.record_device);
+	if (result != MA_SUCCESS) {
+		ma_device_uninit(&rAudio.record_device);
+		ma_encoder_uninit(&rAudio.record_encoder);
+		lua_pushboolean(L, 0);
+		lua_pushstring(L, "Failed to start recording device");
+		return 2;
+	}
+
+	rAudio.is_record_device_active = MA_TRUE;
+	rAudio.is_recording = MA_TRUE;
+
+	lua_pushboolean(L, 1);
+	return 1;
+}
+
+ALWAYS_INT lua_rmp_audio_disable_record(STATE){
+	if (!rAudio.is_recording && !rAudio.is_record_device_active) {
+		lua_pushboolean(L, 0);
+		lua_pushstring(L, "Recording not active");
+		return 2;
+	}
+
+	if (rAudio.is_record_device_active) {
+		ma_device_stop(&rAudio.record_device);
+		ma_device_uninit(&rAudio.record_device);
+		rAudio.is_record_device_active = MA_FALSE;
+	}
+
+	if (rAudio.is_recording) {
+		ma_encoder_uninit(&rAudio.record_encoder);
+		rAudio.is_recording = MA_FALSE;
+	}
+
+	lua_pushboolean(L, 1);
+	return 1;
+}
+
 ALWAYS_INT lua_rmp_audio_cleanup(STATE) {
 	cleanup_audio_context();
 	lua_pushboolean(L, 1);
@@ -670,6 +783,10 @@ static const luaL_Reg rmp_audio_lib[] = {
 	{"DisableVisualization", lua_rmp_audio_disable_visualization},
 	{"SetVisualizationCallback", lua_rmp_audio_set_visualization_callback},
 	{"GetFrequencyData", lua_rmp_audio_get_frequency_data},
+
+    // TODO: add recording functions and more features in the future :)
+	{"EnableRecord", lua_rmp_audio_enable_record},
+	{"DisableRecord", lua_rmp_audio_disable_record},
 
 	{NULL, NULL}
 };

@@ -3881,6 +3881,8 @@ do
         self.freq_data              = {}
         self.metadata_cache         = {}
 
+        self.is_recording_enabled   = false
+
         -- init audio system (Init returns boolean, maybe error; handle both)
         local ok, a, b              = pcall(rmpaudio.Init)
         if not ok then
@@ -3904,6 +3906,48 @@ do
         math.randomseed(os.time() % 2 ^ 31)
 
         return self
+    end
+
+    ---@param filePath string
+    ---@param sampleRate number | nil
+    ---@param channels number | nil
+    ---@return boolean
+    function RMP.Sound:enableRecording(filePath, sampleRate, channels)
+        if self.state == RMP.State.ERROR and self.last_error ~= nil then
+            -- indecates that there's an error
+            return false
+        end
+        if not filePath then
+            self.state = RMP.State.ERROR
+            self.last_error = "ERROR: file path of the Recording method is required"
+            return false
+        end
+
+        sampleRate = sampleRate or 44100
+        channels = channels or 2
+        local ok, err = pcall(rmpaudio.EnableRecord, filePath, sampleRate, channels)
+        if not ok and err then
+            self.state = RMP.State.ERROR
+            self.last_error = "ERROR: " .. err
+            return false
+        end
+        return true
+    end
+
+    ---@return boolean
+    function RMP.Sound:disableRecording()
+        if self.state == RMP.State.ERROR and self.last_error ~= nil then
+            -- indecates that there's an error
+            return false
+        end
+        local ok, err = pcall(rmpaudio.DisableRecord)
+        if not ok and err then
+            self.state = RMP.State.ERROR
+            self.last_error = "ERROR: " .. err
+            return false
+        end
+
+        return true
     end
 
     --- @return integer|nil
