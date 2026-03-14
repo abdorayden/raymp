@@ -122,7 +122,7 @@ then
 		LIBUV_PATH="$(pkg-config --libs libuv)"
 		LIBUV_CFLAGS="$(pkg-config --cflags libuv)"
 	else
-		LIBUV_PATH="-L../src/third_party/libuv-package/lib -l:libuv.a -lpthread -ldl"
+		LIBUV_PATH="-L../src/third_party/libuv-package/lib -luv -lpthread -ldl"
 		LIBUV_CFLAGS="-I../src/third_party/libuv-package/include"
 	fi
 
