@@ -28,10 +28,10 @@
 #include <string.h>
 #include <fcntl.h>
 
-#include "lua.h"
-#include "lauxlib.h"
+#include "../../lua/include/lua.h"
+#include "../../lua/include/lauxlib.h"
 
-#include "uv.h"
+#include "../../../third_party/libuv-package/include/uv.h"
 
 #define UV_TIMER_MT "RmpUVTimer"
 
