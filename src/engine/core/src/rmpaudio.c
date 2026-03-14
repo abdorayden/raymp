@@ -829,7 +829,7 @@ static const luaL_Reg rmp_audio_lib[] = {
 	{"SetVisualizationCallback", lua_rmp_audio_set_visualization_callback},
 	{"GetFrequencyData", lua_rmp_audio_get_frequency_data},
 
-    // TODO: add recording functions and more features in the future :)
+    // BUG: the freqs is not sent it to lua api in recording
 	{"EnableRecord", lua_rmp_audio_enable_record},
 	{"DisableRecord", lua_rmp_audio_disable_record},
 

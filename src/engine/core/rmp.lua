@@ -1093,177 +1093,190 @@ do -- text
     end
 end
 
+--- TODO: handle multiple char input for action:
+--- Example: <C-a>s => do something when user press Ctrl + a and then s
+RMP.KeyMap     = HashMap()
+
 -- the RMP.enumeration value returns from HandleKey input
-RMP.KEY_CTRL_A        = RMP.enum(true)
-RMP.KEY_CTRL_B        = RMP.enum()
-RMP.KEY_CTRL_C        = RMP.enum()
-RMP.KEY_CTRL_D        = RMP.enum()
-RMP.KEY_CTRL_E        = RMP.enum()
-RMP.KEY_CTRL_F        = RMP.enum()
-RMP.KEY_CTRL_G        = RMP.enum()
-RMP.KEY_CTRL_H        = RMP.enum()
-RMP.KEY_CTRL_K        = RMP.enum()
-RMP.KEY_CTRL_L        = RMP.enum()
-RMP.KEY_CTRL_M        = RMP.enum()
-RMP.KEY_CTRL_N        = RMP.enum()
-RMP.KEY_CTRL_O        = RMP.enum()
-RMP.KEY_CTRL_P        = RMP.enum()
-RMP.KEY_CTRL_Q        = RMP.enum()
-RMP.KEY_CTRL_R        = RMP.enum()
-RMP.KEY_CTRL_S        = RMP.enum()
-RMP.KEY_CTRL_T        = RMP.enum()
-RMP.KEY_CTRL_U        = RMP.enum()
-RMP.KEY_CTRL_V        = RMP.enum()
-RMP.KEY_CTRL_W        = RMP.enum()
-RMP.KEY_CTRL_X        = RMP.enum()
-RMP.KEY_CTRL_Y        = RMP.enum()
-RMP.KEY_CTRL_Z        = RMP.enum()
-RMP.KEY_ALT_A         = RMP.enum()
-RMP.KEY_ALT_B         = RMP.enum()
-RMP.KEY_ALT_C         = RMP.enum()
-RMP.KEY_ALT_D         = RMP.enum()
-RMP.KEY_ALT_E         = RMP.enum()
-RMP.KEY_ALT_F         = RMP.enum()
-RMP.KEY_ALT_G         = RMP.enum()
-RMP.KEY_ALT_H         = RMP.enum()
-RMP.KEY_ALT_I         = RMP.enum()
-RMP.KEY_ALT_J         = RMP.enum()
-RMP.KEY_ALT_K         = RMP.enum()
-RMP.KEY_ALT_L         = RMP.enum()
-RMP.KEY_ALT_M         = RMP.enum()
-RMP.KEY_ALT_N         = RMP.enum()
-RMP.KEY_ALT_O         = RMP.enum()
-RMP.KEY_ALT_P         = RMP.enum()
-RMP.KEY_ALT_Q         = RMP.enum()
-RMP.KEY_ALT_R         = RMP.enum()
-RMP.KEY_ALT_S         = RMP.enum()
-RMP.KEY_ALT_T         = RMP.enum()
-RMP.KEY_ALT_U         = RMP.enum()
-RMP.KEY_ALT_V         = RMP.enum()
-RMP.KEY_ALT_W         = RMP.enum()
-RMP.KEY_ALT_X         = RMP.enum()
-RMP.KEY_ALT_Y         = RMP.enum()
-RMP.KEY_ALT_Z         = RMP.enum()
-RMP.KEY_ENTER         = RMP.enum()
-RMP.KEY_SPACE         = RMP.enum()
-RMP.KEY_ESCAPE        = RMP.enum()
-RMP.KEY_UP            = RMP.enum()
-RMP.KEY_DOWN          = RMP.enum()
-RMP.KEY_LEFT          = RMP.enum()
-RMP.KEY_RIGHT         = RMP.enum()
-RMP.KEY_TAB           = RMP.enum()
-RMP.KEY_DELETE        = RMP.enum()
-RMP.KEY_HOME          = RMP.enum()
-RMP.KEY_END           = RMP.enum()
-RMP.KEY_BACKSPACE     = RMP.enum()
+RMP.KEY_CTRL_A = RMP.enum(true); RMP.KeyMap:put("<C-a>", RMP.KEY_CTRL_A)
+RMP.KEY_CTRL_B = RMP.enum(); RMP.KeyMap:put("<C-b>", RMP.KEY_CTRL_B)
+RMP.KEY_CTRL_C = RMP.enum(); RMP.KeyMap:put("<C-c>", RMP.KEY_CTRL_C)
+RMP.KEY_CTRL_D = RMP.enum(); RMP.KeyMap:put("<C-d>", RMP.KEY_CTRL_D)
+RMP.KEY_CTRL_E = RMP.enum(); RMP.KeyMap:put("<C-e>", RMP.KEY_CTRL_E)
+RMP.KEY_CTRL_F = RMP.enum(); RMP.KeyMap:put("<C-f>", RMP.KEY_CTRL_F)
+RMP.KEY_CTRL_G = RMP.enum(); RMP.KeyMap:put("<C-g>", RMP.KEY_CTRL_G)
+RMP.KEY_CTRL_H = RMP.enum(); RMP.KeyMap:put("<C-h>", RMP.KEY_CTRL_H)
+RMP.KEY_CTRL_K = RMP.enum(); RMP.KeyMap:put("<C-k>", RMP.KEY_CTRL_K)
+RMP.KEY_CTRL_L = RMP.enum(); RMP.KeyMap:put("<C-l>", RMP.KEY_CTRL_L)
+RMP.KEY_CTRL_M = RMP.enum(); RMP.KeyMap:put("<C-m>", RMP.KEY_CTRL_M)
+RMP.KEY_CTRL_N = RMP.enum(); RMP.KeyMap:put("<C-n>", RMP.KEY_CTRL_N)
+RMP.KEY_CTRL_O = RMP.enum(); RMP.KeyMap:put("<C-o>", RMP.KEY_CTRL_O)
+RMP.KEY_CTRL_P = RMP.enum(); RMP.KeyMap:put("<C-p>", RMP.KEY_CTRL_P)
+RMP.KEY_CTRL_Q = RMP.enum(); RMP.KeyMap:put("<C-q>", RMP.KEY_CTRL_Q)
+RMP.KEY_CTRL_R = RMP.enum(); RMP.KeyMap:put("<C-r>", RMP.KEY_CTRL_R)
+RMP.KEY_CTRL_S = RMP.enum(); RMP.KeyMap:put("<C-s>", RMP.KEY_CTRL_S)
+RMP.KEY_CTRL_T = RMP.enum(); RMP.KeyMap:put("<C-t>", RMP.KEY_CTRL_T)
+RMP.KEY_CTRL_U = RMP.enum(); RMP.KeyMap:put("<C-u>", RMP.KEY_CTRL_U)
+RMP.KEY_CTRL_V = RMP.enum(); RMP.KeyMap:put("<C-v>", RMP.KEY_CTRL_V)
+RMP.KEY_CTRL_W = RMP.enum(); RMP.KeyMap:put("<C-w>", RMP.KEY_CTRL_W)
+RMP.KEY_CTRL_X = RMP.enum(); RMP.KeyMap:put("<C-x>", RMP.KEY_CTRL_X)
+RMP.KEY_CTRL_Y = RMP.enum(); RMP.KeyMap:put("<C-y>", RMP.KEY_CTRL_Y)
+RMP.KEY_CTRL_Z = RMP.enum(); RMP.KeyMap:put("<C-z>", RMP.KEY_CTRL_Z)
 
-RMP.KEY_F1            = RMP.enum()
-RMP.KEY_F2            = RMP.enum()
-RMP.KEY_F3            = RMP.enum()
-RMP.KEY_F4            = RMP.enum()
-RMP.KEY_F5            = RMP.enum()
-RMP.KEY_F6            = RMP.enum()
-RMP.KEY_F7            = RMP.enum()
-RMP.KEY_F8            = RMP.enum()
-RMP.KEY_F9            = RMP.enum()
-RMP.KEY_F10           = RMP.enum()
-RMP.KEY_F11           = RMP.enum()
-RMP.KEY_F12           = RMP.enum()
+RMP.KEY_ALT_A = RMP.enum(); RMP.KeyMap:put("<A-a>", RMP.KEY_ALT_A)
+RMP.KEY_ALT_B = RMP.enum(); RMP.KeyMap:put("<A-b>", RMP.KEY_ALT_B)
+RMP.KEY_ALT_C = RMP.enum(); RMP.KeyMap:put("<A-c>", RMP.KEY_ALT_C)
+RMP.KEY_ALT_D = RMP.enum(); RMP.KeyMap:put("<A-d>", RMP.KEY_ALT_D)
+RMP.KEY_ALT_E = RMP.enum(); RMP.KeyMap:put("<A-e>", RMP.KEY_ALT_E)
+RMP.KEY_ALT_F = RMP.enum(); RMP.KeyMap:put("<A-f>", RMP.KEY_ALT_F)
+RMP.KEY_ALT_G = RMP.enum(); RMP.KeyMap:put("<A-g>", RMP.KEY_ALT_G)
+RMP.KEY_ALT_H = RMP.enum(); RMP.KeyMap:put("<A-h>", RMP.KEY_ALT_H)
+RMP.KEY_ALT_I = RMP.enum(); RMP.KeyMap:put("<A-i>", RMP.KEY_ALT_I)
+RMP.KEY_ALT_J = RMP.enum(); RMP.KeyMap:put("<A-j>", RMP.KEY_ALT_J)
+RMP.KEY_ALT_K = RMP.enum(); RMP.KeyMap:put("<A-k>", RMP.KEY_ALT_K)
+RMP.KEY_ALT_L = RMP.enum(); RMP.KeyMap:put("<A-l>", RMP.KEY_ALT_L)
+RMP.KEY_ALT_M = RMP.enum(); RMP.KeyMap:put("<A-m>", RMP.KEY_ALT_M)
+RMP.KEY_ALT_N = RMP.enum(); RMP.KeyMap:put("<A-n>", RMP.KEY_ALT_N)
+RMP.KEY_ALT_O = RMP.enum(); RMP.KeyMap:put("<A-o>", RMP.KEY_ALT_O)
+RMP.KEY_ALT_P = RMP.enum(); RMP.KeyMap:put("<A-p>", RMP.KEY_ALT_P)
+RMP.KEY_ALT_Q = RMP.enum(); RMP.KeyMap:put("<A-q>", RMP.KEY_ALT_Q)
+RMP.KEY_ALT_R = RMP.enum(); RMP.KeyMap:put("<A-r>", RMP.KEY_ALT_R)
+RMP.KEY_ALT_S = RMP.enum(); RMP.KeyMap:put("<A-s>", RMP.KEY_ALT_S)
+RMP.KEY_ALT_T = RMP.enum(); RMP.KeyMap:put("<A-t>", RMP.KEY_ALT_T)
+RMP.KEY_ALT_U = RMP.enum(); RMP.KeyMap:put("<A-u>", RMP.KEY_ALT_U)
+RMP.KEY_ALT_V = RMP.enum(); RMP.KeyMap:put("<A-v>", RMP.KEY_ALT_V)
+RMP.KEY_ALT_W = RMP.enum(); RMP.KeyMap:put("<A-w>", RMP.KEY_ALT_W)
+RMP.KEY_ALT_X = RMP.enum(); RMP.KeyMap:put("<A-x>", RMP.KEY_ALT_X)
+RMP.KEY_ALT_Y = RMP.enum(); RMP.KeyMap:put("<A-y>", RMP.KEY_ALT_Y)
+RMP.KEY_ALT_Z = RMP.enum(); RMP.KeyMap:put("<A-z>", RMP.KEY_ALT_Z)
 
-RMP.KEY_A             = RMP.enum()
-RMP.KEY_B             = RMP.enum()
-RMP.KEY_C             = RMP.enum()
-RMP.KEY_D             = RMP.enum()
-RMP.KEY_E             = RMP.enum()
-RMP.KEY_F             = RMP.enum()
-RMP.KEY_G             = RMP.enum()
-RMP.KEY_H             = RMP.enum()
-RMP.KEY_I             = RMP.enum()
-RMP.KEY_J             = RMP.enum()
-RMP.KEY_K             = RMP.enum()
-RMP.KEY_L             = RMP.enum()
-RMP.KEY_M             = RMP.enum()
-RMP.KEY_N             = RMP.enum()
-RMP.KEY_O             = RMP.enum()
-RMP.KEY_P             = RMP.enum()
-RMP.KEY_Q             = RMP.enum()
-RMP.KEY_R             = RMP.enum()
-RMP.KEY_S             = RMP.enum()
-RMP.KEY_T             = RMP.enum()
-RMP.KEY_U             = RMP.enum()
-RMP.KEY_V             = RMP.enum()
-RMP.KEY_W             = RMP.enum()
-RMP.KEY_X             = RMP.enum()
-RMP.KEY_Y             = RMP.enum()
-RMP.KEY_Z             = RMP.enum()
-RMP.KEY_SHIFT_A       = RMP.enum()
-RMP.KEY_SHIFT_B       = RMP.enum()
-RMP.KEY_SHIFT_C       = RMP.enum()
-RMP.KEY_SHIFT_D       = RMP.enum()
-RMP.KEY_SHIFT_E       = RMP.enum()
-RMP.KEY_SHIFT_F       = RMP.enum()
-RMP.KEY_SHIFT_G       = RMP.enum()
-RMP.KEY_SHIFT_H       = RMP.enum()
-RMP.KEY_SHIFT_I       = RMP.enum()
-RMP.KEY_SHIFT_J       = RMP.enum()
-RMP.KEY_SHIFT_K       = RMP.enum()
-RMP.KEY_SHIFT_L       = RMP.enum()
-RMP.KEY_SHIFT_M       = RMP.enum()
-RMP.KEY_SHIFT_N       = RMP.enum()
-RMP.KEY_SHIFT_O       = RMP.enum()
-RMP.KEY_SHIFT_P       = RMP.enum()
-RMP.KEY_SHIFT_Q       = RMP.enum()
-RMP.KEY_SHIFT_R       = RMP.enum()
-RMP.KEY_SHIFT_S       = RMP.enum()
-RMP.KEY_SHIFT_T       = RMP.enum()
-RMP.KEY_SHIFT_U       = RMP.enum()
-RMP.KEY_SHIFT_V       = RMP.enum()
-RMP.KEY_SHIFT_W       = RMP.enum()
-RMP.KEY_SHIFT_X       = RMP.enum()
-RMP.KEY_SHIFT_Y       = RMP.enum()
-RMP.KEY_SHIFT_Z       = RMP.enum()
-RMP.KEY_0             = RMP.enum()
-RMP.KEY_1             = RMP.enum()
-RMP.KEY_2             = RMP.enum()
-RMP.KEY_3             = RMP.enum()
-RMP.KEY_4             = RMP.enum()
-RMP.KEY_5             = RMP.enum()
-RMP.KEY_6             = RMP.enum()
-RMP.KEY_7             = RMP.enum()
-RMP.KEY_8             = RMP.enum()
-RMP.KEY_9             = RMP.enum()
-RMP.KEY_PLUS          = RMP.enum()
-RMP.KEY_MINUS         = RMP.enum()
-RMP.KEY_GT            = RMP.enum()
-RMP.KEY_LT            = RMP.enum()
-RMP.KEY_HASHTAG       = RMP.enum()
-RMP.KEY_DOLAR         = RMP.enum()
-RMP.KEY_PERSANT       = RMP.enum()
-RMP.KEY_STAR          = RMP.enum()
-RMP.KEY_DOT           = RMP.enum()
-RMP.KEY_UNDERS        = RMP.enum()
-RMP.KEY_SEMICOL       = RMP.enum()
-RMP.KEY_QUISTION_MARK = RMP.enum()
-RMP.KEY_AT            = RMP.enum()
-RMP.KEY_OPCURB        = RMP.enum()
-RMP.KEY_CLCURB        = RMP.enum()
-RMP.KEY_BACK_SLASH    = RMP.enum()
-RMP.KEY_BACKTICK      = RMP.enum()
-RMP.KEY_OPEN_BRAKET   = RMP.enum()
-RMP.KEY_CLOSED_BRAKET = RMP.enum()
-RMP.KEY_BAR           = RMP.enum()
-RMP.KEY_DBL_QUOTE     = RMP.enum()
-RMP.KEY_SINGLE_QOUTE  = RMP.enum()
-RMP.KEY_SLASH         = RMP.enum()
-RMP.KEY_COLON         = RMP.enum()
-RMP.KEY_COMMA         = RMP.enum()
-RMP.KEY_OPPAERN       = RMP.enum()
-RMP.KEY_CLPAREN       = RMP.enum()
-RMP.KEY_EQUAL         = RMP.enum()
-RMP.NONE              = RMP.enum()
+RMP.KEY_ENTER = RMP.enum(); RMP.KeyMap:put("<Enter>", RMP.KEY_ENTER)
+RMP.KEY_SPACE = RMP.enum(); RMP.KeyMap:put("<Space>", RMP.KEY_SPACE)
+RMP.KEY_ESCAPE = RMP.enum(); RMP.KeyMap:put("<Escape>", RMP.KEY_ESCAPE)
+RMP.KEY_UP = RMP.enum(); RMP.KeyMap:put("<Up>", RMP.KEY_UP)
+RMP.KEY_DOWN = RMP.enum(); RMP.KeyMap:put("<Down>", RMP.KEY_DOWN)
+RMP.KEY_LEFT = RMP.enum(); RMP.KeyMap:put("<Left>", RMP.KEY_LEFT)
+RMP.KEY_RIGHT = RMP.enum(); RMP.KeyMap:put("<Right>", RMP.KEY_RIGHT)
+RMP.KEY_TAB = RMP.enum(); RMP.KeyMap:put("<Tab>", RMP.KEY_TAB)
+RMP.KEY_DELETE = RMP.enum(); RMP.KeyMap:put("<Delete>", RMP.KEY_DELETE)
+RMP.KEY_HOME = RMP.enum(); RMP.KeyMap:put("<Home>", RMP.KEY_HOME)
+RMP.KEY_END = RMP.enum(); RMP.KeyMap:put("<End>", RMP.KEY_END)
+RMP.KEY_BACKSPACE = RMP.enum(); RMP.KeyMap:put("<Backspace>", RMP.KEY_BACKSPACE)
+
+RMP.KEY_F1 = RMP.enum(); RMP.KeyMap:put("<F1>", RMP.KEY_F1)
+RMP.KEY_F2 = RMP.enum(); RMP.KeyMap:put("<F2>", RMP.KEY_F2)
+RMP.KEY_F3 = RMP.enum(); RMP.KeyMap:put("<F3>", RMP.KEY_F3)
+RMP.KEY_F4 = RMP.enum(); RMP.KeyMap:put("<F4>", RMP.KEY_F4)
+RMP.KEY_F5 = RMP.enum(); RMP.KeyMap:put("<F5>", RMP.KEY_F5)
+RMP.KEY_F6 = RMP.enum(); RMP.KeyMap:put("<F6>", RMP.KEY_F6)
+RMP.KEY_F7 = RMP.enum(); RMP.KeyMap:put("<F7>", RMP.KEY_F7)
+RMP.KEY_F8 = RMP.enum(); RMP.KeyMap:put("<F8>", RMP.KEY_F8)
+RMP.KEY_F9 = RMP.enum(); RMP.KeyMap:put("<F9>", RMP.KEY_F9)
+RMP.KEY_F10 = RMP.enum(); RMP.KeyMap:put("<F10>", RMP.KEY_F10)
+RMP.KEY_F11 = RMP.enum(); RMP.KeyMap:put("<F11>", RMP.KEY_F11)
+RMP.KEY_F12 = RMP.enum(); RMP.KeyMap:put("<F12>", RMP.KEY_F12)
+
+RMP.KEY_A = RMP.enum(); RMP.KeyMap:put("a", RMP.KEY_A)
+RMP.KEY_B = RMP.enum(); RMP.KeyMap:put("b", RMP.KEY_B)
+RMP.KEY_C = RMP.enum(); RMP.KeyMap:put("c", RMP.KEY_C)
+RMP.KEY_D = RMP.enum(); RMP.KeyMap:put("d", RMP.KEY_D)
+RMP.KEY_E = RMP.enum(); RMP.KeyMap:put("e", RMP.KEY_E)
+RMP.KEY_F = RMP.enum(); RMP.KeyMap:put("f", RMP.KEY_F)
+RMP.KEY_G = RMP.enum(); RMP.KeyMap:put("g", RMP.KEY_G)
+RMP.KEY_H = RMP.enum(); RMP.KeyMap:put("h", RMP.KEY_H)
+RMP.KEY_I = RMP.enum(); RMP.KeyMap:put("i", RMP.KEY_I)
+RMP.KEY_J = RMP.enum(); RMP.KeyMap:put("j", RMP.KEY_J)
+RMP.KEY_K = RMP.enum(); RMP.KeyMap:put("k", RMP.KEY_K)
+RMP.KEY_L = RMP.enum(); RMP.KeyMap:put("l", RMP.KEY_L)
+RMP.KEY_M = RMP.enum(); RMP.KeyMap:put("m", RMP.KEY_M)
+RMP.KEY_N = RMP.enum(); RMP.KeyMap:put("n", RMP.KEY_N)
+RMP.KEY_O = RMP.enum(); RMP.KeyMap:put("o", RMP.KEY_O)
+RMP.KEY_P = RMP.enum(); RMP.KeyMap:put("p", RMP.KEY_P)
+RMP.KEY_Q = RMP.enum(); RMP.KeyMap:put("q", RMP.KEY_Q)
+RMP.KEY_R = RMP.enum(); RMP.KeyMap:put("r", RMP.KEY_R)
+RMP.KEY_S = RMP.enum(); RMP.KeyMap:put("s", RMP.KEY_S)
+RMP.KEY_T = RMP.enum(); RMP.KeyMap:put("t", RMP.KEY_T)
+RMP.KEY_U = RMP.enum(); RMP.KeyMap:put("u", RMP.KEY_U)
+RMP.KEY_V = RMP.enum(); RMP.KeyMap:put("v", RMP.KEY_V)
+RMP.KEY_W = RMP.enum(); RMP.KeyMap:put("w", RMP.KEY_W)
+RMP.KEY_X = RMP.enum(); RMP.KeyMap:put("x", RMP.KEY_X)
+RMP.KEY_Y = RMP.enum(); RMP.KeyMap:put("y", RMP.KEY_Y)
+RMP.KEY_Z = RMP.enum(); RMP.KeyMap:put("z", RMP.KEY_Z)
+
+RMP.KEY_SHIFT_A = RMP.enum(); RMP.KeyMap:put("A", RMP.KEY_SHIFT_A)
+RMP.KEY_SHIFT_B = RMP.enum(); RMP.KeyMap:put("B", RMP.KEY_SHIFT_B)
+RMP.KEY_SHIFT_C = RMP.enum(); RMP.KeyMap:put("C", RMP.KEY_SHIFT_C)
+RMP.KEY_SHIFT_D = RMP.enum(); RMP.KeyMap:put("D", RMP.KEY_SHIFT_D)
+RMP.KEY_SHIFT_E = RMP.enum(); RMP.KeyMap:put("E", RMP.KEY_SHIFT_E)
+RMP.KEY_SHIFT_F = RMP.enum(); RMP.KeyMap:put("F", RMP.KEY_SHIFT_F)
+RMP.KEY_SHIFT_G = RMP.enum(); RMP.KeyMap:put("G", RMP.KEY_SHIFT_G)
+RMP.KEY_SHIFT_H = RMP.enum(); RMP.KeyMap:put("H", RMP.KEY_SHIFT_H)
+RMP.KEY_SHIFT_I = RMP.enum(); RMP.KeyMap:put("I", RMP.KEY_SHIFT_I)
+RMP.KEY_SHIFT_J = RMP.enum(); RMP.KeyMap:put("J", RMP.KEY_SHIFT_J)
+RMP.KEY_SHIFT_K = RMP.enum(); RMP.KeyMap:put("K", RMP.KEY_SHIFT_K)
+RMP.KEY_SHIFT_L = RMP.enum(); RMP.KeyMap:put("L", RMP.KEY_SHIFT_L)
+RMP.KEY_SHIFT_M = RMP.enum(); RMP.KeyMap:put("M", RMP.KEY_SHIFT_M)
+RMP.KEY_SHIFT_N = RMP.enum(); RMP.KeyMap:put("N", RMP.KEY_SHIFT_N)
+RMP.KEY_SHIFT_O = RMP.enum(); RMP.KeyMap:put("O", RMP.KEY_SHIFT_O)
+RMP.KEY_SHIFT_P = RMP.enum(); RMP.KeyMap:put("P", RMP.KEY_SHIFT_P)
+RMP.KEY_SHIFT_Q = RMP.enum(); RMP.KeyMap:put("Q", RMP.KEY_SHIFT_Q)
+RMP.KEY_SHIFT_R = RMP.enum(); RMP.KeyMap:put("R", RMP.KEY_SHIFT_R)
+RMP.KEY_SHIFT_S = RMP.enum(); RMP.KeyMap:put("S", RMP.KEY_SHIFT_S)
+RMP.KEY_SHIFT_T = RMP.enum(); RMP.KeyMap:put("T", RMP.KEY_SHIFT_T)
+RMP.KEY_SHIFT_U = RMP.enum(); RMP.KeyMap:put("U", RMP.KEY_SHIFT_U)
+RMP.KEY_SHIFT_V = RMP.enum(); RMP.KeyMap:put("V", RMP.KEY_SHIFT_V)
+RMP.KEY_SHIFT_W = RMP.enum(); RMP.KeyMap:put("W", RMP.KEY_SHIFT_W)
+RMP.KEY_SHIFT_X = RMP.enum(); RMP.KeyMap:put("X", RMP.KEY_SHIFT_X)
+RMP.KEY_SHIFT_Y = RMP.enum(); RMP.KeyMap:put("Y", RMP.KEY_SHIFT_Y)
+RMP.KEY_SHIFT_Z = RMP.enum(); RMP.KeyMap:put("Z", RMP.KEY_SHIFT_Z)
+
+RMP.KEY_0 = RMP.enum(); RMP.KeyMap:put("0", RMP.KEY_0)
+RMP.KEY_1 = RMP.enum(); RMP.KeyMap:put("1", RMP.KEY_1)
+RMP.KEY_2 = RMP.enum(); RMP.KeyMap:put("2", RMP.KEY_2)
+RMP.KEY_3 = RMP.enum(); RMP.KeyMap:put("3", RMP.KEY_3)
+RMP.KEY_4 = RMP.enum(); RMP.KeyMap:put("4", RMP.KEY_4)
+RMP.KEY_5 = RMP.enum(); RMP.KeyMap:put("5", RMP.KEY_5)
+RMP.KEY_6 = RMP.enum(); RMP.KeyMap:put("6", RMP.KEY_6)
+RMP.KEY_7 = RMP.enum(); RMP.KeyMap:put("7", RMP.KEY_7)
+RMP.KEY_8 = RMP.enum(); RMP.KeyMap:put("8", RMP.KEY_8)
+RMP.KEY_9 = RMP.enum(); RMP.KeyMap:put("9", RMP.KEY_9)
+
+RMP.KEY_PLUS = RMP.enum(); RMP.KeyMap:put("+", RMP.KEY_PLUS)
+RMP.KEY_MINUS = RMP.enum(); RMP.KeyMap:put("-", RMP.KEY_MINUS)
+RMP.KEY_GT = RMP.enum(); RMP.KeyMap:put(">", RMP.KEY_GT)
+RMP.KEY_LT = RMP.enum(); RMP.KeyMap:put("<", RMP.KEY_LT)
+RMP.KEY_HASHTAG = RMP.enum(); RMP.KeyMap:put("#", RMP.KEY_HASHTAG)
+RMP.KEY_DOLAR = RMP.enum(); RMP.KeyMap:put("$", RMP.KEY_DOLAR)
+RMP.KEY_PERSANT = RMP.enum(); RMP.KeyMap:put("%", RMP.KEY_PERSANT)
+RMP.KEY_STAR = RMP.enum(); RMP.KeyMap:put("*", RMP.KEY_STAR)
+RMP.KEY_DOT = RMP.enum(); RMP.KeyMap:put(".", RMP.KEY_DOT)
+RMP.KEY_UNDERS = RMP.enum(); RMP.KeyMap:put("_", RMP.KEY_UNDERS)
+RMP.KEY_SEMICOL = RMP.enum(); RMP.KeyMap:put(";", RMP.KEY_SEMICOL)
+RMP.KEY_QUISTION_MARK = RMP.enum(); RMP.KeyMap:put("?", RMP.KEY_QUISTION_MARK)
+RMP.KEY_AT = RMP.enum(); RMP.KeyMap:put("@", RMP.KEY_AT)
+RMP.KEY_OPEN_CURLY_BRACKET = RMP.enum(); RMP.KeyMap:put("{", RMP.KEY_OPEN_CURLY_BRACKET)
+RMP.KEY_CLOSED_CURLY_BRACKET = RMP.enum(); RMP.KeyMap:put("}", RMP.KEY_CLOSED_CURLY_BRACKET)
+RMP.KEY_BACK_SLASH = RMP.enum(); RMP.KeyMap:put("\\", RMP.KEY_BACK_SLASH)
+RMP.KEY_BACKTICK = RMP.enum(); RMP.KeyMap:put("`", RMP.KEY_BACKTICK)
+RMP.KEY_OPEN_BRAKET = RMP.enum(); RMP.KeyMap:put("[", RMP.KEY_OPEN_BRAKET)
+RMP.KEY_CLOSED_BRAKET = RMP.enum(); RMP.KeyMap:put("]", RMP.KEY_CLOSED_BRAKET)
+RMP.KEY_BAR = RMP.enum(); RMP.KeyMap:put("|", RMP.KEY_BAR)
+RMP.KEY_DBL_QUOTE = RMP.enum(); RMP.KeyMap:put('"', RMP.KEY_DBL_QUOTE)
+RMP.KEY_SINGLE_QUOTE = RMP.enum(); RMP.KeyMap:put("'", RMP.KEY_SINGLE_QUOTE)
+RMP.KEY_SLASH = RMP.enum(); RMP.KeyMap:put("/", RMP.KEY_SLASH)
+RMP.KEY_COLON = RMP.enum(); RMP.KeyMap:put(":", RMP.KEY_COLON)
+RMP.KEY_COMMA = RMP.enum(); RMP.KeyMap:put(",", RMP.KEY_COMMA)
+RMP.KEY_OPEN_PAERN = RMP.enum(); RMP.KeyMap:put("(", RMP.KEY_OPEN_PAERN)
+RMP.KEY_CLOSED_PAREN = RMP.enum(); RMP.KeyMap:put(")", RMP.KEY_CLOSED_PAREN)
+RMP.KEY_EQUAL = RMP.enum(); RMP.KeyMap:put("=", RMP.KEY_EQUAL)
+RMP.NONE = RMP.enum(); RMP.KeyMap:put("<None>", RMP.NONE)
+
+--- TODO: !
+--- TODO: &
+--- TODO: ^
 
 --- @class Window
-RMP.Window            = OOP.class("Window")
+RMP.Window = OOP.class("Window")
 do -- creating window
     -- callback function accept 4 agrs
 
@@ -1657,6 +1670,29 @@ do
     end
 end
 
+---@class Theme
+---@field BackGround string
+---@field BorderColor string
+---@field TitleBackGround string
+---@field TitleText string
+---@field PrimaryContent string
+---@field SecondaryContent string
+---@field AccentElements string
+---@field Highlight string
+---@field MutedElements string
+
+---@class WinOpt
+---@field title string
+---@field x number
+---@field y number
+---@field width number
+---@field height number
+---@field border BoxDrawing | table
+
+---@class Cursor
+---@field x number
+---@field y number
+
 -- all components should return VirtualTerminal obj
 -- VirtualTerminal class used to create a virtual terminal
 -- each plugin should have his own VirtualTerminal object
@@ -1667,18 +1703,24 @@ RMP.VirtualTerminal = OOP.class("VirtualTerminal", RMP.EventListener, RMP.Render
 do -- VirtualTerminal
     --- @param width integer
     --- @param height integer
+    --- @param theme Theme
     --- @return  self
-    function RMP.VirtualTerminal:constructor(width, height) -- constructor
+    function RMP.VirtualTerminal:constructor(width, height, theme) -- constructor
         -- super method is coming from the class it self
         -- and it used to access the methods from mother class
         --- @diagnostic disable-next-line
         self:super("constructor")
+
+        self.theme = theme or nil
+
         self.h, self.w = window.get_size()
 
         self.realWidth = width or self.w
         self.realHeight = height or self.h
 
         self.native_vt_rmp = vt_rmp.init(self.realWidth, self.realHeight)
+
+        ---@type Cursor
         self.cursor = { x = 1, y = 1 }
 
         -- NOTE: style attr used for effects class
@@ -1694,6 +1736,61 @@ do -- VirtualTerminal
             end
         end
 
+        return self
+    end
+
+    ---get cursor
+    ---@return Cursor
+    function RMP.VirtualTerminal:getCursor()
+        return self.cursor
+    end
+
+    ---@param thaTheme Theme
+    ---@return self
+    function RMP.VirtualTerminal:setTheme(thaTheme)
+        self.theme = thaTheme
+        return self
+    end
+
+    ---@return Theme
+    function RMP.VirtualTerminal:getTheme()
+        return self.theme
+    end
+
+    ---@param text string
+    ---@param style TextStyle
+    ---@return self
+    function RMP.VirtualTerminal:write(text, style)
+        text = text or ""
+        local match = "\n"
+        local i = 0
+        for _, word in text:find(match) do
+            self:writeText(
+                self.cursor.x,
+                self.cursor.y + i,
+                word,
+                self.theme and RMP.colorFromHex(self.theme.TitleText, RMP.FG) or nil,
+                self.theme and RMP.colorFromHex(self.theme.TitleBackGround, RMP.BG) or nil,
+                style
+            )
+        end
+
+        return self
+    end
+
+    ---@param options WinOpt
+    ---@return self
+    function RMP.VirtualTerminal:openWin(options)
+        self:drawBox(
+            options.title or "",
+            options.x or 1,
+            options.y or 1,
+            options.width or self.realWidth,
+            options.height or self.realHeight,
+            options.border or RMP.BoxDrawing.LightBorder,
+            self.theme and RMP.colorFromHex(self.theme.BorderColor, RMP.FG) or nil,
+            self.theme and RMP.colorFromHex(self.theme.BackGround, RMP.BG) or nil
+        )
         return self
     end
 
@@ -1737,8 +1834,8 @@ do -- VirtualTerminal
     --- @param x integer
     --- @param y integer
     --- @param text string | nil
-    --- @param fg FGColors | nil
-    --- @param bg BGColors | nil
+    --- @param fg FGColors | nil | string
+    --- @param bg BGColors | nil | string
     --- @param style TextStyle | nil
     --- @return VirtualTerminal | nil
     function RMP.VirtualTerminal:writeText(x, y, text, fg, bg, style)
@@ -1758,8 +1855,8 @@ do -- VirtualTerminal
         --- @param width integer
         --- @param height integer
         --- @param border_style BoxDrawing
-        --- @param fg FGColors | nil
-        --- @param bg BGColors | nil
+        --- @param fg FGColors | nil | string
+        --- @param bg BGColors | nil | string
         function RMP.VirtualTerminal:drawBox(title, x, y, width, height, border_style, fg, bg)
             x                 = math.floor(x or 1)
             y                 = math.floor(y or 1)
@@ -1797,8 +1894,8 @@ do -- VirtualTerminal
         --- @param width integer
         --- @param height integer
         --- @param border_style BoxDrawing
-        --- @param fg FGColors
-        --- @param bg BGColors
+        --- @param fg FGColors | nil | string
+        --- @param bg BGColors | nil | string
         function RMP.VirtualTerminal:drawBox(title, x, y, width, height, border_style, fg, bg)
             x        = math.floor(x or 1)
             y        = math.floor(y or 1)
@@ -1877,6 +1974,8 @@ do -- VirtualTerminal
     function RMP.VirtualTerminal:moveCursor(x, y)
         --- @diagnostic disable-next-line
         if x and y then
+            self.cursor.x = math.tointeger(math.floor(x))
+            self.cursor.y = math.tointeger(math.floor(y))
             vt_rmp.movecursor(self.native_vt_rmp, math.tointeger(math.floor(x)), math.tointeger(math.floor(y)))
         end
     end
@@ -2034,6 +2133,18 @@ do -- VirtualTerminal
     end
 end
 
+--- Override the print function to write to the virtual terminal instead of the console
+---@param ... any
+---@return VirtualTerminal
+print = function(...)
+    local args = { ... }
+    local text = ""
+    for _, arg in ipairs(args) do
+        text = text .. tostring(arg) .. " "
+    end
+    return RMP.VirtualTerminal():write(text)
+end
+
 RMP.VirtualTerminalEffect = OOP.class("VirtualTerminalEffect", RMP.VirtualTerminal)
 do
     function RMP.VirtualTerminalEffect.constructor(self, width, height)
@@ -2186,72 +2297,73 @@ do
     --- @param key integer
     --- @return string
     function RMP.Input:keyToChar(key)
+        --- TODO: use KeyMap instead
         local keyMap = {
-            [RMP.KEY_A]             = "a",
-            [RMP.KEY_B]             = "b",
-            [RMP.KEY_C]             = "c",
-            [RMP.KEY_D]             = "d",
-            [RMP.KEY_E]             = "e",
-            [RMP.KEY_F]             = "f",
-            [RMP.KEY_G]             = "g",
-            [RMP.KEY_H]             = "h",
-            [RMP.KEY_I]             = "i",
-            [RMP.KEY_J]             = "j",
-            [RMP.KEY_K]             = "k",
-            [RMP.KEY_L]             = "l",
-            [RMP.KEY_M]             = "m",
-            [RMP.KEY_N]             = "n",
-            [RMP.KEY_O]             = "o",
-            [RMP.KEY_P]             = "p",
-            [RMP.KEY_Q]             = "q",
-            [RMP.KEY_R]             = "r",
-            [RMP.KEY_S]             = "s",
-            [RMP.KEY_T]             = "t",
-            [RMP.KEY_U]             = "u",
-            [RMP.KEY_V]             = "v",
-            [RMP.KEY_W]             = "w",
-            [RMP.KEY_X]             = "x",
-            [RMP.KEY_Y]             = "y",
-            [RMP.KEY_Z]             = "z",
-            [RMP.KEY_0]             = "0",
-            [RMP.KEY_1]             = "1",
-            [RMP.KEY_2]             = "2",
-            [RMP.KEY_3]             = "3",
-            [RMP.KEY_4]             = "4",
-            [RMP.KEY_5]             = "5",
-            [RMP.KEY_6]             = "6",
-            [RMP.KEY_7]             = "7",
-            [RMP.KEY_8]             = "8",
-            [RMP.KEY_9]             = "9",
-            [RMP.KEY_SPACE]         = " ",
-            [RMP.KEY_DOT]           = ".",
-            [RMP.KEY_MINUS]         = "-",
-            [RMP.KEY_UNDERS]        = "_",
-            [RMP.KEY_PLUS]          = "+",
-            [RMP.KEY_STAR]          = "*",
-            [RMP.KEY_SLASH]         = "/",
-            [RMP.KEY_BACK_SLASH]    = "\\",
-            [RMP.KEY_OPEN_BRAKET]   = "[",
-            [RMP.KEY_CLOSED_BRAKET] = "]",
-            [RMP.KEY_OPCURB]        = "{",
-            [RMP.KEY_CLCURB]        = "}",
-            [RMP.KEY_BAR]           = "|",
-            [RMP.KEY_SEMICOL]       = ";",
-            [RMP.KEY_DBL_QUOTE]     = "\"",
-            [RMP.KEY_SINGLE_QOUTE]  = "'",
-            [RMP.KEY_BACKTICK]      = "`",
-            [RMP.KEY_HASHTAG]       = "#",
-            [RMP.KEY_DOLAR]         = "$",
-            [RMP.KEY_PERSANT]       = "%",
-            [RMP.KEY_AT]            = "@",
-            [RMP.KEY_GT]            = ">",
-            [RMP.KEY_LT]            = "<",
-            [RMP.KEY_QUISTION_MARK] = "?",
-            [RMP.KEY_COLON]         = ":",
-            [RMP.KEY_COMMA]         = ",",
-            [RMP.KEY_OPPAERN]       = "(",
-            [RMP.KEY_CLPAREN]       = ")",
-            [RMP.KEY_EQUAL]         = "=",
+            [RMP.KEY_A]                    = "a",
+            [RMP.KEY_B]                    = "b",
+            [RMP.KEY_C]                    = "c",
+            [RMP.KEY_D]                    = "d",
+            [RMP.KEY_E]                    = "e",
+            [RMP.KEY_F]                    = "f",
+            [RMP.KEY_G]                    = "g",
+            [RMP.KEY_H]                    = "h",
+            [RMP.KEY_I]                    = "i",
+            [RMP.KEY_J]                    = "j",
+            [RMP.KEY_K]                    = "k",
+            [RMP.KEY_L]                    = "l",
+            [RMP.KEY_M]                    = "m",
+            [RMP.KEY_N]                    = "n",
+            [RMP.KEY_O]                    = "o",
+            [RMP.KEY_P]                    = "p",
+            [RMP.KEY_Q]                    = "q",
+            [RMP.KEY_R]                    = "r",
+            [RMP.KEY_S]                    = "s",
+            [RMP.KEY_T]                    = "t",
+            [RMP.KEY_U]                    = "u",
+            [RMP.KEY_V]                    = "v",
+            [RMP.KEY_W]                    = "w",
+            [RMP.KEY_X]                    = "x",
+            [RMP.KEY_Y]                    = "y",
+            [RMP.KEY_Z]                    = "z",
+            [RMP.KEY_0]                    = "0",
+            [RMP.KEY_1]                    = "1",
+            [RMP.KEY_2]                    = "2",
+            [RMP.KEY_3]                    = "3",
+            [RMP.KEY_4]                    = "4",
+            [RMP.KEY_5]                    = "5",
+            [RMP.KEY_6]                    = "6",
+            [RMP.KEY_7]                    = "7",
+            [RMP.KEY_8]                    = "8",
+            [RMP.KEY_9]                    = "9",
+            [RMP.KEY_SPACE]                = " ",
+            [RMP.KEY_DOT]                  = ".",
+            [RMP.KEY_MINUS]                = "-",
+            [RMP.KEY_UNDERS]               = "_",
+            [RMP.KEY_PLUS]                 = "+",
+            [RMP.KEY_STAR]                 = "*",
+            [RMP.KEY_SLASH]                = "/",
+            [RMP.KEY_BACK_SLASH]           = "\\",
+            [RMP.KEY_OPEN_BRAKET]          = "[",
+            [RMP.KEY_CLOSED_BRAKET]        = "]",
+            [RMP.KEY_OPEN_CURLY_BRACKET]   = "{",
+            [RMP.KEY_CLOSED_CURLY_BRACKET] = "}",
+            [RMP.KEY_BAR]                  = "|",
+            [RMP.KEY_SEMICOL]              = ";",
+            [RMP.KEY_DBL_QUOTE]            = "\"",
+            [RMP.KEY_SINGLE_QUOTE]         = "'",
+            [RMP.KEY_BACKTICK]             = "`",
+            [RMP.KEY_HASHTAG]              = "#",
+            [RMP.KEY_DOLAR]                = "$",
+            [RMP.KEY_PERSANT]              = "%",
+            [RMP.KEY_AT]                   = "@",
+            [RMP.KEY_GT]                   = ">",
+            [RMP.KEY_LT]                   = "<",
+            [RMP.KEY_QUISTION_MARK]        = "?",
+            [RMP.KEY_COLON]                = ":",
+            [RMP.KEY_COMMA]                = ",",
+            [RMP.KEY_OPEN_PAERN]           = "(",
+            [RMP.KEY_CLOSED_PAREN]         = ")",
+            [RMP.KEY_EQUAL]                = "=",
         }
 
         local shiftMap = {
@@ -2390,12 +2502,12 @@ do
         local specialKeys = {
             RMP.KEY_SPACE, RMP.KEY_DOT, RMP.KEY_MINUS, RMP.KEY_UNDERS,
             RMP.KEY_PLUS, RMP.KEY_STAR, RMP.KEY_SLASH, RMP.KEY_BACK_SLASH,
-            RMP.KEY_OPEN_BRAKET, RMP.KEY_CLOSED_BRAKET, RMP.KEY_OPCURB,
-            RMP.KEY_CLCURB, RMP.KEY_BAR, RMP.KEY_SEMICOL, RMP.KEY_DBL_QUOTE,
-            RMP.KEY_SINGLE_QOUTE, RMP.KEY_BACKTICK, RMP.KEY_HASHTAG,
+            RMP.KEY_OPEN_BRAKET, RMP.KEY_CLOSED_BRAKET, RMP.KEY_OPEN_CURLY_BRACKET,
+            RMP.KEY_CLOSED_CURLY_BRACKET, RMP.KEY_BAR, RMP.KEY_SEMICOL, RMP.KEY_DBL_QUOTE,
+            RMP.KEY_SINGLE_QUOTE, RMP.KEY_BACKTICK, RMP.KEY_HASHTAG,
             RMP.KEY_DOLAR, RMP.KEY_PERSANT, RMP.KEY_AT, RMP.KEY_GT, RMP.KEY_LT,
-            RMP.KEY_QUISTION_MARK, RMP.KEY_COLON, RMP.KEY_COMMA, RMP.KEY_OPPAERN,
-            RMP.KEY_CLPAREN, RMP.KEY_EQUAL,
+            RMP.KEY_QUISTION_MARK, RMP.KEY_COLON, RMP.KEY_COMMA, RMP.KEY_OPEN_PAERN,
+            RMP.KEY_CLOSED_PAREN, RMP.KEY_EQUAL,
         }
 
         for _, special_key in ipairs(specialKeys) do
@@ -2673,72 +2785,73 @@ do
     --- @param key integer
     --- @return string
     function RMP.SimpleInput:_keyToChar(key)
+        --- TODO: use KeyMap instead
         local keyMap = {
-            [RMP.KEY_A]             = "a",
-            [RMP.KEY_B]             = "b",
-            [RMP.KEY_C]             = "c",
-            [RMP.KEY_D]             = "d",
-            [RMP.KEY_E]             = "e",
-            [RMP.KEY_F]             = "f",
-            [RMP.KEY_G]             = "g",
-            [RMP.KEY_H]             = "h",
-            [RMP.KEY_I]             = "i",
-            [RMP.KEY_J]             = "j",
-            [RMP.KEY_K]             = "k",
-            [RMP.KEY_L]             = "l",
-            [RMP.KEY_M]             = "m",
-            [RMP.KEY_N]             = "n",
-            [RMP.KEY_O]             = "o",
-            [RMP.KEY_P]             = "p",
-            [RMP.KEY_Q]             = "q",
-            [RMP.KEY_R]             = "r",
-            [RMP.KEY_S]             = "s",
-            [RMP.KEY_T]             = "t",
-            [RMP.KEY_U]             = "u",
-            [RMP.KEY_V]             = "v",
-            [RMP.KEY_W]             = "w",
-            [RMP.KEY_X]             = "x",
-            [RMP.KEY_Y]             = "y",
-            [RMP.KEY_Z]             = "z",
-            [RMP.KEY_0]             = "0",
-            [RMP.KEY_1]             = "1",
-            [RMP.KEY_2]             = "2",
-            [RMP.KEY_3]             = "3",
-            [RMP.KEY_4]             = "4",
-            [RMP.KEY_5]             = "5",
-            [RMP.KEY_6]             = "6",
-            [RMP.KEY_7]             = "7",
-            [RMP.KEY_8]             = "8",
-            [RMP.KEY_9]             = "9",
-            [RMP.KEY_SPACE]         = " ",
-            [RMP.KEY_DOT]           = ".",
-            [RMP.KEY_MINUS]         = "-",
-            [RMP.KEY_UNDERS]        = "_",
-            [RMP.KEY_PLUS]          = "+",
-            [RMP.KEY_STAR]          = "*",
-            [RMP.KEY_SLASH]         = "/",
-            [RMP.KEY_BACK_SLASH]    = "\\",
-            [RMP.KEY_OPEN_BRAKET]   = "[",
-            [RMP.KEY_CLOSED_BRAKET] = "]",
-            [RMP.KEY_OPCURB]        = "{",
-            [RMP.KEY_CLCURB]        = "}",
-            [RMP.KEY_BAR]           = "|",
-            [RMP.KEY_SEMICOL]       = ";",
-            [RMP.KEY_DBL_QUOTE]     = "\"",
-            [RMP.KEY_SINGLE_QOUTE]  = "'",
-            [RMP.KEY_BACKTICK]      = "`",
-            [RMP.KEY_HASHTAG]       = "#",
-            [RMP.KEY_DOLAR]         = "$",
-            [RMP.KEY_PERSANT]       = "%",
-            [RMP.KEY_AT]            = "@",
-            [RMP.KEY_GT]            = ">",
-            [RMP.KEY_LT]            = "<",
-            [RMP.KEY_QUISTION_MARK] = "?",
-            [RMP.KEY_COLON]         = ":",
-            [RMP.KEY_COMMA]         = ",",
-            [RMP.KEY_OPPAERN]       = "(",
-            [RMP.KEY_CLPAREN]       = ")",
-            [RMP.KEY_EQUAL]         = "=",
+            [RMP.KEY_A]                    = "a",
+            [RMP.KEY_B]                    = "b",
+            [RMP.KEY_C]                    = "c",
+            [RMP.KEY_D]                    = "d",
+            [RMP.KEY_E]                    = "e",
+            [RMP.KEY_F]                    = "f",
+            [RMP.KEY_G]                    = "g",
+            [RMP.KEY_H]                    = "h",
+            [RMP.KEY_I]                    = "i",
+            [RMP.KEY_J]                    = "j",
+            [RMP.KEY_K]                    = "k",
+            [RMP.KEY_L]                    = "l",
+            [RMP.KEY_M]                    = "m",
+            [RMP.KEY_N]                    = "n",
+            [RMP.KEY_O]                    = "o",
+            [RMP.KEY_P]                    = "p",
+            [RMP.KEY_Q]                    = "q",
+            [RMP.KEY_R]                    = "r",
+            [RMP.KEY_S]                    = "s",
+            [RMP.KEY_T]                    = "t",
+            [RMP.KEY_U]                    = "u",
+            [RMP.KEY_V]                    = "v",
+            [RMP.KEY_W]                    = "w",
+            [RMP.KEY_X]                    = "x",
+            [RMP.KEY_Y]                    = "y",
+            [RMP.KEY_Z]                    = "z",
+            [RMP.KEY_0]                    = "0",
+            [RMP.KEY_1]                    = "1",
+            [RMP.KEY_2]                    = "2",
+            [RMP.KEY_3]                    = "3",
+            [RMP.KEY_4]                    = "4",
+            [RMP.KEY_5]                    = "5",
+            [RMP.KEY_6]                    = "6",
+            [RMP.KEY_7]                    = "7",
+            [RMP.KEY_8]                    = "8",
+            [RMP.KEY_9]                    = "9",
+            [RMP.KEY_SPACE]                = " ",
+            [RMP.KEY_DOT]                  = ".",
+            [RMP.KEY_MINUS]                = "-",
+            [RMP.KEY_UNDERS]               = "_",
+            [RMP.KEY_PLUS]                 = "+",
+            [RMP.KEY_STAR]                 = "*",
+            [RMP.KEY_SLASH]                = "/",
+            [RMP.KEY_BACK_SLASH]           = "\\",
+            [RMP.KEY_OPEN_BRAKET]          = "[",
+            [RMP.KEY_CLOSED_BRAKET]        = "]",
+            [RMP.KEY_OPEN_CURLY_BRACKET]   = "{",
+            [RMP.KEY_CLOSED_CURLY_BRACKET] = "}",
+            [RMP.KEY_BAR]                  = "|",
+            [RMP.KEY_SEMICOL]              = ";",
+            [RMP.KEY_DBL_QUOTE]            = "\"",
+            [RMP.KEY_SINGLE_QUOTE]         = "'",
+            [RMP.KEY_BACKTICK]             = "`",
+            [RMP.KEY_HASHTAG]              = "#",
+            [RMP.KEY_DOLAR]                = "$",
+            [RMP.KEY_PERSANT]              = "%",
+            [RMP.KEY_AT]                   = "@",
+            [RMP.KEY_GT]                   = ">",
+            [RMP.KEY_LT]                   = "<",
+            [RMP.KEY_QUISTION_MARK]        = "?",
+            [RMP.KEY_COLON]                = ":",
+            [RMP.KEY_COMMA]                = ",",
+            [RMP.KEY_OPEN_PAERN]           = "(",
+            [RMP.KEY_CLOSED_PAREN]         = ")",
+            [RMP.KEY_EQUAL]                = "=",
         }
 
         local shiftMap = {
