@@ -1762,13 +1762,19 @@ do -- VirtualTerminal
     ---@return self
     function RMP.VirtualTerminal:write(text, style)
         text = text or ""
-        local match = "\n"
-        local i = 0
-        for _, word in text:find(match) do
+        local lines = {}
+
+        -- Split the text by newlines
+        for line in text:gmatch("([^\n]*)\n?") do
+            table.insert(lines, line)
+        end
+
+        -- Write each line
+        for i, line in ipairs(lines) do
             self:writeText(
                 self.cursor.x,
-                self.cursor.y + i,
-                word,
+                self.cursor.y + (i - 1),
+                line,
                 self.theme and RMP.colorFromHex(self.theme.TitleText, RMP.FG) or nil,
                 self.theme and RMP.colorFromHex(self.theme.TitleBackGround, RMP.BG) or nil,
                 style
