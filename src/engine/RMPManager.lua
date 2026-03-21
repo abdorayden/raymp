@@ -777,7 +777,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
     local log_theme = nil
 
     local notify_plug = nil
-    local loaded_theme = nil
+    local loaded_theme_manager = nil
 
     if settings then
         if settings.fps and type(settings.fps) == "number" and settings.fps > 0 and settings.fps <= 120 then
@@ -870,13 +870,10 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         else
             -- user disactivated notifications maybe he download other notification plugin or something idk
         end
+
         if settings.theme and type(settings.theme) == "string" then
-            -- try to load the theme from builtin themes
-            local theme_ok, theme_module = pcall(require,
-                "rmp.builtin.plugins." .. "builtin-theme-" .. settings.theme .. "-rmp")
-            if theme_ok and theme_module then
-                loaded_theme = theme_module
-            end
+        else
+            settings.theme = "default"
         end
     else
         inc_speed = 0.1
@@ -884,6 +881,12 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
         inc_seek = 5
         exit = api.KEY_Q
         messages_key = api.KEY_M
+    end
+
+    local theme_ok, theme_manager = pcall(require,
+        "rmp.builtin.plugins.builtin-theme-manager-rmp")
+    if theme_ok and theme_manager then
+        loaded_theme_manager = theme_manager
     end
 
     mainFrame:initMainFrame()
@@ -1079,11 +1082,25 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             data_freq_engine = sound:getFrequencyData()
         end
 
+        local builtin_themes_always = {
+            "builtin-theme-blackandwhite-rmp",
+            "builtin-theme-default-rmp",
+            "builtin-theme-desert-rmp",
+            "builtin-theme-elflord-rmp",
+        }
+
+        for _, name in ipairs(builtin_themes_always) do
+            local b_theme_ok, b_theme_obj = pcall(require, "rmp.builtin.plugins." .. name)
+            if b_theme_ok and b_theme_obj and type(b_theme_obj) == "function" then
+                mainFrame:add(b_theme_obj())
+            end
+        end
+
         -- To work with the same table
         local windows, _ = parser:parseTemplate(template_copy)
 
-        if loaded_theme and type(loaded_theme) == "function" then
-            mainFrame:add(loaded_theme())
+        if loaded_theme_manager and type(loaded_theme_manager) == "function" then
+            mainFrame:add(loaded_theme_manager())
             -- else sent error throw to notification by transfer data event
         end
 

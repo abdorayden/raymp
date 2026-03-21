@@ -120,6 +120,10 @@ do
     end
 
     function UTIL.HashMap:size()
+        return
+    end
+
+    function UTIL.HashMap:getSize()
         return self.size
     end
 

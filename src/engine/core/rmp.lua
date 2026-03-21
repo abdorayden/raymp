@@ -3127,7 +3127,7 @@ do
             local prefix = ""
             --- @diagnostic disable-next-line
             if self.mark then
-                prefix = (marked and (self.selected or "") or (self.unselected or "")) .. " "
+                if marked then prefix = self.selected .. " " else prefix = self.unselected .. " " end
             end
 
             -- Set style/fg/bg only for focused item; other items keep nil so caller can use defaults

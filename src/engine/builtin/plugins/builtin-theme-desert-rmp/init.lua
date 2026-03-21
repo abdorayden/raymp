@@ -2,6 +2,9 @@ local api = require("rmp.rmp")
 
 -- Builtin-like Vim colorscheme: desert (approximation)
 
+local THEME_NAME = "desert"
+local doApply = false
+
 local theme = {
     BackGround = "#2b2b2b",
     BorderColor = "#e0e0e0",
@@ -41,15 +44,28 @@ end
 
 local vt = api.VirtualTerminal.new(1, 1)
 return function()
+    vt:onConfiguration(function(cfg)
+        local settings = cfg:get("settings")
+        if settings and settings.theme and settings.theme == THEME_NAME then
+            doApply = true
+        else
+            doApply = false
+        end
+    end)
     vt:onTemplate(function(template)
         if template then
-            apply(template)
+            if doApply then
+                apply(template)
+            end
         end
     end)
 
-    vt:addEventListener(api.EventType.TransformDataPut, function()
-        return { theme = theme }
+    vt:addEventListener(api.EventType.TransformDataGet, function(data)
+        if data and data.ThemeManagerObj then
+            data.ThemeManagerObj:addMyTheme(THEME_NAME, theme)
+        end
     end)
+
 
     return vt
 end

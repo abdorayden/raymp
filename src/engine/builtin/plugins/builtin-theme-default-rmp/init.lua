@@ -2,6 +2,9 @@ local api = require("rmp.rmp")
 
 -- Builtin-like Vim colorscheme: default (approximation)
 
+local THEME_NAME = "default"
+local doApply = false
+
 local theme = {
     BackGround = "#000000",
     BorderColor = "#c0c0c0",
@@ -41,14 +44,26 @@ end
 
 local vt = api.VirtualTerminal.new(1, 1)
 return function()
+    vt:onConfiguration(function(cfg)
+        local settings = cfg:get("settings")
+        if settings and settings.theme and settings.theme == THEME_NAME then
+            doApply = true
+        else
+            doApply = false
+        end
+    end)
     vt:onTemplate(function(template)
         if template then
-            apply(template)
+            if doApply then
+                apply(template)
+            end
         end
     end)
 
-    vt:addEventListener(api.EventType.TransformDataPut, function()
-        return { theme = theme }
+    vt:addEventListener(api.EventType.TransformDataGet, function(data)
+        if data and data.ThemeManagerObj then
+            data.ThemeManagerObj:addMyTheme(THEME_NAME, theme)
+        end
     end)
 
     return vt
