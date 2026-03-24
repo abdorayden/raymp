@@ -1,7 +1,7 @@
 /****************************************************************************************/
 /*  RMP - Ray's Music Player 								                            */
 /*  											                                        */
-/*  Copyright (c) 2025 Ray Den 								                            */
+/*  Copyright (c) 2025-2026 Ray Den 								                            */
 /*  											                                        */
 /*  Permission is hereby granted, free of charge, to any person obtaining a copy 	    */
 /*  of this software and associated documentation files (the "Software"), to deal 	    */

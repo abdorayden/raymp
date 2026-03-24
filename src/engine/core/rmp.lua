@@ -332,14 +332,10 @@ do -- os detection
     end
 end
 
-RMP.quickRoutine = function(func)
-    return coroutine.create(func)
-end
-
 -- check ansi escape code : https://en.wikipedia.org/wiki/ANSI_escape_code
 -- line style
 --- @enum TextStyle
-RMP.TextStyle    = {
+RMP.TextStyle = {
     Strike              = "\27[9m",
     Hide                = "\27[8m",
     SlowBlink           = "\27[5m",
@@ -363,9 +359,9 @@ RMP.TextStyle    = {
 -- colors
 
 --- @type string
-RMP.FG           = "38"
+RMP.FG        = "38"
 --- @type string
-RMP.BG           = "48"
+RMP.BG        = "48"
 
 --- colorFromHex({ 255, 255, 255 })
 --- colorFromHex({ r = 255, g = 255, b = 255 })
@@ -376,7 +372,7 @@ RMP.BG           = "48"
 --- @param fg_or_bg string|nil
 --- @return string|nil
 function RMP.colorFromHex(hex, fg_or_bg)
-    local fb = fg_or_bg or "38"
+    local fb = fg_or_bg or RMP.FG
     if type(hex) == "string" then
         if hex:sub(1, 1) == "#" then
             hex = hex:sub(2)
@@ -884,7 +880,7 @@ do
     --- @param y integer
     --- @param fg FGColors
     --- @param bg BGColors
-    --- @param vterm VirtualTerminal
+    --- @param vterm rmp.rmp.VirtualTerminal
     --- @return self
     function RMP.LoadingSpinner:constructor(x, y, fg, bg, vterm)
         self.x = x or 2
@@ -944,7 +940,7 @@ do
         return self
     end
 
-    --- @overload fun() : VirtualTerminal
+    --- @overload fun() : rmp.rmp.VirtualTerminal
     function RMP.LoadingSpinner:render()
         return self.vterm
     end
@@ -5037,7 +5033,7 @@ do
 
     --- @param key integer
     --- @param mouse any
-    --- @param sound Sound
+    --- @param sound rmp.rmp.Sound
     --- @param config table
     --- @param template table
     --- @param datafreq any
