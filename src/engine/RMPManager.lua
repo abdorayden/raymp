@@ -756,8 +756,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
     mainFrame:clear()
 
     -- check the settings first and then the keymap
-    local sound = api.Sound.new() -- empty playlist
-    sound:enableVisualization(64)
+    local sound = api.Sound() -- empty playlist
     local data_freq_engine = nil
 
     -- sound:setVisualizationCallback(function(freqData)
@@ -786,6 +785,14 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs, so
             -- default engine fps
             settings.fps = 60
             mainFrame:setFps(settings.fps)
+        end
+
+        if settings.freq_bins and type(settings.freq_bins) == "number" then
+            sound:enableVisualization(settings.freq_bins)
+        else
+            -- default engine freq_bins
+            settings.freq_bins = 32
+            sound:enableVisualization(settings.freq_bins)
         end
 
         if settings.restart_engine and type(settings.restart_engine) == "number" then

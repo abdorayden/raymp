@@ -1,4 +1,4 @@
--- Copyright (c) 2024 Ray Den
+-- Copyright (c) 2024-2026 Ray Den
 --
 -- Permission is hereby granted, free of charge, to any person obtaining a copy
 -- of this software and associated documentation files (the "Software"), to deal
@@ -265,6 +265,7 @@
 -- TODO: handle ssl/tls to a socket
 -- TODO: handle Mouse
 
+--- @module 'rmp.rmp'
 RMP                       = {}
 
 local io                  = require("io")
@@ -876,7 +877,7 @@ RMP.AnimationPatterns   = {
     Working = { "💼", "📊", "📈", "📉", "📋" }
 }
 
---- @class LoadingSpinner
+--- @class rmp.rmp.LoadingSpinner
 RMP.LoadingSpinner      = OOP.class("LoadingSpinner", nil, RMP.Renderable)
 do
     --- @param x integer
@@ -966,7 +967,7 @@ local function moveto(x, y, ret)
 end
 
 --- @deprecated
---- @class Duration
+--- @class rmp.rmp.Duration
 RMP.Duration = OOP.class("Duration")
 do
     --- @param time integer
@@ -994,7 +995,7 @@ function RMP.sleep(time)
 end
 
 -- Text class used to work with texts
---- @class Text
+--- @class rmp.rmp.Text
 RMP.Text = OOP.class("Text", nil, RMP.Renderable)
 do -- text
     -- constructor
@@ -1275,7 +1276,7 @@ RMP.NONE = RMP.enum(); RMP.KeyMap:put("<None>", RMP.NONE)
 --- TODO: &
 --- TODO: ^
 
---- @class Window
+--- @class rmp.rmp.Window
 RMP.Window = OOP.class("Window")
 do -- creating window
     -- callback function accept 4 agrs
@@ -1430,7 +1431,7 @@ local Event = OOP.interface("Event",
 -- so when the plugin is initialized it create his own EventListener object
 -- and add event listener for the events he want to listen to
 -- when the event is triggered the callback function is called
---- @class EventListener
+--- @class rmp.rmp.EventListener
 RMP.EventListener = OOP.class("EventListener", nil, Event)
 do
     --- @return self
@@ -1540,7 +1541,7 @@ do
     --- @param sound Sound
     --- @param config HashMap
     --- @param template table
-    --- @return EventListener | nil
+    --- @return self | nil
     function RMP.EventListener:handleEvent(key, mouse, sound, config, template, frame, datafreq, exit)
         local _template = self.events:get(RMP.EventType.Template)
         while not _template:isEmpty() do
@@ -1670,7 +1671,7 @@ do
     end
 end
 
----@class Theme
+---@class rmp.rmp.Theme
 ---@field BackGround string
 ---@field BorderColor string
 ---@field TitleBackGround string
@@ -1681,7 +1682,7 @@ end
 ---@field Highlight string
 ---@field MutedElements string
 
----@class WinOpt
+---@class rmp.rmp.WinOpt
 ---@field title string
 ---@field x number
 ---@field y number
@@ -1689,7 +1690,7 @@ end
 ---@field height number
 ---@field border BoxDrawing | table
 
----@class Cursor
+---@class rmp.rmp.Cursor
 ---@field x number
 ---@field y number
 
@@ -1698,7 +1699,7 @@ end
 -- each plugin should have his own VirtualTerminal object
 -- so when the plugin is initialized it create his own VirtualTerminal object
 -- and draw on it
---- @class VirtualTerminal
+--- @class rmp.rmp.VirtualTerminal
 RMP.VirtualTerminal = OOP.class("VirtualTerminal", RMP.EventListener, RMP.Renderable)
 do -- VirtualTerminal
     --- @param width integer
@@ -2163,7 +2164,7 @@ end
 -- NOTE: Terminal class uses ansii escape code i need to create shared library to handle terminal for each platform
 -- Terminal class used to handle terminal operations
 
---- @class Terminal
+--- @class rmp.rmp.Terminal
 RMP.Terminal = OOP.class("Terminal")
 do -- Terminal
     function RMP.Terminal:clearWindow()
@@ -2247,7 +2248,7 @@ do -- Terminal
 end
 
 -- Input class used to handle user input
---- @class Input
+--- @class rmp.rmp.Input
 RMP.Input = OOP.class("Input", nil, RMP.Renderable)
 do
     --- @param label string
@@ -2608,7 +2609,7 @@ end
 -- if input:isActive() then ... end -- to check if input is active
 -- if input:hasError() then ... end -- to check if there is an error
 -- local error_msg = input:getError() -- to get the error message
---- @class SimpleInput
+--- @class rmp.rmp.SimpleInput
 RMP.SimpleInput = OOP.class("SimpleInput")
 do
     --- @param options table
@@ -2957,7 +2958,7 @@ end
 
 -- TODO: handle Tables
 -- TODO: handle Animation  [loading bar , spinner , progress bar ]
---- @class Options
+--- @class rmp.rmp.Options
 RMP.Options = OOP.class("Options")
 do
     --- @param options table
@@ -3152,7 +3153,7 @@ end
 --- TODO: implement Draw class in C native code for better performance
 --- enhanced draw class using unicode block characters for better resolution
 --- uses half-block characters (▀▄█) and quarter-block characters for sub-pixel rendering
---- @class Draw
+--- @class rmp.rmp.Draw
 RMP.Draw = OOP.class("Draw")
 do -- Draw
     local BLOCK_CHARS  = {
@@ -3706,7 +3707,7 @@ do -- Draw
     end
 end
 
---- @class Scroller
+--- @class rmp.rmp.Scroller
 RMP.Scroller = OOP.class("Scroller")
 do
     --- @param visible_height number
@@ -3978,7 +3979,7 @@ RMP.State = {
     ERROR   = RMP.enum()
 }
 
---- @class Sound
+--- @class rmp.rmp.Sound
 RMP.Sound = OOP.class("Sound")
 do
     --- @param files table | string
@@ -4603,7 +4604,7 @@ do
     end
 end
 
---- @class Path
+--- @class rmp.rmp.Path
 RMP.Path = OOP.class("Path")
 do -- Path
     --- @return string
@@ -4806,7 +4807,7 @@ end
 -- TODO: make sure that every socket method works async
 -- TODO: handle SSL/TLS sockets
 
---- @class Socket
+--- @class rmp.rmp.Socket
 RMP.Socket = OOP.class("Socket")
 do
     --- @param host string  | nil
@@ -4891,7 +4892,7 @@ do
     end
 end
 
---- @class Packet
+--- @class rmp.rmp.Packet
 RMP.Packet = OOP.class("Packet")
 do
     function RMP.Packet:constructor()
@@ -4902,7 +4903,7 @@ do
     end
 end
 
---- @class TCPSocket
+--- @class rmp.rmp.TCPSocket
 RMP.TCPSocket = OOP.class("TCPSocket", RMP.Socket)
 do
     function RMP.TCPSocket:constructor(host, port)
@@ -4914,7 +4915,7 @@ do
 end
 
 -- TODO: make sure that the socket native library support UDP sockets
---- @class UDPSocket
+--- @class rmp.rmp.UDPSocket
 RMP.UDPSocket = OOP.class("UDPSocket", RMP.Socket)
 do
     function RMP.UDPSocket:constructor(host, port)
@@ -4925,7 +4926,7 @@ do
     end
 end
 
---- @class FTPClient
+--- @class rmp.rmp.FTPClient
 RMP.FTPClient = OOP.class("FTPClient", RMP.TCPSocket)
 do
     function RMP.FTPClient:constructor()
@@ -4933,7 +4934,7 @@ do
     end
 end
 
---- @class HTTPServer
+--- @class rmp.rmp.HTTPServer
 RMP.HTTPServer = OOP.class("HTTPServer", RMP.TCPSocket)
 do
     function RMP.HTTPServer:constructor(port)
@@ -4942,7 +4943,7 @@ do
     end
 end
 
---- @class HTTPClient
+--- @class rmp.rmp.HTTPClient
 RMP.HTTPClient = OOP.class("HTTPClient", RMP.TCPSocket)
 do
     function RMP.HTTPClient:constructor()
@@ -4954,7 +4955,7 @@ end
 -- Hight Level API Components
 -- /////////////////////////////////////////////////////
 
---- @class Frame
+--- @class rmp.rmp.Frame
 RMP.Frame = OOP.class("Frame", RMP.VirtualTerminal)
 do
     --- @param width integer
