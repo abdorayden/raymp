@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 REM /************************************************************************************/
-REM /*  Copyright (c) 2025 Ray Den 							*/
+REM /*  Copyright (c) 2025-2026 Ray Den 							*/
 REM /*  										*/ 
 REM /*  Permission is hereby granted, free of charge, to any person obtaining a copy 	*/
 REM /*  of this software and associated documentation files (the "Software"), to deal 	*/

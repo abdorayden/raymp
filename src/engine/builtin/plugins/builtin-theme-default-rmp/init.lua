@@ -45,11 +45,13 @@ end
 local vt = api.VirtualTerminal.new(1, 1)
 return function()
     vt:onConfiguration(function(cfg)
-        local settings = cfg:get("settings")
-        if settings and settings.theme and settings.theme == THEME_NAME then
-            doApply = true
-        else
-            doApply = false
+        if cfg then
+            local settings = cfg:get("settings")
+            if settings and settings.theme and settings.theme == THEME_NAME then
+                doApply = true
+            else
+                doApply = false
+            end
         end
     end)
     vt:onTemplate(function(template)

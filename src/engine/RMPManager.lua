@@ -40,18 +40,21 @@
 
 --- TODO: share the logs to catch them with builtin plugins instead of showing stupid popup
 
+--- WARNING: this shit is ass is slow it's not good it's not optimized i have to create a better one or make it better
+
 local api = require("rmp.rmp")
 local utils = require("rmp.util")
 local OOP = require("rmp.oop")
 
-local mainFrame = api.Frame.new()
-
 local joinPath = api.Path.joinPath
 local colorFromHex = api.colorFromHex
+local Frame = api.Frame
 local FG = api.FG
 local BG = api.BG
 local Text = api.Text
 local TextStyle = api.TextStyle
+
+local mainFrame = Frame()
 
 local io = require("io")
 local os = require("os")
