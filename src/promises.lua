@@ -25,6 +25,7 @@
 -- the goal of this is simplify run plugins asyc
 --
 -- TODO: use uv lib as backend
+--  check: https://github.com/luvit/luv
 --
 -- Resources:
 -- 	- https://javascript.info/promise-basics
