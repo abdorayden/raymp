@@ -131,6 +131,8 @@ do
     function EngineFrame:constructor(width, height)
         --- @diagnostic disable-next-line
         self:super("constructor", width, height)
+
+        self.theme = nil
     end
 
     ---@param thaTheme Theme
@@ -1112,16 +1114,6 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         mainFrame:clear()
         local key = api.Terminal:handleKey()
 
-        mainFrame:onDataGet(function(data)
-            if data then
-                if data.theme then
-                    sharedTheme = data.theme
-                end
-            end
-        end)
-
-        mainFrame:setTheme(sharedTheme)
-
         if parser:wasTerminalResized() then
             h, w = api.Terminal:getSize()
             mainFrame:resize(w, h)
@@ -1133,6 +1125,14 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         local currPos   = math.floor(sound:getPosition())
         local len       = math.floor(sound:getLength())
         local currSpeed = sound:getSpeed()
+
+        mainFrame:onDataGet(function(data)
+            if data and data.theme then
+                sharedTheme = data.theme
+            end
+        end)
+
+        mainFrame:setTheme(sharedTheme)
 
         -- ── Keyboard event handler ────────────────────────────────────────
         mainFrame:addEventListener(api.EventType.Keyboard, function(inputKey)

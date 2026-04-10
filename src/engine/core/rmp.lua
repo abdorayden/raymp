@@ -1661,15 +1661,12 @@ RMP.VirtualTerminal = OOP.class("VirtualTerminal", RMP.EventListener, RMP.Render
 do -- VirtualTerminal
     --- @param width integer
     --- @param height integer
-    --- @param theme Theme
     --- @return  self
-    function RMP.VirtualTerminal:constructor(width, height, theme) -- constructor
+    function RMP.VirtualTerminal:constructor(width, height) -- constructor
         -- super method is coming from the class it self
         -- and it used to access the methods from mother class
         --- @diagnostic disable-next-line
         self:super("constructor")
-
-        self.theme = theme or nil
 
         self.h, self.w = window.get_size()
 
