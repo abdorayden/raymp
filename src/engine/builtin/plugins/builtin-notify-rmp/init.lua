@@ -132,10 +132,8 @@ if false then
     notificationQueue:push({ message = "test error", status = "message", duration = 15 })
 end
 
-local vt = VirtualTerminal(1, 1)
-
-return function()
-    vt:addEventListener(api.EventType.TransformDataGet, function(data)
+return function(frame)
+    frame:addEventListener(api.EventType.TransformDataGet, function(data)
         if data and data.theme then
             tha_theme = data.theme
         end
@@ -143,7 +141,7 @@ return function()
 
     --- TODO: add event handling so plugins can sent notifications data so this plugin must handle the rendering
     --- the plugins must sent data like message, status (info, error, warning) and duration
-    vt:addEventListener(api.EventType.TransformDataGet, function(data)
+    frame:addEventListener(api.EventType.TransformDataGet, function(data)
         if data and data.notification then
             notificationQueue:push(data.notification)
         end
@@ -154,14 +152,7 @@ return function()
         add_notification(noti.message, noti.status, noti.duration)
     end
     prune_old_notifications()
-
-    vt:onFrame(function(frame)
-        if frame then
-            render_notifications(frame)
-        end
-    end)
+    render_notifications(frame)
     --
     --- TODO: create a beautiful popup with diffrent status and add animations to it like noice in nvim
-
-    return vt
 end

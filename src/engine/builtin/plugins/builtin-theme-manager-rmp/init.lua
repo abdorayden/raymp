@@ -43,11 +43,9 @@ do
 end
 
 local themeManager = ThemeManager()
-local vt = VirtualTerminal(1, 1)
 
-
-return function()
-    vt:onConfiguration(function(cfg)
+return function(frame)
+    frame:onConfiguration(function(cfg)
         if cfg then
             local settings = cfg:get("settings")
             if settings and settings.theme then
@@ -56,11 +54,10 @@ return function()
         end
     end)
 
-    vt:onDataPut(function()
+    frame:onDataPut(function()
         return {
             ThemeManagerObj = themeManager,
             theme = themeManager:getSelectedTheme()
         }
     end)
-    return vt
 end

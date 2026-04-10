@@ -95,19 +95,101 @@
 --
 -- see if we can handle themes diffrently
 
-local api                   = require("rmp.rmp")
-local utils                 = require("rmp.util")
-local OOP                   = require("rmp.oop")
+local api          = require("rmp.rmp")
+local utils        = require("rmp.util")
+local OOP          = require("rmp.oop")
 
-local joinPath              = api.Path.joinPath
-local colorFromHex          = api.colorFromHex
-local Frame                 = api.Frame
-local FG                    = api.FG
-local BG                    = api.BG
-local Text                  = api.Text
-local TextStyle             = api.TextStyle
+local joinPath     = api.Path.joinPath
+local colorFromHex = api.colorFromHex
+local Frame        = api.Frame
+local FG           = api.FG
+local BG           = api.BG
+local Text         = api.Text
+local TextStyle    = api.TextStyle
 
-local mainFrame             = Frame()
+---@class Theme
+---@field BackGround string
+---@field BorderColor string
+---@field TitleBackGround string
+---@field TitleText string
+---@field PrimaryContent string
+---@field SecondaryContent string
+---@field AccentElements string
+---@field Highlight string
+---@field MutedElements string
+
+---@class WinOpt
+---@field title string
+---@field x number
+---@field y number
+---@field width number
+---@field height number
+---@field border BoxDrawing | table
+
+local EngineFrame  = OOP.class("EngineFrame", Frame)
+do
+    function EngineFrame:constructor(width, height)
+        --- @diagnostic disable-next-line
+        self:super("constructor", width, height)
+    end
+
+    ---@param thaTheme Theme
+    ---@return self
+    function RMP.VirtualTerminal:setTheme(thaTheme)
+        self.theme = thaTheme
+        return self
+    end
+
+    ---@return Theme
+    function RMP.VirtualTerminal:getTheme()
+        return self.theme
+    end
+
+    ---@param text string
+    ---@param style TextStyle
+    ---@return self
+    function RMP.VirtualTerminal:write(text, style)
+        text = text or ""
+        local lines = {}
+
+        -- Split the text by newlines
+        for line in text:gmatch("([^\n]*)\n?") do
+            table.insert(lines, line)
+        end
+
+        -- Write each line
+        for i, line in ipairs(lines) do
+            self:writeText(
+                self.cursor.x,
+                self.cursor.y + (i - 1),
+                line,
+                self.theme and RMP.colorFromHex(self.theme.TitleText, RMP.FG) or nil,
+                self.theme and RMP.colorFromHex(self.theme.TitleBackGround, RMP.BG) or nil,
+                style
+            )
+        end
+
+        return self
+    end
+
+    ---@param options WinOpt
+    ---@return self
+    function RMP.VirtualTerminal:openWin(options)
+        self:drawBox(
+            options.title or "",
+            options.x or 1,
+            options.y or 1,
+            options.width or self.realWidth,
+            options.height or self.realHeight,
+            options.border or RMP.BoxDrawing.LightBorder,
+            self.theme and RMP.colorFromHex(self.theme.BorderColor, RMP.FG) or nil,
+            self.theme and RMP.colorFromHex(self.theme.BackGround, RMP.BG) or nil
+        )
+        return self
+    end
+end
+
+local mainFrame             = EngineFrame()
 
 local io                    = require("io")
 local os                    = require("os")
@@ -579,10 +661,8 @@ do
         local callback = function(innerX, innerY, innerXX, innerYY)
             -- Run the window's plugin
             if currentPlugin and type(currentPlugin) == "function" then
-                local ok, pluginResult = pcall(currentPlugin, innerX, innerY, innerXX, innerYY)
-                if ok and pluginResult then
-                    targetFrame:merge(pluginResult)
-                elseif not ok then
+                local ok, pluginResult = pcall(currentPlugin, mainFrame, innerX, innerY, innerXX, innerYY)
+                if not ok then
                     -- FEAT-2: isolate plugin error — log but don't crash
                     logwarn("plugin error in window '" .. tostring(windowConfig.id)
                         .. "': " .. tostring(pluginResult))
@@ -598,11 +678,9 @@ do
 
             -- Run inline content callback
             if windowConfig.content and type(windowConfig.content) == "function" then
-                local ok, contentResult = pcall(windowConfig.content,
+                local ok, contentResult = pcall(windowConfig.content, mainFrame,
                     innerX, innerY, innerXX, innerYY, context)
-                if ok and contentResult then
-                    targetFrame:merge(contentResult)
-                elseif not ok then
+                if not ok then
                     logwarn("content error in window '" .. tostring(windowConfig.id)
                         .. "': " .. tostring(contentResult))
                 end
@@ -896,6 +974,8 @@ local function merge_sound_cfg(cfg)
     return out
 end
 
+local sharedTheme = nil
+
 -- ─────────────────────────────────────────────────────────────────────────────
 -- runRMPApplication
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -1031,6 +1111,16 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
 
         mainFrame:clear()
         local key = api.Terminal:handleKey()
+
+        mainFrame:onDataGet(function(data)
+            if data then
+                if data.theme then
+                    sharedTheme = data.theme
+                end
+            end
+        end)
+
+        mainFrame:setTheme(sharedTheme)
 
         if parser:wasTerminalResized() then
             h, w = api.Terminal:getSize()
@@ -1173,7 +1263,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
 
         -- OPT-1: Use cached theme function references instead of pcall(require) each frame
         for _, theme_fn in ipairs(builtin_theme_fns) do
-            mainFrame:add(theme_fn())
+            theme_fn(mainFrame)
         end
 
         -- Parse and render the layout template
@@ -1181,14 +1271,14 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
 
         -- Theme manager
         if loaded_theme_manager and type(loaded_theme_manager) == "function" then
-            mainFrame:add(loaded_theme_manager())
+            loaded_theme_manager(mainFrame)
         end
 
         -- Help overlay
         if render_help then
             local h_ok, h_obj = pcall(require, "rmp.builtin.plugins.builtin-help-rmp")
             if h_ok and h_obj and type(h_obj) == "function" then
-                mainFrame:add(h_obj())
+                h_obj(mainFrame)
             end
         end
         if help_fn and key == help_fn then
@@ -1200,12 +1290,9 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         while oq and not oq:isEmpty() do
             local plug = oq:pop()
             if plug then
-                local vt
                 if type(plug) == "function" then
-                    local ok, res = pcall(plug)
-                    if ok and res then
-                        vt = res
-                    elseif not ok then
+                    local ok, res = pcall(plug, mainFrame)
+                    if not ok then
                         logwarn("global plugin error: " .. tostring(res))
                         -- FEAT-2: drop the failing plugin from the queue
                         goto skip_push
@@ -1213,16 +1300,13 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
                 elseif type(plug) == "table" then
                     local fn = plug.update or plug.poll or plug.render
                     if fn then
-                        local ok, res = pcall(fn)
-                        if ok and res then
-                            vt = res
-                        elseif not ok then
+                        local ok, res = pcall(fn, mainFrame)
+                        if not ok then
                             logwarn("global plugin error: " .. tostring(res))
                             goto skip_push
                         end
                     end
                 end
-                if vt then mainFrame:add(vt) end
                 qq:push(plug)
                 ::skip_push::
             end
@@ -1231,7 +1315,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
 
         -- Notifications
         if notify_plug and type(notify_plug) == "function" then
-            mainFrame:add(notify_plug())
+            notify_plug(mainFrame)
         end
 
         local notis = drain_notifications()

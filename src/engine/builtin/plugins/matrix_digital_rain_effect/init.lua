@@ -2,9 +2,8 @@ local api = require("rmp.rmp")
 
 local chars = { "$", "?", "!", "#", "&", "A", "B", "C", "1", "2", "3", "0" }
 local streams = {}
-local vt = api.VirtualTerminal(1, 1)
 
-return function(x, y, xx, yy)
+return function(frame, x, y, xx, yy)
     local h, w = (yy - y), (xx - x)
     local cols = math.floor(w / 2)
 
@@ -47,20 +46,14 @@ return function(x, y, xx, yy)
                     color = api.FGColors.NoBrights.Green
                 end
 
-                vt:onFrame(function(frame)
-                    if frame then
-                        frame:writeText(
-                            x + (i - 1) * 2,
-                            y + charY - 1,
-                            stream.chars[j],
-                            color,
-                            api.BGColors.NoBrights.Black
-                        )
-                    end
-                end)
+                frame:writeText(
+                    x + (i - 1) * 2,
+                    y + charY - 1,
+                    stream.chars[j],
+                    color,
+                    api.BGColors.NoBrights.Black
+                )
             end
         end
     end
-
-    return vt
 end

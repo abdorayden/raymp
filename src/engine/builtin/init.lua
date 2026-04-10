@@ -1,5 +1,6 @@
 local api = require("rmp.rmp")
 
+-- TODO: rewrite builtin view all over again
 return {
     settings = {
         fps = 60,
@@ -54,7 +55,7 @@ return {
             themeWindowId = "animation-window",
             isActivated = true,
             names = {
-                "digital_clock_with_effects",
+                "matrix_digital_rain_effect",
             }
         },
     }

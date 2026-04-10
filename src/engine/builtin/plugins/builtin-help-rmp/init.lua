@@ -130,23 +130,17 @@ local function engine_render_help(frame, w, h, settings, soundCfg)
 end
 local settings = nil
 local soundCfg = nil
-local vt       = api.VirtualTerminal(1, 1)
 
-return function()
+return function(frame)
     local h, w = api.Terminal:getSize()
 
-    vt:onConfiguration(function(cfg)
+    frame:onConfiguration(function(cfg)
         if cfg and type(cfg) == "table" and not cfg:isEmpty() then
             settings = cfg:get("settings")
             soundCfg = cfg:get("soundCfg")
         end
     end)
     if settings and soundCfg then
-        vt:onFrame(function(frame)
-            if frame then
-                engine_render_help(frame, w, h, settings, soundCfg)
-            end
-        end)
+        engine_render_help(frame, w, h, settings, soundCfg)
     end
-    return vt
 end

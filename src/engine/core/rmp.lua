@@ -1407,8 +1407,6 @@ RMP.EventType = {
     Configuration = RMP.enum(), -- get access to the configurations also save a new configuration (cfg for plugins)
     --- @type integer
     Template = RMP.enum(),      -- Template Event to apply changes to the template
-    --- @type integer
-    Frame = RMP.enum(),         -- Frame Event (or actually a tunnel) is a main rendered frame so plugins have access to it
     -- TODO: add data freq table tunnel to access it
     --- @type integer
     DataFreq = RMP.enum(),
@@ -1446,7 +1444,6 @@ do
 
         self.events:put(RMP.EventType.Template, Queue.new())
 
-        self.events:put(RMP.EventType.Frame, Queue.new())
         -- callback : fun(data)
         self.events:put(RMP.EventType.DataFreq, Queue.new())
 
@@ -1489,11 +1486,6 @@ do
     function RMP.EventListener:onDataFreq(callback)
         --- @diagnostic disable-next-line
         return self:addEventListener(RMP.EventType.DataFreq, callback)
-    end
-
-    function RMP.EventListener:onFrame(callback)
-        --- @diagnostic disable-next-line
-        return self:addEventListener(RMP.EventType.Frame, callback)
     end
 
     --- @param callback function
@@ -1562,14 +1554,6 @@ do
             local dataFreqCallback = dataFreqQueue:pop()
             if dataFreqCallback and type(dataFreqCallback) == 'function' then
                 dataFreqCallback(datafreq)
-            end
-        end
-
-        local frameQueue = self.events:get(RMP.EventType.Frame)
-        while not frameQueue:isEmpty() do
-            local frameCallback = frameQueue:pop()
-            if frameCallback and type(frameCallback) == 'function' then
-                frameCallback(frame)
             end
         end
 
@@ -1667,29 +1651,6 @@ do
     end
 end
 
----@class rmp.rmp.Theme
----@field BackGround string
----@field BorderColor string
----@field TitleBackGround string
----@field TitleText string
----@field PrimaryContent string
----@field SecondaryContent string
----@field AccentElements string
----@field Highlight string
----@field MutedElements string
-
----@class rmp.rmp.WinOpt
----@field title string
----@field x number
----@field y number
----@field width number
----@field height number
----@field border BoxDrawing | table
-
----@class rmp.rmp.Cursor
----@field x number
----@field y number
-
 -- all components should return VirtualTerminal obj
 -- VirtualTerminal class used to create a virtual terminal
 -- each plugin should have his own VirtualTerminal object
@@ -1717,7 +1678,6 @@ do -- VirtualTerminal
 
         self.native_vt_rmp = vt_rmp.init(self.realWidth, self.realHeight)
 
-        ---@type Cursor
         self.cursor = { x = 1, y = 1 }
 
         -- NOTE: style attr used for effects class
@@ -1737,64 +1697,9 @@ do -- VirtualTerminal
     end
 
     ---get cursor
-    ---@return Cursor
+    ---@return table
     function RMP.VirtualTerminal:getCursor()
         return self.cursor
-    end
-
-    ---@param thaTheme Theme
-    ---@return self
-    function RMP.VirtualTerminal:setTheme(thaTheme)
-        self.theme = thaTheme
-        return self
-    end
-
-    ---@return Theme
-    function RMP.VirtualTerminal:getTheme()
-        return self.theme
-    end
-
-    ---@param text string
-    ---@param style TextStyle
-    ---@return self
-    function RMP.VirtualTerminal:write(text, style)
-        text = text or ""
-        local lines = {}
-
-        -- Split the text by newlines
-        for line in text:gmatch("([^\n]*)\n?") do
-            table.insert(lines, line)
-        end
-
-        -- Write each line
-        for i, line in ipairs(lines) do
-            self:writeText(
-                self.cursor.x,
-                self.cursor.y + (i - 1),
-                line,
-                self.theme and RMP.colorFromHex(self.theme.TitleText, RMP.FG) or nil,
-                self.theme and RMP.colorFromHex(self.theme.TitleBackGround, RMP.BG) or nil,
-                style
-            )
-        end
-
-        return self
-    end
-
-    ---@param options WinOpt
-    ---@return self
-    function RMP.VirtualTerminal:openWin(options)
-        self:drawBox(
-            options.title or "",
-            options.x or 1,
-            options.y or 1,
-            options.width or self.realWidth,
-            options.height or self.realHeight,
-            options.border or RMP.BoxDrawing.LightBorder,
-            self.theme and RMP.colorFromHex(self.theme.BorderColor, RMP.FG) or nil,
-            self.theme and RMP.colorFromHex(self.theme.BackGround, RMP.BG) or nil
-        )
-        return self
     end
 
     function RMP.VirtualTerminal:clear()
@@ -2060,10 +1965,6 @@ do -- VirtualTerminal
 
                 while not event:get(RMP.EventType.DataFreq):isEmpty() do
                     myevent:get(RMP.EventType.DataFreq):push(event:get(RMP.EventType.DataFreq):pop())
-                end
-
-                while not event:get(RMP.EventType.Frame):isEmpty() do
-                    myevent:get(RMP.EventType.Frame):push(event:get(RMP.EventType.Frame):pop())
                 end
 
                 while not event:get(RMP.EventType.Focuse):isEmpty() do
@@ -5058,7 +4959,7 @@ do
         end
 
         --- @diagnostic disable-next-line
-        self:super("handleEvent", key, mouse, sound, config, template, self, datafreq, exit)
+        self:super("handleEvent", key, mouse, sound, config, template, datafreq, exit)
         --- @diagnostic disable-next-line
         self:super("render")
         --- @diagnostic disable-next-line

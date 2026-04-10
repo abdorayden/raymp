@@ -481,9 +481,7 @@ local function syntaxHighlightLua(codeLine)
     return tokens
 end
 
-local vterm = api.VirtualTerminal.new()
-
-return function(x, y, xx, yy)
+return function(frame, x, y, xx, yy)
     local w = xx - x - 1
     local h = yy - y - 1
 
@@ -507,7 +505,7 @@ return function(x, y, xx, yy)
             color = api.FGColors.Brights.Cyan
         end
 
-        vterm:writeText(centered_x, centered_y, animation_text, color, nil, api.TextStyle.Bold)
+        frame:writeText(centered_x, centered_y, animation_text, color, nil, api.TextStyle.Bold)
 
         local progress_text = ""
         for i = 1, animation_duration do
@@ -518,12 +516,12 @@ return function(x, y, xx, yy)
             end
         end
         local progress_x = x + math.floor((w - #progress_text) / 2)
-        vterm:writeText(progress_x, centered_y + 2, progress_text, api.FGColors.Brights.White)
+        frame:writeText(progress_x, centered_y + 2, progress_text, api.FGColors.Brights.White)
 
-        return vterm
+        return
     end
 
-    vterm:onKeyboard(function(key)
+    frame:onKeyboard(function(key)
         if key == api.KEY_J or key == api.KEY_DOWN then
             move_down = move_down + 1
         elseif key == api.KEY_K or key == api.KEY_UP then
@@ -531,7 +529,7 @@ return function(x, y, xx, yy)
         end
     end)
 
-    vterm:addEventListener(api.EventType.TransformDataPut, function()
+    frame:addEventListener(api.EventType.TransformDataPut, function()
         return {
             UP = "k/key-up",
             DOWN = "j/key-down",
@@ -575,7 +573,7 @@ return function(x, y, xx, yy)
                         local xPos = x + 1
                         local tokens = syntaxHighlightLua(codeContent)
                         for _, token in ipairs(tokens) do
-                            vterm:writeTextClipped(xPos, displayY, token.text, w - (xPos - x - 1), token.color,
+                            frame:writeTextClipped(xPos, displayY, token.text, w - (xPos - x - 1), token.color,
                                 nil, token.style)
                             xPos = xPos + #token.text
                         end
@@ -584,7 +582,7 @@ return function(x, y, xx, yy)
                             api.TextStyle.Bold)
                         local xPos = x + 1
                         for _, part in ipairs(formattedParts) do
-                            vterm:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg, part.bg,
+                            frame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg, part.bg,
                                 part.style)
                             xPos = xPos + #part.text
                         end
@@ -594,13 +592,13 @@ return function(x, y, xx, yy)
                     elseif line:match("^%s*-") then
                         local bullet_text = line:match("^%s*-%s*(.*)")
                         if bullet_text then
-                            vterm:writeTextClipped(x + 1, displayY, "-", w, api.FGColors.Brights.Red)
+                            frame:writeTextClipped(x + 1, displayY, "-", w, api.FGColors.Brights.Red)
 
                             local formattedParts = parseFormattedText(" " .. bullet_text, api.FGColors.Brights.White, nil,
                                 nil)
                             local xPos = x + 2
                             for _, part in ipairs(formattedParts) do
-                                vterm:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg, part.bg,
+                                frame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg, part.bg,
                                     part.style)
                                 xPos = xPos + #part.text
                             end
@@ -608,7 +606,7 @@ return function(x, y, xx, yy)
                             local formattedParts = parseFormattedText(line, api.FGColors.Brights.White, nil, nil)
                             local xPos = x + 1
                             for _, part in ipairs(formattedParts) do
-                                vterm:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg, part.bg,
+                                frame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg, part.bg,
                                     part.style)
                                 xPos = xPos + #part.text
                             end
@@ -617,7 +615,7 @@ return function(x, y, xx, yy)
                         local formattedParts = parseFormattedText(line, api.FGColors.Brights.White, nil, nil)
                         local xPos = x + 1
                         for _, part in ipairs(formattedParts) do
-                            vterm:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg, part.bg,
+                            frame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg, part.bg,
                                 part.style)
                             xPos = xPos + #part.text
                         end
@@ -627,5 +625,4 @@ return function(x, y, xx, yy)
             displayLineNumber = displayLineNumber + 1
         end
     end
-    return vterm
 end
