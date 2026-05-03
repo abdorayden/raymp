@@ -147,6 +147,8 @@ do
         return self.theme
     end
 
+    -- TODO: make it easy to change to other theme colors without require them from the shared data
+
     ---@param text string
     ---@param style TextStyle
     ---@return self
@@ -668,6 +670,8 @@ do
                     -- FEAT-2: isolate plugin error — log but don't crash
                     logwarn("plugin error in window '" .. tostring(windowConfig.id)
                         .. "': " .. tostring(pluginResult))
+                elseif ok and pluginResult and type(pluginResult) == "table" then
+                    mainFrame:add(pluginResult)
                 end
             end
 
@@ -685,6 +689,8 @@ do
                 if not ok then
                     logwarn("content error in window '" .. tostring(windowConfig.id)
                         .. "': " .. tostring(contentResult))
+                elseif ok and contentResult and type(contentResult) == "table" then
+                    mainFrame:add(contentResult)
                 end
             end
         end
@@ -1296,6 +1302,8 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
                         logwarn("global plugin error: " .. tostring(res))
                         -- FEAT-2: drop the failing plugin from the queue
                         goto skip_push
+                    elseif ok and res then
+                        mainFrame:add(res)
                     end
                 elseif type(plug) == "table" then
                     local fn = plug.update or plug.poll or plug.render
@@ -1304,6 +1312,8 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
                         if not ok then
                             logwarn("global plugin error: " .. tostring(res))
                             goto skip_push
+                        elseif ok and res then
+                            mainFrame:add(res)
                         end
                     end
                 end
@@ -1335,11 +1345,9 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         -- Log overlay (FEAT-4)
         if show_logs then
             local log_vt = api.VirtualTerminal(1, 1)
-            log_vt:onFrame(function(frame)
-                if frame then
-                    render_log_overlay(frame, log_overlay_state, log_theme)
-                end
-            end)
+            if mainFrame then
+                render_log_overlay(mainFrame, log_overlay_state, log_theme)
+            end
             mainFrame:add(log_vt, true)
         end
 
