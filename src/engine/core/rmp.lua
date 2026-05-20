@@ -4969,4 +4969,20 @@ do
     end
 end
 
+---comment
+---@param callback function(callback : Frame) : boolean
+function RMP.runApp(callback)
+    --TODO: im writing just an example of the function architecture, but the function is not finished yet
+    local frame = RMP.Frame()
+
+    local quit = false
+
+    while not quit do
+        quit = callback(frame)
+
+        -- add additional informations
+        frame:run()
+    end
+end
+
 return RMP

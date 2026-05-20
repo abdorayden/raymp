@@ -114,7 +114,7 @@ local function engine_render_help(frame, w, h, settings, soundCfg)
 
     -- Create a box using the VirtualTerminal's drawBox method
     frame:drawBox(
-        api.Text.new("Help", api.TextStyle.Bold, api.FGColors.Brights.White, api.BGColors.NoBrights.Black),
+        api.Text.new("Help", api.TextStyle.Bold, api.FGColors.Brights.White, api.BGColors.NoBrights.Black, frame),
         boxX, boxY, boxWidth, boxHeight,
         api.BoxDrawing.LightBorder,
         api.FGColors.Brights.White,  -- border color
@@ -125,7 +125,8 @@ local function engine_render_help(frame, w, h, settings, soundCfg)
     for i, line in ipairs(helpText) do
         local textX = boxX + 2     -- Add padding from the left border
         local textY = boxY + 1 + i -- Add padding from the top border
-        frame:writeText(textX, textY, line, api.FGColors.Brights.White, api.BGColors.NoBrights.Black)
+        frame:moveCursor(textX, textY)
+        frame:writeText(line)
     end
 end
 local settings = nil

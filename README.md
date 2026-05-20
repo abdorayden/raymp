@@ -900,3 +900,23 @@ Special thanks to the terminal application community for inspiration and feedbac
 <p align="center">
   <img src="https://img.shields.io/badge/Made%20with-❤️%20and%20C-red.svg" alt="Made with love and C"/>
 </p>
+
+---
+
+## Memory Safety Review (2026-02-16)
+
+This report summarizes a targeted review of memory leaks and unbounded growth risks in the RMP engine and selected plugins/templates.
+
+**Findings (Most Severe First)**
+1. Unbounded growth of keyboard/mouse event queues when no input arrives. A new keyboard callback is enqueued every frame in `RMPManager.lua`, and queues are only drained when input exists. This can grow without bound during idle periods. Affected files: `src/engine/RMPManager.lua`, `src/engine/core/rmp.lua`.
+2. Same queue growth pattern in plugins (example: tutorial). The tutorial plugin registers a keyboard handler each frame, and those callbacks are merged into the main frame. If no input arrives, callbacks accumulate. Affected file: `src/engine/builtin/plugins/tutorial_rmp/init.lua`.
+3. Native VT leak in `VirtualTerminal:copy`. `RMP.VirtualTerminal:copy()` allocates a native buffer in the constructor, then overwrites `native_vt_rmp` with a new native copy without freeing the original. Affected file: `src/engine/core/rmp.lua`.
+4. Potential cache growth in `TemplateParser.compiledExpressions`. Cache keys include context values and can grow without bound if context values vary frequently. Affected file: `src/engine/RMPManager.lua`.
+
+**Things That Look OK**
+1. `VirtualTerminal` buffers are freed in C via `vt_rmp.distroy`, and merge paths destroy temporary VTs when `distroy=true`.
+2. `TemplateParser` window/plugin caches are bounded by the number of windows.
+
+**Suggested Fix Directions**
+1. Event queue growth: store persistent listener lists and iterate without popping for keyboard/mouse events, or clear those queues each frame before re-registering handlers.
+2. `VirtualTerminal:copy` leak: avoid allocating a native buffer before replacing `native_vt_rmp`, or add a native-copy constructor path.
