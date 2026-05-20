@@ -903,6 +903,10 @@ Special thanks to the terminal application community for inspiration and feedbac
 
 ---
 
+# Replace lua with rdn
+
+---
+
 ## Memory Safety Review (2026-02-16)
 
 This report summarizes a targeted review of memory leaks and unbounded growth risks in the RMP engine and selected plugins/templates.
