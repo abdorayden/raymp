@@ -1,0 +1,363 @@
+[*
+*   Copyright (c) 2024-2026 Ray Den
+*   
+*   Permission is hereby granted, free of charge, to any person obtaining a copy
+*   of this software and associated documentation files (the "Software"), to deal
+*   in the Software without restriction, including without limitation the rights
+*   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+*   copies of the Software, and to permit persons to whom the Software is
+*   furnished to do so, subject to the following conditions:
+*   
+*   The above copyright notice and this permission notice shall be included in
+*   all copies or substantial portions of the Software.
+*   
+*   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+*   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+*   THE SOFTWARE.
+* *]
+
+[*
+*   rdn file that will be loaded at the runtime
+*   vt.rdn is hight level layer of VirtualTerminal manipulations
+*   it protect backward complatible in case the native layer API has been 
+*   upgraded or changed
+* *]
+
+[*
+*   rmp_vt_init : initialize virtual terminal buffer 
+*   the function push two values into the stack
+*   the top one is VirtualTerminal it can be null if issue happen
+*   if it's null the second value is the error message as string
+*   otherwise the second value is null
+*   in case width and height is null or other type of data it will be 
+*   1 by default
+*   example:
+*       (100 200) rmp_vt_init call -> (VirtualTerminal? , error_msg?)
+* *]
+rmp_vt_init defun
+    tha_params let
+    tha-list type "list" != if
+        null "the param type is not a list"
+    else
+        tha_params 0 index width let
+        tha_params 1 index height let
+    
+        width null = width type "integer" != |
+        height null = height  type "integer" != | |
+        if
+            1 1 rmp_vt_init_native call
+        else
+            width height rmp_vt_init_native call
+        end
+    end
+end
+
+[*
+*   rmp_vt_distroy : distroy virtual terminal buffer 
+*   returns boolean in case the param is not a list type
+*   example:
+*       (vt_t) rmp_vt_distroy call -> boolean
+* *]
+rmp_vt_distroy defun
+    tha-list let
+
+    tha-list type "list" != if
+        false
+    else
+        tha-list 0 index 
+        rmp_vt_distroy_native call
+        true
+    end
+end
+
+[*
+*   rmp_vt_clear : clear virtual terminal buffer
+*   example:
+*       (vt_t) rmp_vt_clear call -> boolean
+* *]
+rmp_vt_clear defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list 0 index 
+        rmp_vt_clear_native call
+    end
+end
+
+[*
+*   rmp_vt_setchar : takes the character and place it in x and y buffer
+*   and the styles like fg and bg colors and style
+*   all params has default values 
+*   x and y default is 1
+*   chr default is " "
+*   fg bg style default is ""
+*   returns boolean in case of the param type is not a list
+*   example:
+*       (vt_t 1 1 "x" fg bg style) rmp_vt_setchar call -> boolean
+* *]
+rmp_vt_setchar defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list 0 index
+        tha-list 1 index
+        tha-list 2 index
+        tha-list 3 index
+        tha-list 4 index
+        tha-list 5 index
+        tha-list 6 index
+        rmp_vt_setchar_native call
+    end
+end
+
+[*
+*   rmp_vt_writetext : 
+*   it's just like rmp_vt_setchar but instead it takes text not just char
+*   example:
+*       (vt_t 1 1 "hello world" fg bg style) rmp_vt_writetext call -> boolean
+* *]
+rmp_vt_writetext defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list 0 index
+        tha-list 1 index
+        tha-list 2 index
+        tha-list 3 index
+        tha-list 4 index
+        tha-list 5 index
+        tha-list 6 index
+        rmp_vt_writetext_native call
+    end
+end
+
+
+[*
+*   BorderStyle : is enumeration that used for rmp_vt_open_win to choose
+*   the border of the window
+* *]
+enum NoBorder       const
+enum LightBorder    const
+enum HeavyBorder    const
+enum RoundedCorners const
+reset
+
+[*
+*   rmp_vt_open_win: function that draw box or window in the buffer
+*   it returns boolean false if the params are not a list type or x and y
+*   and wifth and height are negative otherwise true
+*   example:
+*   (vt_t "logs" x y w h LightBorder fg bg) rmp_vt_open_win call -> boolean
+* *]
+rmp_vt_open_win defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list 0 index [* virtual terminal *]
+        tha-list 1 index [* title *]
+        tha-list 2 index [* x *]
+        tha-list 3 index [* y *]
+        tha-list 4 index [* w *]
+        tha-list 5 index [* h *]
+        tha-list 6 index [* border *]
+        tha-list 7 index [* fg *]
+        tha-list 8 index [* bg *]
+        rmp_vt_open_win_native call
+    end
+end
+
+[*
+*   rmp_vt_merge: this function merge two VirtualTerminals in case 
+*   the system use multi terminal buffers
+*   it accept the first param as destnation of the VirtualTerminal
+*   the second one is the source
+*   the third and forth params is the offsetX and offsetY
+*   returns boolean in case of something happens
+*   example:
+*       (main_vt component_vt 1 1) rmp_vt_merge call -> boolean
+* *]
+rmp_vt_merge defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list 0 index [* dst virtual terminal *]
+        tha-list 1 index [* src virtual terminal *]
+        tha-list 2 index [* offs_x *]
+        tha-list 3 index [* offs_y *]
+        rmp_vt_merge_native call
+    end
+end
+
+[*
+*   rmp_vt_render: function that takes the VirtualTerminal buffer and rendre it 
+*   into a terminal
+*   it accept the VirtualTerminal to render and returns two values
+*   into the stack
+*   the first one boolean detect is the error happens or not
+*   the second one will be a string type message if the first value is true
+*   contains the error otherwise it's null
+*   example:
+*   (vt_t) rmp_vt_render call -> boolean , string?
+* *]
+rmp_vt_render defun
+    tha-list let
+    tha-list type "list" != if
+        false "params must be list (...) rmp_vt_render"
+    else
+        tha-list 0 index [* virtual terminal *]
+        rmp_vt_render_native call
+    end
+end
+
+[*
+*   rmp_vt_movecursor: function that accept x and y to move cursor of 
+*   VirtualTerminal
+*   it takes 1 if x < 1 and width of the terminal in case x > width
+*   same thing to y
+*   and return boolean in case the params of the function is not a list
+*   example:
+*       (vt_t 2 2) rmp_vt_movecursor call -> boolean
+*
+*
+* *]
+rmp_vt_movecursor defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list 0 index [* VirtualTerminal *]
+        tha-list 1 index [* x *]
+        tha-list 2 index [* y *]
+        rmp_vt_movecursor_native call
+        true
+    end
+end
+
+[*
+*   rmp_vt_getsize: function accept the VirtualTerminal and push two value into 
+*   the stack the width and height of the VirtualTerminal as return value
+*   in case the params are not list it will return null null
+*   example:
+*   (vt_t) rmp_vt_getsize call -> width? height?
+* *]
+rmp_vt_getsize defun
+    tha-list let
+    tha-list type "list" != if
+        null null
+    else
+        tha-list 0 index [* VirtualTerminal *]
+        rmp_vt_getsize_native call
+    end
+end
+
+[*
+*   rmp_vt_resize: function that accept VirtualTerminal and width , height to 
+*   resize the buffer and returns two values into the stack
+*   the first one is boolean indecate is there any error
+*   the second is string contains error if boolean is true otherwise null
+*   example:
+*       (vt_t 100 100) rmp_vt_resize call -> boolean string?
+* *]
+rmp_vt_resize defun
+    tha-list let
+    tha-list type "list" != if
+        false "rmp_vt_resize accept list (...)"
+    else
+        tha-list 0 index [* VirtualTerminal *]
+        tha-list 1 index [* width *]
+        tha-list 2 index [* height *]
+        rmp_vt_resize_native call
+    end
+end
+
+[*
+*   rmp_vt_moveup: it's like a move cursor but it used if you want to move it up 
+*   without getting the currant cursor because it accept steps of how match 
+*   it moves and return boolean in case function accept list or not
+*   example:
+*       (vt_t 2) rmp_vt_resize call -> boolean string?
+* *]
+rmp_vt_moveup defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list 0 index [* VirtualTerminal *]
+        tha-list 1 index [* steps *]
+        rmp_vt_moveup_native call
+        true
+    end
+end
+
+[*
+*   rmp_vt_movedown: read ** rmp_vt_moveup ** it's the same but the steps is 
+*   going down
+* *]
+rmp_vt_movedown defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list 0 index [* VirtualTerminal *]
+        tha-list 1 index [* steps *]
+        rmp_vt_movedown_native call
+        true
+    end
+end
+
+[*
+*   rmp_vt_moveleft: read ** rmp_vt_moveup ** it's the same but the steps is 
+*   going left
+* *]
+rmp_vt_moveleft defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list 0 index [* VirtualTerminal *]
+        tha-list 1 index [* steps *]
+        rmp_vt_moveleft_native call
+        true
+    end
+end
+
+[*
+*   rmp_vt_moveright: read ** rmp_vt_moveup ** it's the same but the steps is 
+*   going right
+* *]
+rmp_vt_moveright defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list 0 index [* VirtualTerminal *]
+        tha-list 1 index [* steps *]
+        rmp_vt_moveright_native call
+        true
+    end
+end
+
+[*
+*   rmp_vt_copy: used to copy the instance and push it into the stack as return 
+*   value and error_msg in case issue happens
+*   example:
+*       (vt_t) rmp_vt_copy call -> VirtualTerminal? string?
+* *]
+rmp_vt_copy defun
+    tha-list let
+    tha-list type "list" != if
+        null "rmp_vt_copy should accept list (...)"
+    else
+        tha-list 0 index [* VirtualTerminal *]
+        rmp_vt_copy_native call 
+    end
+end

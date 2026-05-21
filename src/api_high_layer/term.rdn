@@ -1,0 +1,58 @@
+[*
+*   Copyright (c) 2024-2026 Ray Den
+*   
+*   Permission is hereby granted, free of charge, to any person obtaining a copy
+*   of this software and associated documentation files (the "Software"), to deal
+*   in the Software without restriction, including without limitation the rights
+*   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+*   copies of the Software, and to permit persons to whom the Software is
+*   furnished to do so, subject to the following conditions:
+*   
+*   The above copyright notice and this permission notice shall be included in
+*   all copies or substantial portions of the Software.
+*   
+*   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+*   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+*   THE SOFTWARE.
+* *]
+
+[*
+*   rdn file that will be loaded at the runtime
+*   term.rdn is hight level layer of Terminal manipulations
+*   it protect backward complatible in case the native layer API has been 
+*   upgraded or changed
+* *]
+
+[*
+*  rmp_to_raw_mode: function that accept boolean 
+*  true to raw mode false not
+*  and returns boolean indicate the error
+*  example:
+*       (true) rmp_to_raw_mode call -> boolean
+* *]
+rmp_to_raw_mode defun
+    tha-list let
+
+    tha-list type "list" != if
+        false
+    else
+        tha-list 0 index [* boolean *]
+        rmp_to_raw_mode_native call
+    end
+end
+
+[*
+*   rmp_get_term_size: function that push two values into the stack
+*   as return value width and height of the function
+*   otherwise it push two null value indicates that is error
+*   example:
+*       rmp_get_term_size call -> integer? integer?
+* *]
+rmp_get_term_size defun
+    rmp_get_term_size call
+end
+
