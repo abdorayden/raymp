@@ -139,10 +139,8 @@ rmp_vt_writetext defun
 end
 
 
-[*
-*   BorderStyle : is enumeration that used for rmp_vt_open_win to choose
-*   the border of the window
-* *]
+[* BorderStyle *]
+[* is enumeration that used for rmp_vt_open_win to choose the border of the window *]
 enum NoBorder       const
 enum LightBorder    const
 enum HeavyBorder    const

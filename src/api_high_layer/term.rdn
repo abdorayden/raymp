@@ -56,3 +56,16 @@ rmp_get_term_size defun
     rmp_get_term_size call
 end
 
+[*
+*   rmp_init_terminal: always intial terminal first
+* *]
+rmp_init_terminal defun
+    rmp_init_terminal_native call
+end
+
+[*
+*   rmp_restore_terminal: and don't forget to restore the og one
+* *]
+rmp_restore_terminal defun
+    rmp_restore_terminal call
+end

@@ -90,3 +90,42 @@ bool rmp_get_term_size(RDNApi* api)
 #endif
     return true;
 }
+
+bool init_terminal(RDNApi* api)
+{
+#ifdef _WIN32
+	if (!initialized) {
+		hStdin = GetStdHandle(STD_INPUT_HANDLE);
+		GetConsoleMode(hStdin, &oldMode);
+		SetConsoleMode(hStdin, ENABLE_WINDOW_INPUT | ENABLE_MOUSE_INPUT);
+		initialized = true;
+	}
+#else 
+	if (!initialized) {
+		tcgetattr(STDIN_FILENO, &orig_termios);
+		struct termios new_termios = orig_termios;
+		new_termios.c_lflag &= ~(ICANON | ECHO);
+		new_termios.c_cc[VMIN] = 0;
+		new_termios.c_cc[VTIME] = 0;
+		tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
+		initialized = true;
+	}
+#endif
+
+    return true;
+}
+bool restore_terminal(RDNApi* api)
+{
+#ifdef _WIN32
+	if (initialized) {
+		SetConsoleMode(hStdin, oldMode);
+		initialized = false;
+	}
+#else 
+	if (initialized) {
+		tcsetattr(STDIN_FILENO, TCSANOW, &orig_termios);
+		initialized = false;
+	}
+#endif
+    return true;
+}

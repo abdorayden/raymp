@@ -35,6 +35,10 @@
 
 static struct termios orig_termios;
 static int raw_mode_enabled = 0;
+
+
+static bool initialized = false;
+
 #else
 // Windows
 #include <windows.h>
@@ -42,9 +46,15 @@ static int raw_mode_enabled = 0;
 static CONSOLE_SCREEN_BUFFER_INFO orig_csbi;
 static DWORD orig_mode;
 ALWAYS_INT raw_mode_enabled = 0;
+
+// for restore the terminal
+static bool initialized = false;
+static HANDLE hStdin;
+static DWORD oldMode;
 #endif
 
 bool rmp_to_raw_mode(RDNApi* api);
-bool rmp_get_term_size(RDNApi* api) ;
+bool rmp_get_term_size(RDNApi* api);
+bool init_terminal(RDNApi* api);
+bool restore_terminal(RDNApi* api);
 #endif // !TERM_H
-

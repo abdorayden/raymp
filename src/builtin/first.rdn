@@ -14,25 +14,25 @@ enum SHUFFLE       const
 reset
 
 
-rmp_pause_audio
-rmp_resume_audio
-(5) rmp_volume_up [*in %*]
-(5) rmp_volume_down [*in %*]
-(70) rmp_set_volume
-rmp_is_audio_playing [*returns bool*]
-rmp_next_track
-rmp_prev_track
-rmp_set_track
-rmp_set_playlist
-rmp_get_volume
-rmp_get_audio_position
-rmp_get_frequency_data
-rmp_get_audio_length
-rmp_set_speed
-rmp_get_speed
-rmp_seek_left
-rmp_seek_right
-rmp_stop_audio
-rmp_play_audio
-rmp_get_current_audio
-rmp_get_playlist
+[* rmp_pause_audio *]
+[* rmp_resume_audio *]
+[* (5) rmp_volume_up [*in %*] *]
+[* (5) rmp_volume_down [*in %*] *]
+[* (70) rmp_set_volume *]
+[* rmp_is_audio_playing [*returns bool*] *]
+[* rmp_next_track *]
+[* rmp_prev_track *]
+[* rmp_set_track *]
+[* rmp_set_playlist *]
+[* rmp_get_volume *]
+[* rmp_get_audio_position *]
+[* rmp_get_frequency_data *]
+[* rmp_get_audio_length *]
+[* rmp_set_speed *]
+[* rmp_get_speed *]
+[* rmp_seek_left *]
+[* rmp_seek_right *]
+[* rmp_stop_audio *]
+[* rmp_play_audio *]
+[* rmp_get_current_audio *]
+[* rmp_get_playlist *]

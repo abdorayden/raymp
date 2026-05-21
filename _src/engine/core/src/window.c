@@ -68,8 +68,7 @@ ALWAYS_INT lua_raw_mode(STATE) {
 		}
 
 		raw_mode_enabled = 1;
-	}
-	else if (!enable && raw_mode_enabled) {
+	} else if (!enable && raw_mode_enabled) {
 		tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
 		raw_mode_enabled = 0;
 	}
