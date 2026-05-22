@@ -60,10 +60,10 @@ else
             20 
             10
             LightBorder
-            "\x1b[93;41m" 
-            ""
+            (FG "#ffffff") color
+            (BG "#000000") color
             )
-            rmp_vt_open_win call false = if
+            rmp_vt_open_win call pop false false = if
                 (
                 vt 
                 2 

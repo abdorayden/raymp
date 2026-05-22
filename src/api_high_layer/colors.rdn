@@ -4,15 +4,14 @@ enum FG const
 enum BG const
 reset
 
-[*
+[* 
 *   (FG "#ffffff") color defun
 * *]
 color defun
-    typeColor let
-    hex let
-    hex type "string" =
-    hex 0 index "#" = & if 
-
-    end
+	typeColor let
+	hex let
+	typeColor
+	hex
+	rmp_color_native call
 end
 

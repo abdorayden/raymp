@@ -27,21 +27,5 @@
 "./directory.rdn" load
 "./keyboard.rdn" load
 "./framework.rdn" load
-
-reset
-
-enum FG const
-enum BG const
-reset
-
-[*
-*   FG "#ffffff" color defun
-* *]
-color defun
-    typeColor let
-    hex let
-    hex 0 index "#" = if 
-
-    end
-end
+"./colors.rdn" load
 
