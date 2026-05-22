@@ -1,0 +1,231 @@
+[*
+*   Copyright (c) 2024-2026 Ray Den
+*   
+*   Permission is hereby granted, free of charge, to any person obtaining a copy
+*   of this software and associated documentation files (the "Software"), to deal
+*   in the Software without restriction, including without limitation the rights
+*   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+*   copies of the Software, and to permit persons to whom the Software is
+*   furnished to do so, subject to the following conditions:
+*   
+*   The above copyright notice and this permission notice shall be included in
+*   all copies or substantial portions of the Software.
+*   
+*   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+*   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+*   THE SOFTWARE.
+* *]
+
+[* 
+*   framework.rdn is the high level compatibility layer for the native engine.
+*   The event loop, command queue, keyboard polling, and frame lifecycle live
+*   in C inside src/api/engine.c.
+*
+*   Raden code uses this file only to:
+*   - create the frame
+*   - register event callbacks
+*   - register custom commands
+*   - enqueue built-in draw commands
+*   - start the native loop
+*
+*   That keeps plugins/configuration small while the runtime-critical work stays
+*   in the host application, similar to how vim/neovim expose a native core and
+*   a script layer on top.
+* *]
+
+[* 
+*   rmp_framework_reset: clear native engine state, event handlers,
+*   registered commands, queued commands, and the active frame.
+* *]
+rmp_framework_reset defun
+    rmp_engine_reset_native call
+end
+
+[* 
+*   rmp_frame_init: create the active frame.
+*   example:
+*       (80 24 30) rmp_frame_init call -> frame_handle? error?
+* *]
+rmp_frame_init defun
+    tha-list let
+    tha-list type "list" != if
+        null "rmp_frame_init expects list (...)"
+    else
+        tha-list rmp_engine_frame_init_native call
+    end
+end
+
+[* 
+*   rmp_frame_get: returns the current active frame handle or null.
+* *]
+rmp_frame_get defun
+    rmp_engine_frame_get_native call
+end
+
+[* 
+*   rmp_frame_set_fps: set native loop fps.
+*   example:
+*       (30) rmp_frame_set_fps call -> boolean
+* *]
+rmp_frame_set_fps defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list 0 index rmp_engine_set_fps_native call
+    end
+end
+
+[* 
+*   Generic event registration.
+*   example:
+*       ("playlist_changed" on_playlist_changed) rmp_on call -> boolean
+* *]
+rmp_on defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list rmp_engine_on_native call
+    end
+end
+
+[* Fixed lifecycle helpers. *]
+rmp_on_init defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list 0 index rmp_engine_on_init_native call
+    end
+end
+
+rmp_on_tick defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list 0 index rmp_engine_on_tick_native call
+    end
+end
+
+rmp_on_key defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list 0 index rmp_engine_on_key_native call
+    end
+end
+
+rmp_on_render defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list 0 index rmp_engine_on_render_native call
+    end
+end
+
+rmp_on_shutdown defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list 0 index rmp_engine_on_shutdown_native call
+    end
+end
+
+[* 
+*   Emit an event immediately from script.
+*   example:
+*       ("playlist_loaded" song_count) rmp_emit_event call
+* *]
+rmp_emit_event defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list rmp_engine_emit_native call
+    end
+end
+
+[* 
+*   Register a custom command callback.
+*   The callback receives the full queued command list.
+*   example:
+*       ("show_popup" popup_command) rmp_register_command call
+* *]
+rmp_register_command defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list rmp_engine_register_command_native call
+    end
+end
+
+[* 
+*   Queue a command for the native loop.
+*   example:
+*       ("write_text" 2 2 "hello" "" "" "") rmp_command call
+* *]
+rmp_command defun
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list rmp_engine_command_native call
+    end
+end
+
+[* Built-in command helpers handled by native engine.c *]
+rmp_cmd_quit defun
+    ("quit") rmp_command call
+end
+
+rmp_cmd_clear defun
+    ("clear") rmp_command call
+end
+
+rmp_cmd_write_text defun
+    tha-list let
+    tha-list rmp_command call
+end
+
+rmp_cmd_set_char defun
+    tha-list let
+    tha-list rmp_command call
+end
+
+rmp_cmd_draw_box defun
+    tha-list let
+    tha-list rmp_command call
+end
+
+rmp_cmd_merge defun
+    tha-list let
+    tha-list rmp_command call
+end
+
+rmp_cmd_resize defun
+    tha-list let
+    tha-list rmp_command call
+end
+
+[* 
+*   Start the native loop.
+*   It performs:
+*   - terminal setup
+*   - init event
+*   - per-frame clear/key/tick/render/command/render/sleep
+*   - shutdown event
+*   - terminal cleanup
+* *]
+rmp_run_loop defun
+    rmp_engine_run_native call
+end

@@ -82,6 +82,7 @@ struct NativeModuleReg {
 struct NativeCallState {
     RDNState *stack;
     Vars *vars;
+    Funcs *funcs;
     char *error_message;
 };
 

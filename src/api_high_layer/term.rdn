@@ -69,3 +69,24 @@ end
 rmp_restore_terminal defun
     rmp_restore_terminal_native call
 end
+
+[* 
+*   rmp_term_clear: clear terminal screen and move cursor to home
+* *]
+rmp_term_clear defun
+    rmp_term_clear_native call
+end
+
+[* 
+*   rmp_term_hide_cursor: hide terminal cursor
+* *]
+rmp_term_hide_cursor defun
+    rmp_term_hide_cursor_native call
+end
+
+[* 
+*   rmp_term_show_cursor: show terminal cursor
+* *]
+rmp_term_show_cursor defun
+    rmp_term_show_cursor_native call
+end

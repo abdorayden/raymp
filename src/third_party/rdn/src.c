@@ -2155,6 +2155,7 @@ static bool execute_named_entry(RDNState *stack, Vars *vars, Funcs *funcs, Funcs
 
         call_state.stack = stack;
         call_state.vars = vars;
+        call_state.funcs = funcs;
         call_state.error_message = NULL;
 
         api.userdata = &call_state;

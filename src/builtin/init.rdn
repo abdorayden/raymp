@@ -20,10 +20,14 @@
 *   THE SOFTWARE.
 * *]
 
-"./vt.rdn" load
-"./term.rdn" load
-"./platform.rdn" load
-"./sleep.rdn" load
-"./directory.rdn" load
-"./keyboard.rdn" load
-"./framework.rdn" load
+[* 
+*   Default bundled init script.
+*   main.c loads this file only when:
+*   - ~/.config/raymp/init.rdn does not exist
+*   - ~/.rmp/init.rdn does not exist
+*
+*   This gives raymp a built-in screen instead of starting with an empty
+*   runtime. Users can copy this file into their config directory and edit it.
+* *]
+
+"./plugins/example_ui.rdn" load

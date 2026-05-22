@@ -16,10 +16,10 @@ reset
 
 [* rmp_pause_audio *]
 [* rmp_resume_audio *]
-[* (5) rmp_volume_up [*in %*] *]
-[* (5) rmp_volume_down [*in %*] *]
+[* rmp_volume_up default step 5 percent *]
+[* rmp_volume_down default step 5 percent *]
 [* (70) rmp_set_volume *]
-[* rmp_is_audio_playing [*returns bool*] *]
+[* rmp_is_audio_playing returns bool *]
 [* rmp_next_track *]
 [* rmp_prev_track *]
 [* rmp_set_track *]

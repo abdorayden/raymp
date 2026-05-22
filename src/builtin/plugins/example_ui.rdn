@@ -1,0 +1,110 @@
+[*
+*   Copyright (c) 2024-2026 Ray Den
+*   
+*   Permission is hereby granted, free of charge, to any person obtaining a copy
+*   of this software and associated documentation files (the "Software"), to deal
+*   in the Software without restriction, including without limitation the rights
+*   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+*   copies of the Software, and to permit persons to whom the Software is
+*   furnished to do so, subject to the following conditions:
+*   
+*   The above copyright notice and this permission notice shall be included in
+*   all copies or substantial portions of the Software.
+*   
+*   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+*   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+*   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+*   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+*   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+*   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+*   THE SOFTWARE.
+* *]
+
+[* 
+*   Builtin UI plugin example.
+*
+*   This file is a plugin, not the engine owner.
+*   It does not call rmp_frame_init or rmp_run_loop.
+*   The host init script loads plugins first, then starts the engine.
+*
+*   It demonstrates:
+*   - fixed engine events
+*   - generic events
+*   - custom commands
+*   - persistent UI state rendered every frame
+*
+*   Controls:
+*   - q / Esc : quit
+*   - h       : toggle help panel through a custom command
+*   - t       : toggle mode through a generic event
+* *]
+
+0 builtin_demo_mode let
+false builtin_demo_help_visible let
+
+builtin_demo_toggle_mode defun
+    payload let
+    builtin_demo_mode 0 = if
+        1 builtin_demo_mode set
+    else
+        0 builtin_demo_mode set
+    end
+end
+
+builtin_demo_toggle_help_command defun
+    cmd let
+    builtin_demo_help_visible ! builtin_demo_help_visible set
+end
+
+builtin_demo_key defun
+    key let
+
+    key KEY_Q = key KEY_ESCAPE = | if
+        rmp_cmd_quit call pop
+    else
+        key KEY_H = if
+            ("builtin_toggle_help") rmp_command call pop
+        else
+            key KEY_T = if
+                ("builtin_toggle_mode" 1) rmp_emit_event call pop
+            end
+        end
+    end
+end
+
+builtin_demo_render_help defun
+    ("draw_box" "Builtin Plugin" 23 3 34 10 RoundedCorners "" "") rmp_cmd_draw_box call pop
+    ("write_text" 25 5 "This help panel is persistent." "" "" "") rmp_cmd_write_text call pop
+    ("write_text" 25 6 "It is toggled by a custom command." "" "" "") rmp_cmd_write_text call pop
+    ("write_text" 25 7 "The plugin keeps state in script vars." "" "" "") rmp_cmd_write_text call pop
+    ("write_text" 25 8 "Press h again to hide this panel." "" "" "") rmp_cmd_write_text call pop
+end
+
+builtin_demo_render defun
+    ("draw_box" "RayMP Builtin" 1 1 60 18 LightBorder "" "") rmp_cmd_draw_box call pop
+    ("write_text" 3 3 "No user init.rdn was found." "" "" "") rmp_cmd_write_text call pop
+    ("write_text" 3 4 "raymp loaded src/builtin/init.rdn instead." "" "" "") rmp_cmd_write_text call pop
+    ("write_text" 3 6 "q or Esc : quit" "" "" "") rmp_cmd_write_text call pop
+    ("write_text" 3 7 "h        : toggle help command" "" "" "") rmp_cmd_write_text call pop
+    ("write_text" 3 8 "t        : emit toggle event" "" "" "") rmp_cmd_write_text call pop
+
+    builtin_demo_mode 0 = if
+        ("write_text" 3 10 "Mode: base screen" "" "" "") rmp_cmd_write_text call pop
+        ("write_text" 3 11 "Press t to switch plugin state." "" "" "") rmp_cmd_write_text call pop
+    else
+        ("write_text" 3 10 "Mode: toggled by generic event" "" "" "") rmp_cmd_write_text call pop
+        ("write_text" 3 11 "The event callback changed plugin state." "" "" "") rmp_cmd_write_text call pop
+    end
+
+    builtin_demo_help_visible if
+        builtin_demo_render_help call
+    end
+
+    ("write_text" 3 14 "Plugin file:" "" "" "") rmp_cmd_write_text call pop
+    ("write_text" 3 15 "src/builtin/plugins/example_ui.rdn" "" "" "") rmp_cmd_write_text call pop
+end
+
+("builtin_toggle_mode" builtin_demo_toggle_mode) rmp_on call pop
+("builtin_toggle_help" builtin_demo_toggle_help_command) rmp_register_command call pop
+(builtin_demo_key) rmp_on_key call pop
+(builtin_demo_render) rmp_on_render call pop

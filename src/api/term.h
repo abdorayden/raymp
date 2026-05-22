@@ -57,4 +57,7 @@ bool rmp_to_raw_mode(RDNApi* api);
 bool rmp_get_term_size(RDNApi* api);
 bool init_terminal(RDNApi* api);
 bool restore_terminal(RDNApi* api);
+bool rmp_term_clear(RDNApi* api);
+bool rmp_term_hide_cursor(RDNApi* api);
+bool rmp_term_show_cursor(RDNApi* api);
 #endif // !TERM_H
