@@ -8,10 +8,13 @@ reset
 *   (FG "#ffffff") color defun
 * *]
 color defun
-	typeColor let
-	hex let
-	typeColor
-	hex
-	rmp_color_native call
+    tha-list let
+    tha-list type "list" != if
+        false
+    else
+        tha-list 1 index [*hex color*]
+        tha-list 0 index [*type*]
+	    rmp_color_native call
+    end
 end
 

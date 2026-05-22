@@ -53,6 +53,9 @@ else
         end
 
         [* key KEY_A = if *]
+            (FG "#ffdd00") color call fg_color let 
+            (BG "#224488") color call bg_color let 
+
             (vt 
             "test win"
             4 
@@ -60,8 +63,8 @@ else
             20 
             10
             LightBorder
-            (FG "#ffffff") color
-            (BG "#000000") color
+            (FG "#ffdd00") color
+            (BG "#224488") color
             )
             rmp_vt_open_win call pop false false = if
                 (

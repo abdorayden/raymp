@@ -33,37 +33,35 @@ bool rmp_color(RDNApi *api) {
         api->push_string(api, "");
         return true;
     }
-    api->pop(api, 2);
 
-    if (!hex || hex[0] == '\0') {
-        api->push_string(api, "");
-        return true;
-    }
-
-    if (hex[0] == '#') {
-        hex++;
-    }
-
-    size_t len = strlen(hex);
     long r = 0, g = 0, b = 0;
 
-    if (len >= 6) {
-        char component[3] = {0};
-        component[0] = hex[0]; component[1] = hex[1];
-        r = strtol(component, NULL, 16);
-        component[0] = hex[2]; component[1] = hex[3];
-        g = strtol(component, NULL, 16);
-        component[0] = hex[4]; component[1] = hex[5];
-        b = strtol(component, NULL, 16);
-    } else if (len >= 3) {
-        char component[3] = {0};
-        component[0] = hex[0]; component[1] = hex[0];
-        r = strtol(component, NULL, 16);
-        component[0] = hex[1]; component[1] = hex[1];
-        g = strtol(component, NULL, 16);
-        component[0] = hex[2]; component[1] = hex[2];
-        b = strtol(component, NULL, 16);
+    if (hex) {
+        if (hex[0] == '#') {
+            hex++;
+        }
+
+        size_t len = strlen(hex);
+        if (len >= 6) {
+            char component[3] = {0};
+            component[0] = hex[0]; component[1] = hex[1];
+            r = strtol(component, NULL, 16);
+            component[0] = hex[2]; component[1] = hex[3];
+            g = strtol(component, NULL, 16);
+            component[0] = hex[4]; component[1] = hex[5];
+            b = strtol(component, NULL, 16);
+        } else if (len >= 3) {
+            char component[3] = {0};
+            component[0] = hex[0]; component[1] = hex[0];
+            r = strtol(component, NULL, 16);
+            component[0] = hex[1]; component[1] = hex[1];
+            g = strtol(component, NULL, 16);
+            component[0] = hex[2]; component[1] = hex[2];
+            b = strtol(component, NULL, 16);
+        }
     }
+
+    api->pop(api, 2);
 
     char ansi_code[32];
     if (type == 0) {
