@@ -55,13 +55,15 @@ else
         [* key KEY_A = if *]
             (vt 
             "test win"
-            4 4 
-            20 10
+            4 
+            4 
+            20 
+            10
             LightBorder
-            "\27[38;2;255;255;255m" "\27[48;2;255;0;0m"
+            "\x1b[93;41m" 
+            ""
             )
             rmp_vt_open_win call false = if
-
                 (
                 vt 
                 2 

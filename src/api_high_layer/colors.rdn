@@ -1,0 +1,18 @@
+
+reset
+enum FG const
+enum BG const
+reset
+
+[*
+*   (FG "#ffffff") color defun
+* *]
+color defun
+    typeColor let
+    hex let
+    hex type "string" =
+    hex 0 index "#" = & if 
+
+    end
+end
+

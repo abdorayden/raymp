@@ -425,7 +425,7 @@ bool rmp_vt_open_win(RDNApi *api) {
     long y;
     long width;
     long height;
-    BorderStyle border;
+    long border;
 
     const char *title = api->to_string(api, -8);
     size_t title_len;
@@ -473,7 +473,8 @@ bool rmp_vt_open_win(RDNApi *api) {
     bg = bg == NULL ? "" : bg;
 
     if (vt == NULL || vt->buffer == NULL || width < 1 || height < 1 || x < 1 || y < 1) {
-        api->pop(api, 9);
+        // api->pop(api, 9);
+        fprintf(stderr, "height: %ld\n" , height);
         api->push_boolean(api , false);
         return true;
     }
