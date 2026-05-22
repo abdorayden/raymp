@@ -30,4 +30,73 @@
 *   runtime. Users can copy this file into their config directory and edit it.
 * *]
 
-"Hello From builtin" print
+rmp_init_terminal call
+rmp_term_clear call
+rmp_term_hide_cursor call
+
+(true) rmp_to_raw_mode call
+
+rmp_get_term_size call
+height let
+width let
+(width height) rmp_vt_init call
+err let
+vt let
+
+err null != if
+    "error: " print err print
+else
+    true loop
+        rmp_get_key call key let
+        key KEY_Q = if 
+            break
+        end
+
+        [* key KEY_A = if *]
+            (vt 
+            "test win"
+            4 4 
+            20 10
+            LightBorder
+            "\27[38;2;255;255;255m" "\27[48;2;255;0;0m"
+            )
+            rmp_vt_open_win call false = if
+
+                (
+                vt 
+                2 
+                2 
+                "open win false"
+                ""
+                ""
+                ""
+                )
+                rmp_vt_writetext call
+            end
+        [* else *]
+        [*     ( *]
+        [*     vt  *]
+        [*     2  *]
+        [*     2  *]
+        [*     "test" *]
+        [*     "" *]
+        [*     "" *]
+        [*     "" *]
+        [*     ) *]
+        [*     rmp_vt_writetext call *]
+        [* end *]
+
+
+        (vt)
+        rmp_vt_render call
+        (vt) rmp_vt_clear call
+        true
+    end
+end
+
+
+rmp_restore_terminal call
+rmp_close_key call
+(vt) rmp_vt_distroy call
+pop pop pop pop pop pop 
+

@@ -437,10 +437,25 @@ bool rmp_vt_open_win(RDNApi *api) {
     }
 
     bool res = api->to_integer(api, -7, &x);
+    if (res == false) {
+        x = 1;
+    }
     res &= api->to_integer(api, -6, &y);
+    if (res == false) {
+        y = 1;
+    }
     res &= api->to_integer(api, -5, &width);
+    if (res == false) {
+        width = 10;
+    }
     res &= api->to_integer(api, -4, &height);
-    res &= api->to_integer(api, -3, (long *)&border);
+    if (res == false) {
+        height = 5;
+    }
+    res &= api->to_integer(api, -3, &border);
+    if (res == false) {
+        border = NoBorder;
+    }
 
     if (border > RoundedCorners || border < NoBorder) {
         border = NoBorder;
@@ -457,7 +472,7 @@ bool rmp_vt_open_win(RDNApi *api) {
     fg = fg == NULL ? "" : fg;
     bg = bg == NULL ? "" : bg;
 
-    if (!vt || !vt->buffer || !res || width < 1 || height < 1 || x < 1 || y < 1) {
+    if (vt == NULL || vt->buffer == NULL || width < 1 || height < 1 || x < 1 || y < 1) {
         api->pop(api, 9);
         api->push_boolean(api , false);
         return true;

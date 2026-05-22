@@ -8,6 +8,7 @@
 #include "./src/api/sleep.h"
 #include "./src/api/term.h"
 #include "./src/api/vt.h"
+#include "./src/api/keyboard.h"
 
 #define RMP_NAME "Ray Media Platform"
 #define RMP_VERSION "0.1.0"
@@ -32,19 +33,24 @@ static bool register_native_api(Funcs *funcs) {
         register_native(funcs, "rmp_vt_moveup_native", rmp_vt_moveup) &&
         register_native(funcs, "rmp_vt_movedown_native", rmp_vt_movedown) &&
         register_native(funcs, "rmp_vt_moveleft_native", rmp_vt_moveleft) &&
-        register_native(funcs, "rmp_vt_moveright_native", rmp_vt_moveright) &&
         register_native(funcs, "rmp_vt_copy_native", rmp_vt_copy) &&
+        register_native(funcs, "rmp_vt_moveright_native", rmp_vt_moveright) &&
         register_native(funcs, "rmp_to_raw_mode_native", rmp_to_raw_mode) &&
         register_native(funcs, "rmp_get_term_size_native", rmp_get_term_size) &&
         register_native(funcs, "rmp_init_terminal_native", init_terminal) &&
         register_native(funcs, "rmp_restore_terminal_native", restore_terminal) &&
+        register_native(funcs, "rmp_term_clear_native", rmp_term_clear) &&
+        register_native(funcs, "rmp_term_hide_cursor_native", rmp_term_hide_cursor) &&
+        register_native(funcs, "rmp_term_show_cursor_native", rmp_term_show_cursor) &&
         register_native(funcs, "rmp_platform_native", rmp_platform) &&
         register_native(funcs, "rmp_sleep_native", rmp_sleep) &&
         register_native(funcs, "rmp_get_current_path_native", rmp_get_current_path) &&
         register_native(funcs, "rmp_home_path_native", rmp_home_path) &&
         register_native(funcs, "rmp_list_dir_native", rmp_list_dir) &&
         register_native(funcs, "rmp_mkdir_native", rmp_mkdir) &&
-        register_native(funcs, "rmp_rmdir_native", rmp_rmdir);
+        register_native(funcs, "rmp_rmdir_native", rmp_rmdir) &&
+        register_native(funcs, "rmp_get_key_native", rmp_get_key) &&
+        register_native(funcs, "rmp_close_key_native", rmp_close_key);
 }
 
 static char *dup_env(const char *name) {
@@ -255,3 +261,4 @@ cleanup:
 #include "./src/api/platform.c"
 #include "./src/api/sleep.c"
 #include "./src/api/directory.c"
+#include "./src/api/keyboard.c"

@@ -27,6 +27,7 @@
 *   upgraded or changed
 * *]
 
+reset
 enum KEY_CTRL_A const
 enum KEY_CTRL_B const
 enum KEY_CTRL_C const

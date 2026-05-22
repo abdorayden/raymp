@@ -1,4 +1,5 @@
 #include "term.h"
+#include <stdio.h>
 
 bool rmp_to_raw_mode(RDNApi* api)
 {
