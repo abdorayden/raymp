@@ -2380,6 +2380,8 @@ static bool read_string_token(char **cursor, char **out_token) {
                 escaped = '\\';
             } else if (**cursor == '"') {
                 escaped = '"';
+            } else if (**cursor == 'e') {
+                escaped = '\x1b';
             } else {
                 escaped = **cursor;
             }
