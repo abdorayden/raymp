@@ -49,7 +49,10 @@ static bool register_native_api(Funcs *funcs) {
 
 static char *dup_env(const char *name) {
     const char *value = getenv(name);
-    return value == NULL ? NULL : copy_string(value);
+    if (value == NULL || value[0] == '\0') {
+        return NULL;
+    }
+    return copy_string(value);
 }
 
 static char *join_owned(char *base, const char *path) {
@@ -69,8 +72,11 @@ static bool bootstrap_runtime(RDNState *stack, Vars *vars, Funcs *funcs) {
     char *home = NULL;
     char *xdg_config = NULL;
     char *config_dir = NULL;
+    char *config_dir_alt = NULL;
     char *config_init = NULL;
+    char *config_init_alt = NULL;
     char *legacy_init = NULL;
+    bool loaded_user_init = false;
 
     if (!reset_search_paths()) {
         fprintf(stderr, "failed to initialize search paths\n");
@@ -100,18 +106,32 @@ static bool bootstrap_runtime(RDNState *stack, Vars *vars, Funcs *funcs) {
     home = dup_env("HOME");
     xdg_config = dup_env("XDG_CONFIG_HOME");
     if (xdg_config != NULL) {
-        config_dir = join_owned(xdg_config, "raymp");
+        config_dir = join_paths(xdg_config, "raymp");
+        config_dir_alt = join_paths(xdg_config, "rayden");
     } else if (home != NULL) {
         config_dir = join_paths(home, ".config/raymp");
+        config_dir_alt = join_paths(home, ".config/rayden");
     }
 
     if (config_dir != NULL) {
         if (!push_search_path(&g_script_search_paths, config_dir)) {
             free(home);
             free(config_dir);
+            free(config_dir_alt);
             return false;
         }
         config_init = join_paths(config_dir, "init.rdn");
+    }
+
+    if (config_dir_alt != NULL) {
+        if (!push_search_path(&g_script_search_paths, config_dir_alt)) {
+            free(home);
+            free(config_dir);
+            free(config_dir_alt);
+            free(config_init);
+            return false;
+        }
+        config_init_alt = join_paths(config_dir_alt, "init.rdn");
     }
 
     if (home != NULL) {
@@ -121,22 +141,54 @@ static bool bootstrap_runtime(RDNState *stack, Vars *vars, Funcs *funcs) {
     if (config_init != NULL && !source_if_exists(stack, vars, funcs, config_init)) {
         free(home);
         free(config_dir);
+        free(config_dir_alt);
         free(config_init);
+        free(config_init_alt);
         free(legacy_init);
         return false;
+    } else if (config_init != NULL && path_is_readable_file(config_init)) {
+        loaded_user_init = true;
+    }
+
+    if (!loaded_user_init && config_init_alt != NULL && !source_if_exists(stack, vars, funcs, config_init_alt)) {
+        free(home);
+        free(config_dir);
+        free(config_dir_alt);
+        free(config_init);
+        free(config_init_alt);
+        free(legacy_init);
+        return false;
+    } else if (!loaded_user_init && config_init_alt != NULL && path_is_readable_file(config_init_alt)) {
+        loaded_user_init = true;
     }
 
     if (legacy_init != NULL && !source_if_exists(stack, vars, funcs, legacy_init)) {
         free(home);
         free(config_dir);
+        free(config_dir_alt);
         free(config_init);
+        free(config_init_alt);
+        free(legacy_init);
+        return false;
+    } else if (!loaded_user_init && legacy_init != NULL && path_is_readable_file(legacy_init)) {
+        loaded_user_init = true;
+    }
+
+    if (!loaded_user_init && !source_if_exists(stack, vars, funcs, "src/builtin/init.rdn")) {
+        free(home);
+        free(config_dir);
+        free(config_dir_alt);
+        free(config_init);
+        free(config_init_alt);
         free(legacy_init);
         return false;
     }
 
     free(home);
     free(config_dir);
+    free(config_dir_alt);
     free(config_init);
+    free(config_init_alt);
     free(legacy_init);
     return true;
 }

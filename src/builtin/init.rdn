@@ -30,4 +30,4 @@
 *   runtime. Users can copy this file into their config directory and edit it.
 * *]
 
-"./plugins/example_ui.rdn" load
+"Hello From builtin" print
