@@ -9,6 +9,7 @@
 #include "./src/api/term.h"
 #include "./src/api/vt.h"
 #include "./src/api/keyboard.h"
+#include "./src/api/color.h"
 
 #define RMP_NAME "Ray Media Platform"
 #define RMP_VERSION "0.1.0"
@@ -50,7 +51,8 @@ static bool register_native_api(Funcs *funcs) {
         register_native(funcs, "rmp_mkdir_native", rmp_mkdir) &&
         register_native(funcs, "rmp_rmdir_native", rmp_rmdir) &&
         register_native(funcs, "rmp_get_key_native", rmp_get_key) &&
-        register_native(funcs, "rmp_close_key_native", rmp_close_key);
+        register_native(funcs, "rmp_close_key_native", rmp_close_key) &&
+        register_native(funcs, "rmp_color_native", rmp_color);
 }
 
 static char *dup_env(const char *name) {
@@ -262,3 +264,4 @@ cleanup:
 #include "./src/api/sleep.c"
 #include "./src/api/directory.c"
 #include "./src/api/keyboard.c"
+#include "./src/api/color.c"
