@@ -22,8 +22,19 @@
 
 #include "vt.h"
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
+static VirtualTerminal *get_vt_arg(RDNApi *api, long index) {
+    long handle = 0;
+
+    if (!api->to_integer(api, index, &handle)) {
+        return NULL;
+    }
+
+    return (VirtualTerminal *)(intptr_t)handle;
+}
 
 static Cell *get_cell(VirtualTerminal *vt, unsigned short x, unsigned short y) {
     // x and y is unsigned short so i don't have to worry about negative value
@@ -145,6 +156,7 @@ bool rmp_vt_init(RDNApi *api) {
     long height;
     bool res = api->to_integer(api, -1, &height);
     res &= api->to_integer(api, -2, &width);
+    api->pop(api, 2);
     if (!res) {
         api->push_null(api);
         api->push_string(api, "error with input value");
@@ -203,24 +215,31 @@ bool rmp_vt_init(RDNApi *api) {
         strcpy(vt->buffer[i].style, "");
     }
 
-    api->push_string(api, (char *)(void *)vt);
+    api->push_integer(api, (long)(intptr_t)vt);
     api->push_null(api);
     return true;
 }
 
 bool rmp_vt_distroy(RDNApi *api) {
-    VirtualTerminal *vt = (VirtualTerminal *)(void *)api->to_string(api, -1);
+    VirtualTerminal *vt = get_vt_arg(api, -1);
+    api->pop(api, 1);
+    if (!vt) {
+        api->push_boolean(api, false);
+        return true;
+    }
+
     free(vt->buffer);
-    vt->buffer = NULL;
-    return 0;
+    free(vt);
+    api->push_boolean(api, true);
+    return true;
 }
 
 bool rmp_vt_clear(RDNApi *api) {
-    VirtualTerminal *vt = (VirtualTerminal *)(void *)api->to_string(api, -1);
+    VirtualTerminal *vt = get_vt_arg(api, -1);
+    api->pop(api, 1);
 
     if (!vt || !vt->buffer) {
         return api->push_boolean(api, false);
-        return true;
     }
 
     size_t total_size = vt->width * vt->height;
@@ -235,14 +254,12 @@ bool rmp_vt_clear(RDNApi *api) {
     }
     vt->is_dirty = true;
     return api->push_boolean(api, true);
-    return true;
 }
 
 bool rmp_vt_setchar(RDNApi *api) {
-    VirtualTerminal *vt = (VirtualTerminal *)(void *)api->to_string(api, -7);
+    VirtualTerminal *vt = get_vt_arg(api, -7);
     if (!vt || !vt->buffer) {
         return api->push_boolean(api, false);
-        return true;
     }
 
     long x;
@@ -270,12 +287,15 @@ bool rmp_vt_setchar(RDNApi *api) {
         cell->style[sizeof(cell->style) - 1] = '\0';
         vt->is_dirty = true;
     }
+    api->pop(api, 7);
     return api->push_boolean(api, true);
-    return true;
 }
 
 bool rmp_vt_writetext(RDNApi *api) {
-    VirtualTerminal *vt = (VirtualTerminal *)(void *)api->to_string(api, -7);
+    VirtualTerminal *vt = get_vt_arg(api, -7);
+    if (!vt || !vt->buffer) {
+        return api->push_boolean(api, false);
+    }
 
     long x;
     long y;
@@ -393,11 +413,13 @@ bool rmp_vt_writetext(RDNApi *api) {
     }
 
     vt->is_dirty = true;
+    api->pop(api, 7);
+    api->push_boolean(api, true);
     return true;
 }
 
 bool rmp_vt_open_win(RDNApi *api) {
-    VirtualTerminal *vt = (VirtualTerminal *)(void *)api->to_string(api, -9);
+    VirtualTerminal *vt = get_vt_arg(api, -9);
 
     long x;
     long y;
@@ -430,14 +452,13 @@ bool rmp_vt_open_win(RDNApi *api) {
     const char *tr_corner = Border[border][3];
     const char *bl_corner = Border[border][4];
     const char *br_corner = Border[border][5];
-    bool use_default = true;
-
     const char *fg = api->to_string(api, -2);
     const char *bg = api->to_string(api, -1);
     fg = fg == NULL ? "" : fg;
     bg = bg == NULL ? "" : bg;
 
-    if (width < 1 || height < 1 || x < 1 || y < 1) {
+    if (!vt || !vt->buffer || !res || width < 1 || height < 1 || x < 1 || y < 1) {
+        api->pop(api, 9);
         api->push_boolean(api , false);
         return true;
     }
@@ -552,19 +573,21 @@ bool rmp_vt_open_win(RDNApi *api) {
     }
 
     vt->is_dirty = true;
+    api->pop(api, 9);
     api->push_boolean(api , true);
     return true;
 }
 
 bool rmp_vt_merge(RDNApi *api) {
-    VirtualTerminal *dest_vt = (VirtualTerminal *)(void *)api->to_string(api, -4);
-    VirtualTerminal *src_vt = (VirtualTerminal *)(void *)api->to_string(api, -3);
+    VirtualTerminal *dest_vt = get_vt_arg(api, -4);
+    VirtualTerminal *src_vt = get_vt_arg(api, -3);
     bool res = true;
     long offset_x;
     long offset_y;
     res = api->to_integer(api, -2, &offset_x);
     res = api->to_integer(api, -1, &offset_y);
     if (!dest_vt || !dest_vt->buffer || !src_vt || !src_vt->buffer || !res) {
+        api->pop(api, 4);
         api->push_boolean(api , false);
         return true;
     }
@@ -590,6 +613,7 @@ bool rmp_vt_merge(RDNApi *api) {
 
     if (start_src_y > end_src_y || start_src_x > end_src_x) {
         dest_vt->is_dirty = true;
+        api->pop(api, 4);
         api->push_boolean(api , false);
         return true;
     }
@@ -617,36 +641,40 @@ bool rmp_vt_merge(RDNApi *api) {
     }
 
     dest_vt->is_dirty = true;
+    api->pop(api, 4);
     api->push_boolean(api , true);
     return true;
 }
 
 bool rmp_vt_render(RDNApi *api) {
-    VirtualTerminal *vt = (VirtualTerminal *)(void *)api->to_string(api, -1);
+    VirtualTerminal *vt = get_vt_arg(api, -1);
+    if (!vt) {
+        api->pop(api, 1);
+        api->push_boolean(api, false);
+        api->push_string(api, "invalid virtual terminal handle");
+        return true;
+    }
     if (!vt->is_dirty) {
+        api->pop(api, 1);
         api->push_boolean(api , false);
         api->push_string(api, "the VirtualTerminal is not modified");
         return true;
     }
     if (!vt->buffer) {
+        api->pop(api, 1);
         api->push_boolean(api , false);
         api->push_string(api, "buffer is not allocated or it's NULL value");
         return true;
     }
 
-    RLList(char *) sb = {0};
-
-    char sequence_buf[128];
+    int saved_cursor_x = vt->cursor_x;
+    int saved_cursor_y = vt->cursor_y;
     char current_fg[CH_STRYLE_AND_COLOR_SIZE] = "";
     char current_bg[CH_STRYLE_AND_COLOR_SIZE] = "";
     char current_style[CH_STRYLE_AND_COLOR_SIZE] = "";
-    int saved_cursor_x = vt->cursor_x;
-    int saved_cursor_y = vt->cursor_y;
 
     for (int y = 1; y <= vt->height; y++) {
-        snprintf(sequence_buf, sizeof(sequence_buf), "\x1b[%d;%dH", y, 1);
-        ray_append(&sb, sequence_buf);
-        ray_append(&sb, "\x1b[0m");
+        fprintf(stdout, "\x1b[%d;%dH\x1b[0m", y, 1);
         current_style[0] = '\0';
         current_fg[0] = '\0';
         current_bg[0] = '\0';
@@ -657,11 +685,10 @@ bool rmp_vt_render(RDNApi *api) {
                 continue;
             }
 
-            int style_changed = strcmp(cell->style, current_style) != 0;
-            int fg_changed = strcmp(cell->fg, current_fg) != 0;
-            int bg_changed = strcmp(cell->bg, current_bg) != 0;
-            if (style_changed || fg_changed || bg_changed) {
-                ray_append(&sb, "\x1b[0m");
+            if (strcmp(cell->style, current_style) != 0 ||
+                strcmp(cell->fg, current_fg) != 0 ||
+                strcmp(cell->bg, current_bg) != 0) {
+                fprintf(stdout, "\x1b[0m");
                 strncpy(current_style, cell->style, sizeof(current_style) - 1);
                 current_style[sizeof(current_style) - 1] = '\0';
                 strncpy(current_fg, cell->fg, sizeof(current_fg) - 1);
@@ -669,47 +696,25 @@ bool rmp_vt_render(RDNApi *api) {
                 strncpy(current_bg, cell->bg, sizeof(current_bg) - 1);
                 current_bg[sizeof(current_bg) - 1] = '\0';
 
-                // Apply combined color/style sequence
-                if (current_style[0] != '\0')
-                    ray_append(&sb, current_style);
-                if (current_fg[0] != '\0')
-                    ray_append(&sb, current_fg);
-                if (current_bg[0] != '\0')
-                    ray_append(&sb, current_bg);
+                if (current_style[0] != '\0') {
+                    fputs(current_style, stdout);
+                }
+                if (current_fg[0] != '\0') {
+                    fputs(current_fg, stdout);
+                }
+                if (current_bg[0] != '\0') {
+                    fputs(current_bg, stdout);
+                }
             }
-            ray_append(&sb, cell->ch);
+
+            fputs(cell->ch, stdout);
         }
     }
 
-    // Restore cursor position
-    snprintf(sequence_buf, sizeof(sequence_buf), "\x1b[%d;%dH", saved_cursor_y,
-            saved_cursor_x);
-    ray_append(&sb, sequence_buf);
-
-    // Check if buffer allocation failed during building
-    if (!sb.items) {
-        api->push_boolean(api , false);
-        api->push_string(api, "Buffer allocation failed during rendering");
-        return true;
-    }
-    // Write the output
-#ifdef PLATFORM_WINDOWS
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hConsole != INVALID_HANDLE_VALUE) {
-        DWORD written;
-        WriteConsoleA(hConsole, sb.data, (DWORD)sb.size, &written, NULL);
-    } else {
-        fwrite(sb.data, sizeof(char), sb.size, stdout);
-    }
-#else
-    fwrite(sb.items, sizeof(char), sb.count, stdout);
-#endif
-
+    fprintf(stdout, "\x1b[%d;%dH", saved_cursor_y, saved_cursor_x);
     fflush(stdout);
     vt->is_dirty = false;
-
-    // Clean up
-    ray_clear(&sb);
+    api->pop(api, 1);
     api->push_boolean(api , true);
     api->push_null(api);
     return true;
@@ -717,19 +722,32 @@ bool rmp_vt_render(RDNApi *api) {
 
 bool rmp_vt_movecursor(RDNApi* api)
 {
-    VirtualTerminal *vt = (VirtualTerminal *)(void *)api->to_string(api, -3);
+    VirtualTerminal *vt = get_vt_arg(api, -3);
     long x;
     long y;
+    if (!vt) {
+        api->pop(api, 3);
+        return api->push_boolean(api, false);
+    }
     api->to_integer(api , -2 , &x);
     api->to_integer(api , -1 , &y);
     vt->cursor_x = (x < 1) ? 1 : (x > vt->width) ? vt->width : x;
     vt->cursor_y = (y < 1) ? 1 : (y > vt->height) ? vt->height : y;
+    api->pop(api, 3);
+    api->push_boolean(api, true);
     return true;
 }
 
 bool rmp_vt_getsize(RDNApi* api)
 {
-    VirtualTerminal *vt = (VirtualTerminal *)(void *)api->to_string(api, -1);
+    VirtualTerminal *vt = get_vt_arg(api, -1);
+    if (!vt) {
+        api->pop(api, 1);
+        api->push_null(api);
+        api->push_null(api);
+        return true;
+    }
+    api->pop(api, 1);
     api->push_integer(api , vt->width);
     api->push_integer(api , vt->height);
     return true;
@@ -737,24 +755,33 @@ bool rmp_vt_getsize(RDNApi* api)
 
 bool rmp_vt_resize(RDNApi* api)
 {
-    VirtualTerminal *vt = (VirtualTerminal *)(void *)api->to_string(api, -3);
+    VirtualTerminal *vt = get_vt_arg(api, -3);
     long new_width;
     long new_height;
+    if (!vt || !vt->buffer) {
+        api->pop(api, 3);
+        api->push_boolean(api, false);
+        api->push_string(api, "invalid virtual terminal handle");
+        return true;
+    }
     api->to_integer(api , -2 , &new_width);
     api->to_integer(api , -1 , &new_height);
 
     if (new_width <= 0 || new_height <= 0) {
+        api->pop(api, 3);
         api->push_boolean(api, false);
         api->push_string(api, "Invalid dimensions: width and height must be positive");
         return true;
     }
     if (new_width > USHRT_MAX || new_height > USHRT_MAX) {
+        api->pop(api, 3);
         api->push_boolean(api, false);
         api->push_string(api, "Invalid dimensions: width and height must be <= 65535");
         return true;
     }
 
     if ((size_t)new_width > SIZE_MAX / new_height / sizeof(Cell)) {
+        api->pop(api, 3);
         api->push_boolean(api, false);
         api->push_string(api, "Dimensions too large: potential overflow");
         return true;
@@ -763,6 +790,7 @@ bool rmp_vt_resize(RDNApi* api)
     size_t new_buffer_size = new_width * new_height * sizeof(Cell);
     Cell* new_buffer = (Cell*)malloc(new_buffer_size);
     if (new_buffer == NULL) {
+        api->pop(api, 3);
         api->push_boolean(api, false);
         api->push_string(api, "Failed to allocate memory for resized buffer");
         return true;
@@ -795,6 +823,7 @@ bool rmp_vt_resize(RDNApi* api)
 
     vt->is_dirty = true;
 
+    api->pop(api, 3);
     api->push_boolean(api, true);
     api->push_null(api);
     return true;
@@ -802,55 +831,81 @@ bool rmp_vt_resize(RDNApi* api)
 
 bool rmp_vt_moveup(RDNApi* api)
 {
-    VirtualTerminal *vt = (VirtualTerminal *)(void *)api->to_string(api, -2);
+    VirtualTerminal *vt = get_vt_arg(api, -2);
     long steps;
+    if (!vt) {
+        api->pop(api, 2);
+        return api->push_boolean(api, false);
+    }
     bool res = api->to_integer(api , -1 , &steps);
     if (!res) steps = 1;
     vt->cursor_y = (vt->cursor_y - steps < 1) ? 1 : vt->cursor_y - steps;
+    api->pop(api, 2);
+    api->push_boolean(api, true);
     return true;
 }
 
 bool rmp_vt_movedown(RDNApi* api)
 {
-    VirtualTerminal *vt = (VirtualTerminal *)(void *)api->to_string(api, -2);
+    VirtualTerminal *vt = get_vt_arg(api, -2);
     long steps;
+    if (!vt) {
+        api->pop(api, 2);
+        return api->push_boolean(api, false);
+    }
     bool res = api->to_integer(api , -1 , &steps);
     if (!res) steps = 1;
     vt->cursor_y = (vt->cursor_y + steps > vt->height) ? vt->height : vt->cursor_y + steps;
+    api->pop(api, 2);
+    api->push_boolean(api, true);
     return true;
 }
 
 bool rmp_vt_moveleft(RDNApi* api)
 {
-    VirtualTerminal *vt = (VirtualTerminal *)(void *)api->to_string(api, -2);
+    VirtualTerminal *vt = get_vt_arg(api, -2);
     long steps;
+    if (!vt) {
+        api->pop(api, 2);
+        return api->push_boolean(api, false);
+    }
     bool res = api->to_integer(api , -1 , &steps);
     if (!res) steps = 1;
     vt->cursor_x = (vt->cursor_x - steps < 1) ? 1 : vt->cursor_x - steps;
+    api->pop(api, 2);
+    api->push_boolean(api, true);
     return true;
 }
 
 bool rmp_vt_moveright(RDNApi* api)
 {
-    VirtualTerminal *vt = (VirtualTerminal *)(void *)api->to_string(api, -2);
+    VirtualTerminal *vt = get_vt_arg(api, -2);
     long steps;
+    if (!vt) {
+        api->pop(api, 2);
+        return api->push_boolean(api, false);
+    }
     bool res = api->to_integer(api , -1 , &steps);
     if (!res) steps = 1;
     vt->cursor_x = (vt->cursor_x + steps > vt->width) ? vt->width : vt->cursor_x + steps;
+    api->pop(api, 2);
+    api->push_boolean(api, true);
     return true;
 }
 
 bool rmp_vt_copy(RDNApi* api)
 {
-    VirtualTerminal *src_vt = (VirtualTerminal *)(void *)api->to_string(api, -1);
+    VirtualTerminal *src_vt = get_vt_arg(api, -1);
 
     if (!src_vt || !src_vt->buffer) {
+        api->pop(api, 1);
         api->push_null(api);
         api->push_string(api, "Invalid source virtual terminal");
         return true;
     }
 
     if (src_vt->width > SIZE_MAX / src_vt->height / sizeof(Cell)) {
+        api->pop(api, 1);
         api->push_null(api);
         api->push_string(api, "Source virtual terminal too large: potential overflow");
         return true;
@@ -861,6 +916,7 @@ bool rmp_vt_copy(RDNApi* api)
     size_t vt_size = sizeof(VirtualTerminal);
     VirtualTerminal *dest_vt = (VirtualTerminal *)malloc(vt_size);
     if (!dest_vt) {
+        api->pop(api, 1);
         api->push_null(api);
         api->push_string(api, "Failed to create destination virtual terminal");
         return true;
@@ -874,6 +930,7 @@ bool rmp_vt_copy(RDNApi* api)
     dest_vt->buffer = (Cell*)malloc(buffer_size);
 
     if (dest_vt->buffer == NULL) {
+        api->pop(api, 1);
         api->push_null(api);
         api->push_string(api, "Failed to allocate memory for copied buffer");
         return true;
@@ -881,7 +938,8 @@ bool rmp_vt_copy(RDNApi* api)
 
     memcpy(dest_vt->buffer, src_vt->buffer, buffer_size);
 
-    api->push_string(api , (char*)(void*)dest_vt);
+    api->pop(api, 1);
+    api->push_integer(api, (long)(intptr_t)dest_vt);
     api->push_null(api);
 
     return true;

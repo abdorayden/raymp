@@ -20,8 +20,25 @@
 *   THE SOFTWARE.
 * *]
 
-"./vt.rdn" load
-"./term.rdn" load
-"./platform.rdn" load
-"./sleep.rdn" load
-"./directory.rdn" load
+[* 
+*   rdn file that will be loaded at the runtime
+*   platform.rdn is hight level layer of platform manipulations
+*   it protect backward complatible in case the native layer API has been
+*   upgraded or changed
+* *]
+
+[* RMPPlatform *]
+enum RMP_PLATFORM_LINUX    const
+enum RMP_PLATFORM_WINDOWS    const
+enum RMP_PLATFORM_MAC    const
+enum RMP_PLATFORM_UNKNOW    const
+reset
+
+[* 
+*   rmp_platform: returns host platform enum value
+*   example:
+*       rmp_platform call -> integer [RMPPlatform]
+* *]
+rmp_platform defun
+    rmp_platform_native call
+end

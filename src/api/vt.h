@@ -91,7 +91,7 @@
 #else
     int wcwidth(wchar_t);
     // on unix, we can use system wcwidth
-    inline int unicode_width(char32_t ucs) {
+    static inline int unicode_width(char32_t ucs) {
         // cast to wchar_t for system wcwidth function
         // this should work for most cases since unicode codepoints <= 0x10ffff
         return wcwidth((wchar_t)(ucs <= WCHAR_MAX ? ucs : '?'));

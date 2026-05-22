@@ -4,6 +4,7 @@ bool rmp_to_raw_mode(RDNApi* api)
 {
     bool enable = true;
     api->to_boolean(api , -1 , &enable);
+    api->pop(api, 1);
 
 #ifndef _WIN32
 
@@ -93,6 +94,7 @@ bool rmp_get_term_size(RDNApi* api)
 
 bool init_terminal(RDNApi* api)
 {
+    (void)api;
 #ifdef _WIN32
 	if (!initialized) {
 		hStdin = GetStdHandle(STD_INPUT_HANDLE);
@@ -116,6 +118,7 @@ bool init_terminal(RDNApi* api)
 }
 bool restore_terminal(RDNApi* api)
 {
+    (void)api;
 #ifdef _WIN32
 	if (initialized) {
 		SetConsoleMode(hStdin, oldMode);

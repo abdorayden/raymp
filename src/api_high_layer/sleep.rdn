@@ -20,8 +20,13 @@
 *   THE SOFTWARE.
 * *]
 
-"./vt.rdn" load
-"./term.rdn" load
-"./platform.rdn" load
-"./sleep.rdn" load
-"./directory.rdn" load
+rmp_sleep defun
+    tha-list let
+
+    tha-list type "list" != if
+        false
+    else
+        tha-list 0 index
+        rmp_sleep_native call
+    end
+end

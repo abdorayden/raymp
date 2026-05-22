@@ -20,52 +20,72 @@
 *   THE SOFTWARE.
 * *]
 
-[*
+[* 
 *   rdn file that will be loaded at the runtime
-*   term.rdn is hight level layer of Terminal manipulations
-*   it protect backward complatible in case the native layer API has been 
+*   directory.rdn is hight level layer of directory and path manipulations
+*   it protect backward complatible in case the native layer API has been
 *   upgraded or changed
 * *]
 
-[*
-*  rmp_to_raw_mode: function that accept boolean 
-*  true to raw mode false not
-*  and returns boolean indicate the error
-*  example:
-*       (true) rmp_to_raw_mode call -> boolean
+[* 
+*   rmp_get_current_path: returns current working directory as string?
 * *]
-rmp_to_raw_mode defun
+rmp_get_current_path defun
+    rmp_get_current_path_native call
+end
+
+[* 
+*   rmp_home_path: returns home directory as string?
+* *]
+rmp_home_path defun
+    rmp_home_path_native call
+end
+
+[* 
+*   rmp_list_dir: returns directory entries from a path
+*   example:
+*       (".") rmp_list_dir call -> list? string?
+* *]
+rmp_list_dir defun
     tha-list let
 
     tha-list type "list" != if
-        false
+        null "rmp_list_dir expects list (...)"
     else
-        tha-list 0 index [* boolean *]
-        rmp_to_raw_mode_native call
+        tha-list 0 index
+        rmp_list_dir_native call
     end
 end
 
-[*
-*   rmp_get_term_size: function that push two values into the stack
-*   as return value width and height of the function
-*   otherwise it push two null value indicates that is error
+[* 
+*   rmp_mkdir: create directory with optional mode
 *   example:
-*       rmp_get_term_size call -> integer? integer?
+*       ("./foo" 755) rmp_mkdir call -> boolean string?
 * *]
-rmp_get_term_size defun
-    rmp_get_term_size_native call
+rmp_mkdir defun
+    tha-list let
+
+    tha-list type "list" != if
+        false "rmp_mkdir expects list (...)"
+    else
+        tha-list 0 index
+        tha-list 1 index
+        rmp_mkdir_native call
+    end
 end
 
-[*
-*   rmp_init_terminal: always intial terminal first
+[* 
+*   rmp_rmdir: remove directory
+*   example:
+*       ("./foo") rmp_rmdir call -> boolean string?
 * *]
-rmp_init_terminal defun
-    rmp_init_terminal_native call
-end
+rmp_rmdir defun
+    tha-list let
 
-[*
-*   rmp_restore_terminal: and don't forget to restore the og one
-* *]
-rmp_restore_terminal defun
-    rmp_restore_terminal_native call
+    tha-list type "list" != if
+        false "rmp_rmdir expects list (...)"
+    else
+        tha-list 0 index
+        rmp_rmdir_native call
+    end
 end

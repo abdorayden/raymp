@@ -40,18 +40,15 @@
 * *]
 rmp_vt_init defun
     tha_params let
-    tha-list type "list" != if
+    tha_params type "list" != if
         null "the param type is not a list"
     else
-        tha_params 0 index width let
-        tha_params 1 index height let
-    
-        width null = width type "integer" != |
-        height null = height  type "integer" != | |
-        if
+        tha_params len 2 < if
             1 1 rmp_vt_init_native call
         else
-            width height rmp_vt_init_native call
+            tha_params 0 index
+            tha_params 1 index
+            rmp_vt_init_native call
         end
     end
 end
