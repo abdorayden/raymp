@@ -419,7 +419,7 @@ bool rmp_vt_writetext(RDNApi *api) {
 }
 
 bool rmp_vt_open_win(RDNApi *api) {
-    VirtualTerminal *vt = get_vt_arg(api, -9);
+    VirtualTerminal *vt = get_vt_arg(api, -10);
 
     long x;
     long y;
@@ -427,7 +427,7 @@ bool rmp_vt_open_win(RDNApi *api) {
     long height;
     long border;
 
-    const char *title = api->to_string(api, -8);
+    const char *title = api->to_string(api, -9);
     size_t title_len;
     if (title == NULL) {
         title = " ";
@@ -436,23 +436,23 @@ bool rmp_vt_open_win(RDNApi *api) {
         title_len = strlen(title);
     }
 
-    bool res = api->to_integer(api, -7, &x);
+    bool res = api->to_integer(api, -8, &x);
     if (res == false) {
         x = 1;
     }
-    res &= api->to_integer(api, -6, &y);
+    res &= api->to_integer(api, -7, &y);
     if (res == false) {
         y = 1;
     }
-    res &= api->to_integer(api, -5, &width);
+    res &= api->to_integer(api, -6, &width);
     if (res == false) {
         width = 10;
     }
-    res &= api->to_integer(api, -4, &height);
+    res &= api->to_integer(api, -5, &height);
     if (res == false) {
         height = 5;
     }
-    res &= api->to_integer(api, -3, &border);
+    res &= api->to_integer(api, -4, &border);
     if (res == false) {
         border = NoBorder;
     }
@@ -467,14 +467,15 @@ bool rmp_vt_open_win(RDNApi *api) {
     const char *tr_corner = Border[border][3];
     const char *bl_corner = Border[border][4];
     const char *br_corner = Border[border][5];
-    const char *fg = api->to_string(api, -2);
-    const char *bg = api->to_string(api, -1);
+    const char *fg = api->to_string(api, -3);
+    const char *bg = api->to_string(api, -2);
+    const char *style = api->to_string(api, -1);
     fg = fg == NULL ? "" : fg;
     bg = bg == NULL ? "" : bg;
+    style = style == NULL ? "" : style;
 
     if (vt == NULL || vt->buffer == NULL || width < 1 || height < 1 || x < 1 || y < 1) {
-        // api->pop(api, 9);
-        fprintf(stderr, "height: %ld\n" , height);
+        api->pop(api, 10);
         api->push_boolean(api , false);
         return true;
     }
@@ -499,7 +500,8 @@ bool rmp_vt_open_win(RDNApi *api) {
             top_cell->fg[sizeof(top_cell->fg) - 1] = '\0';
             strncpy(top_cell->bg, bg, sizeof(top_cell->bg) - 1);
             top_cell->bg[sizeof(top_cell->bg) - 1] = '\0';
-            top_cell->style[0] = '\0';
+            strncpy(top_cell->style, style, sizeof(top_cell->style) - 1);
+            top_cell->style[sizeof(top_cell->style) - 1] = '\0';
         }
     }
 
@@ -521,7 +523,8 @@ bool rmp_vt_open_win(RDNApi *api) {
                 bottom_cell->fg[sizeof(bottom_cell->fg) - 1] = '\0';
                 strncpy(bottom_cell->bg, bg, sizeof(bottom_cell->bg) - 1);
                 bottom_cell->bg[sizeof(bottom_cell->bg) - 1] = '\0';
-                bottom_cell->style[0] = '\0';
+                strncpy(bottom_cell->style, style, sizeof(bottom_cell->style) - 1);
+                bottom_cell->style[sizeof(bottom_cell->style) - 1] = '\0';
             }
         }
     }
@@ -535,7 +538,8 @@ bool rmp_vt_open_win(RDNApi *api) {
             left_cell->fg[sizeof(left_cell->fg) - 1] = '\0';
             strncpy(left_cell->bg, bg, sizeof(left_cell->bg) - 1);
             left_cell->bg[sizeof(left_cell->bg) - 1] = '\0';
-            left_cell->style[0] = '\0';
+            strncpy(left_cell->style, style, sizeof(left_cell->style) - 1);
+            left_cell->style[sizeof(left_cell->style) - 1] = '\0';
         }
 
         if (width > 1) {
@@ -547,7 +551,8 @@ bool rmp_vt_open_win(RDNApi *api) {
                 right_cell->fg[sizeof(right_cell->fg) - 1] = '\0';
                 strncpy(right_cell->bg, bg, sizeof(right_cell->bg) - 1);
                 right_cell->bg[sizeof(right_cell->bg) - 1] = '\0';
-                right_cell->style[0] = '\0';
+                strncpy(right_cell->style, style, sizeof(right_cell->style) - 1);
+                right_cell->style[sizeof(right_cell->style) - 1] = '\0';
             }
         }
     }
@@ -561,7 +566,8 @@ bool rmp_vt_open_win(RDNApi *api) {
                 interior_cell->fg[0] = '\0';
                 strncpy(interior_cell->bg, bg, sizeof(interior_cell->bg) - 1);
                 interior_cell->bg[sizeof(interior_cell->bg) - 1] = '\0';
-                interior_cell->style[0] = '\0';
+                strncpy(interior_cell->style, style, sizeof(interior_cell->style) - 1);
+                interior_cell->style[sizeof(interior_cell->style) - 1] = '\0';
             }
         }
     }
@@ -583,13 +589,14 @@ bool rmp_vt_open_win(RDNApi *api) {
                 title_cell->fg[sizeof(title_cell->fg) - 1] = '\0';
                 strncpy(title_cell->bg, bg, sizeof(title_cell->bg) - 1);
                 title_cell->bg[sizeof(title_cell->bg) - 1] = '\0';
-                title_cell->style[0] = '\0';
+                strncpy(title_cell->style, style, sizeof(title_cell->style) - 1);
+                title_cell->style[sizeof(title_cell->style) - 1] = '\0';
             }
         }
     }
 
     vt->is_dirty = true;
-    api->pop(api, 9);
+    api->pop(api, 10);
     api->push_boolean(api , true);
     return true;
 }

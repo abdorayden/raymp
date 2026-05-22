@@ -12,9 +12,72 @@ color defun
     tha-list type "list" != if
         false
     else
-        tha-list 1 index [*hex color*]
         tha-list 0 index [*type*]
+        tha-list 1 index [*hex color*]
 	    rmp_color_native call
     end
 end
 
+[* ForeGround No bright *]
+(FG "#000000") color call FGNBBlack const
+(FG "#ff0000") color call FGNBRed const
+(FG "#00ff00") color call FGNBGreen const
+(FG "#ffff00") color call FGNBYellow const
+(FG "#0000ff") color call FGNBBlue const
+(FG "#ff00ff") color call FGNBMagenta const
+(FG "#00ffff") color call FGNBCyan const
+(FG "#ffffff") color call FGNBWhite const
+
+[* ForeGround bright *]
+(FG "#808080") color call FGBBlack const
+(FG "#FF5555") color call FGBRed const
+(FG "#32cd32") color call FGBGreen const
+(FG "#ffeb3b") color call FGBYellow const
+(FG "#1e90ff") color call FGBBlue const
+(FG "#ff77ff") color call FGBMagenta const
+(FG "#7fffd4") color call FGBCyan const
+(FG "#f4f4f4") color call FGBWhite const
+
+[* BackGround No bright *]
+(BG "#000000") color call BGNBBlack const
+(BG "#ff0000") color call BGNBRed const
+(BG "#00ff00") color call BGNBGreen const
+(BG "#ffff00") color call BGNBYellow const
+(BG "#0000ff") color call BGNBBlue const
+(BG "#ff00ff") color call BGNBMagenta const
+(BG "#00ffff") color call BGNBCyan const
+(BG "#ffffff") color call BGNBWhite const
+
+[* BackGround bright *]
+(BG "#808080") color call BGBBlack const
+(BG "#FF5555") color call BGBRed const
+(BG "#32cd32") color call BGBGreen const
+(BG "#ffeb3b") color call BGBYellow const
+(BG "#1e90ff") color call BGBBlue const
+(BG "#ff77ff") color call BGBMagenta const
+(BG "#7fffd4") color call BGBCyan const
+(BG "#f4f4f4") color call BGBWhite const
+
+"\e[0m" Reset const
+
+[* check ansi escape code : https://en.wikipedia.org/wiki/ANSI_escape_code *]
+[* line style *]
+[* TextStyle *]
+ "\e[9m" Strike const
+ "\e[8m" Hide const
+ "\e[5m" SlowBlink const
+ "\e[53m" OverUnderline const
+ "\e[4m" Underline const
+ "\e[21m" DoubleUnderline const
+ "\e[3m" Italic const
+ "\e[1m" Bold const
+ "\e[6m" RapidBlink const
+ "\e[2m" Faint const
+ "\e[7m" Reverse const
+ "\e[51m" Framed const
+ "\e[52m" Encircled const
+ "\e[55m" Overline const
+ "\e[26m" ProportionalSpacing const
+ "\e[73m" Superscript const
+ "\e[74m" Subscript const
+ Reset Regular const

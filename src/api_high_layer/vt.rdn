@@ -149,7 +149,7 @@ reset
 *   it returns boolean false if the params are not a list type or x and y
 *   and wifth and height are negative otherwise true
 *   example:
-*   (vt_t "logs" x y w h LightBorder fg bg) rmp_vt_open_win call -> boolean
+*   (vt_t "logs" x y w h LightBorder fg bg style) rmp_vt_open_win call -> boolean
 * *]
 rmp_vt_open_win defun
     tha-list let
@@ -165,6 +165,7 @@ rmp_vt_open_win defun
         tha-list 6 index [* border *]
         tha-list 7 index [* fg *]
         tha-list 8 index [* bg *]
+        tha-list 9 index [* style *]
         rmp_vt_open_win_native call
     end
 end

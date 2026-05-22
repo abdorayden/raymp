@@ -37,8 +37,8 @@ rmp_term_hide_cursor call
 (true) rmp_to_raw_mode call
 
 rmp_get_term_size call
-height let
 width let
+height let
 (width height) rmp_vt_init call
 err let
 vt let
@@ -53,18 +53,21 @@ else
         end
 
         [* key KEY_A = if *]
-            (FG "#ffdd00") color call fg_color let 
-            (BG "#224488") color call bg_color let 
+            [* (FG "#ffdd00") color call fg_color let  *]
+            [* (BG "#224488") color call bg_color let  *]
+            (FG "#ff0044") color call fg_color let 
+            (BG "#ffffff") color call bg_color let 
 
             (vt 
             "test win"
             4 
             4 
-            20 
-            10
-            LightBorder
-            (FG "#ffdd00") color
-            (BG "#224488") color
+            width 5 -  
+            height 5 - 
+             LightBorder
+            fg_color
+            bg_color
+            ""
             )
             rmp_vt_open_win call pop false false = if
                 (
@@ -72,9 +75,9 @@ else
                 2 
                 2 
                 "open win false"
-                ""
-                ""
-                ""
+                Reset
+                Reset
+                Bold
                 )
                 rmp_vt_writetext call
             end
