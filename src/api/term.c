@@ -128,7 +128,6 @@ bool restore_terminal(RDNApi* api)
 		initialized = false;
 	}
 #endif
-    api->push_boolean(api, true);
     return true;
 }
 

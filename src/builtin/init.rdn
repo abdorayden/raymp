@@ -105,3 +105,10 @@ else
 end
 
 (vt) rmp_vt_distroy call pop
+(false) rmp_to_raw_mode call pop
+rmp_term_show_cursor call
+rmp_term_clear call
+rmp_restore_terminal call
+[*
+* handle reset
+* *]

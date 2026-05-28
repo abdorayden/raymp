@@ -1,0 +1,5 @@
+foo defun
+    43 print
+end
+
+("pfoo" foo) rmp-reg-command call

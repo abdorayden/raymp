@@ -1,37 +1,29 @@
+#ifndef RMPENGINE_H_
+#define RMPENGINE_H_
 #include "api/vt.h"
 #include "third_party/rdn/stack.h"
-#ifndef RMPENGINE_H_
-#include "./third_party/rdn/src.h"
+#include "third_party/rdn/src.h"
 
 // TODO: check how VirtualTerminal is used in vt.h to make functionalities of it use the engine frame for more memory optimisation
 
-typedef enum {
-    // handle this two commands and add more later
-    engine_EXIT,
-    engine_START,
-} EventsType;
- 
+
+
+// TODO: create a special api for working with engine and rename all folders that contains api in their names 
+// the engine api will works with one single virtual terminal
+
+// typedef enum {
+//     engine_EXIT,
+//     engine_START,
+// } EventsType;
+
 typedef struct {
     char* command_name;
     char* function_name;
 }RMPCommand;
 
 typedef RLList(RMPCommand) RMPCommands;
-typedef RLList(VirtualTerminal) VTS;
 
-typedef struct{
-    RDNState    state;
-    Vars        vars;
-    Funcs       funcs;
-    size_t      fps;
-    RMPCommands commands;
-    VTS vts;
-}RMPEngine;
-
-
-RMPEngine rmp_engine_init(RDNState , Vars , Funcs );
-void      rmp_engine_run(RMPEngine);
-void      rmp_engine_clear(RMPEngine);
+extern RMPCommands rmp_commands;
 
 #endif // !RMPENGINE_H_
 

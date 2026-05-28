@@ -1,0 +1,17 @@
+
+unpack apply
+    tha-list let
+    tha-list type "list" != if 
+        null
+    else
+        0 i let
+        tha-list len l let
+        i l < loop
+            tha-list i index
+            i 1 + i set
+            i l <
+        end
+    end
+end
+
+[* ("cmd-name"  "foo") unpack print "\n" print print *]

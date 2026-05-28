@@ -226,6 +226,7 @@ int main(int argc, char **argv) {
         return EXIT_SUCCESS;
     }
 
+    // handle configuration file and evaluate it
     if (!bootstrap_runtime(&stack, &vars, &funcs)) {
         goto cleanup;
     }
