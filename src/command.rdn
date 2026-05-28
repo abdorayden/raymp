@@ -1,4 +1,4 @@
-[*
+[* 
 *   Copyright (c) 2024-2026 Ray Den
 *   
 *   Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,11 +22,10 @@
 
 "helpers.rdn" load
 
-[*
-*   rmp-reg-command: function that accept list of two values 
-*   - command_name: the name of the command that u want to register
-*   - function_name: the function that will execute when the command is called
-*   - the return value is string option if it's null the function works correctly otherwise u will get a string value contains the error
+[* 
+*   rmp-reg-command: register a command name → function mapping
+*   args: (command_name function_name)
+*   returns: null on success, error string on failure
 *   example:
 *       ("stop" my-stop) rmp-reg-command call
 * *]
@@ -34,10 +33,59 @@ rmp-reg-command defun
     tha-params let
     tha-params type tha-params-type let
     tha-params-type "list" != if 
-        "rmp-reg-command accept list of two fieds got " tha-params-type append
+        "rmp-reg-command accept list of two fields got " tha-params-type append
     else
         tha-params unpack
         rmp-reg-command-native call
     end
+end
 
+[* 
+*   rmp-eval-cmd: execute a registered command by name
+*   args: (command_name)
+*   example:
+*       ("stop") rmp-eval-cmd call
+* *]
+rmp-eval-cmd defun
+    tha-params let
+    tha-params type "list" != if
+        "rmp-eval-cmd accept list of one field" 
+    else
+        tha-params 0 index
+        rmp-eval-cmd-native call
+    end
+end
+
+[* 
+*   rmp-map-key: map a key code to a command
+*   args: (key_code command_name)
+*   key_code should be one of the KEY_* constants from keyboard.rdn
+*   example:
+*       (KEY_CTRL_S "save") rmp-map-key call
+* *]
+rmp-map-key defun
+    tha-params let
+    tha-params type "list" != if
+        false
+    else
+        tha-params 0 index
+        tha-params 1 index
+        rmp-map-key-native call
+    end
+end
+
+[* 
+*   rmp-unmap-key: remove a key mapping
+*   args: (key_code)
+*   example:
+*       (KEY_CTRL_S) rmp-unmap-key call
+* *]
+rmp-unmap-key defun
+    tha-params let
+    tha-params type "list" != if
+        false
+    else
+        tha-params 0 index
+        rmp-unmap-key-native call
+    end
 end
