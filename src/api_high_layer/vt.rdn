@@ -54,6 +54,10 @@ rmp_vt_init defun
 end
 
 [*
+*   TODO: make sure that all native apis are consume the input params
+* *]
+
+[*
 *   rmp_vt_distroy : distroy virtual terminal buffer 
 *   returns boolean in case the param is not a list type
 *   example:
@@ -67,7 +71,6 @@ rmp_vt_distroy defun
     else
         tha-list 0 index 
         rmp_vt_distroy_native call
-        true
     end
 end
 

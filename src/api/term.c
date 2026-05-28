@@ -113,8 +113,6 @@ bool init_terminal(RDNApi* api)
 		initialized = true;
 	}
 #endif
-
-    api->push_boolean(api, true);
     return true;
 }
 bool restore_terminal(RDNApi* api)
@@ -138,7 +136,6 @@ bool rmp_term_clear(RDNApi* api)
 {
     fputs("\x1b[2J\x1b[H", stdout);
     fflush(stdout);
-    api->push_boolean(api, true);
     return true;
 }
 
@@ -146,7 +143,6 @@ bool rmp_term_hide_cursor(RDNApi* api)
 {
     fputs("\x1b[?25l", stdout);
     fflush(stdout);
-    api->push_boolean(api, true);
     return true;
 }
 
@@ -154,6 +150,5 @@ bool rmp_term_show_cursor(RDNApi* api)
 {
     fputs("\x1b[?25h", stdout);
     fflush(stdout);
-    api->push_boolean(api, true);
     return true;
 }

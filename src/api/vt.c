@@ -719,14 +719,14 @@ bool rmp_vt_render(RDNApi *api) {
                 strncpy(current_bg, cell->bg, sizeof(current_bg) - 1);
                 current_bg[sizeof(current_bg) - 1] = '\0';
 
-                if (current_style[0] != '\0') {
-                    fputs(current_style, stdout);
-                }
                 if (current_fg[0] != '\0') {
                     fputs(current_fg, stdout);
                 }
                 if (current_bg[0] != '\0') {
                     fputs(current_bg, stdout);
+                }
+                if (current_style[0] != '\0') {
+                    fputs(current_style, stdout);
                 }
             }
 

@@ -1,4 +1,8 @@
 
+[*
+*   TODO: introduce theme style with a better functionalities
+* *]
+
 reset
 enum FG const
 enum BG const

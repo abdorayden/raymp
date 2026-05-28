@@ -34,7 +34,10 @@ rmp_init_terminal call
 rmp_term_clear call
 rmp_term_hide_cursor call
 
-(true) rmp_to_raw_mode call
+(true) rmp_to_raw_mode call false = if
+    "cannot enable raw mode\n" print
+    1 exit
+end
 
 rmp_get_term_size call
 width let
@@ -48,15 +51,15 @@ err null != if
 else
     true loop
         rmp_get_key call key let
-        key KEY_Q = if 
+        key KEY_Q = key KEY_CTRL_C = | if 
             break
         end
 
         [* key KEY_A = if *]
-            [* (FG "#ffdd00") color call fg_color let  *]
-            [* (BG "#224488") color call bg_color let  *]
-            (FG "#ff0044") color call fg_color let 
-            (BG "#ffffff") color call bg_color let 
+            (FG "#ffdd00") color call fg_color let 
+            (BG "#224488") color call bg_color let 
+            [* (FG "#ff0044") color call fg_color let  *]
+            [* (BG "#ffffff") color call bg_color let  *]
 
             (vt 
             "test win"
@@ -67,7 +70,7 @@ else
              LightBorder
             fg_color
             bg_color
-            ""
+            Bold
             )
             rmp_vt_open_win call pop false false = if
                 (
@@ -79,7 +82,7 @@ else
                 Reset
                 Bold
                 )
-                rmp_vt_writetext call
+                rmp_vt_writetext call pop
             end
         [* else *]
         [*     ( *]
@@ -95,16 +98,10 @@ else
         [* end *]
 
 
-        (vt)
-        rmp_vt_render call
-        (vt) rmp_vt_clear call
+        (vt) rmp_vt_render call pop pop
+        (vt) rmp_vt_clear call pop 
         true
     end
 end
 
-
-rmp_restore_terminal call
-rmp_close_key call
-(vt) rmp_vt_distroy call
-pop pop pop pop pop pop 
-
+(vt) rmp_vt_distroy call pop
