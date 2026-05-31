@@ -1,0 +1,99 @@
+
+"./libs/lists.rdn" load
+"./libs/core.rdn" load
+
+(
+    ("BackGround" "#000000")
+    ("BorderColor" "#c0c0c0")
+    ("TitleBackGround" "#000000")
+    ("TitleText" "#c0c0c0")
+    ("PrimaryContent" "#00ff00")
+    ("SecondaryContent" "#00afff")
+    ("AccentElements" "#ff0000")
+    ("Highlight" "#ffff00")
+    ("MutedElements" "#808080")
+)
+default const
+
+(
+    ("BackGround" "#2b2b2b")
+    ("BorderColor" "#e0e0e0")
+    ("TitleBackGround" "#2b2b2b")
+    ("TitleText" "#e0e0e0")
+    ("PrimaryContent" "#c0a000")
+    ("SecondaryContent" "#87afd7")
+    ("AccentElements" "#d75f5f")
+    ("Highlight" "#ffaf5f")
+    ("MutedElements" "#a8a8a8")
+)
+desert const
+
+(
+    ("BackGround" "#1c1c1c")
+    ("BorderColor" "#d0d0d0")
+    ("TitleBackGround" "#1c1c1c")
+    ("TitleText" "#d0d0d0")
+    ("PrimaryContent" "#87af5f")
+    ("SecondaryContent" "#5f87af")
+    ("AccentElements" "#d75f5f")
+    ("Highlight" "#d7af5f")
+    ("MutedElements" "#808080")
+)
+elflord const
+
+(
+    ("default" default)
+    ("desert" desert)
+    ("elflord" elflord)
+)
+themes const
+
+[*
+*   get_current_theme_value: function that returns table of current theme colors
+*       
+* *]
+get_current_theme_value defun
+   null val let 
+   body defun
+        item let
+        item 0 index rmp-g-current-theme = if
+            item 1 index val set
+        end
+   end
+
+   body themes for
+   val
+end
+
+[*
+*   get_field_from_theme: function that returns hex color by field fromm current theme
+*   example:
+*   ("MutedElements") get_field_from_theme call
+*       
+* *]
+get_field_from_theme defun
+    tha-list let
+    is_list not if
+        null
+    else
+        get_current_theme_value call val let
+        val is_null if
+            null
+        else
+           tha-list 0 index needed let
+           null hexcolor let
+           body defun
+                item let
+                item 0 index needed = if
+                    item 1 index hexcolor set
+                end
+           end
+
+           body
+           val
+           for
+
+           hexcolor
+        end
+    end
+end

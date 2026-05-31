@@ -2,3 +2,33 @@
 *   must be loaded first after the bindings ofc
 * *]
 60 rmp-fps let
+
+rmp_get_term_size call
+width-g let
+height-g let
+
+(width-g height-g) rmp_vt_init call
+err-msg let
+[* Global VT handle, set by rmp-ui-init *]
+rmp-g-vt let
+
+[*theme*]
+"default" rmp-g-current-theme let
+
+err-msg null != if
+    [*
+    *   TODO: handle err-msg for the vt
+    * *]
+    1 exit
+end
+
+quit-rmp defun 
+    rmp_restore_terminal call
+    rmp_term_show_cursor call
+    (false) rmp_to_raw_mode call pop
+    rmp_term_clear call
+    (rmp-g-vt) rmp_vt_distroy call pop
+end
+
+("quit" quit-rmp) rmp-reg-command call
+(KEY_ALT_Q "quit") rmp-map-key call

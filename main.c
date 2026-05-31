@@ -11,6 +11,8 @@
 #include "./src/api/keyboard.h"
 #include "./src/api/color.h"
 
+#include "./src/command.h"
+
 #define RMP_NAME "Ray Media Platform"
 #define RMP_VERSION "0.1.0"
 
@@ -52,7 +54,11 @@ static bool register_native_api(Funcs *funcs) {
         register_native(funcs, "rmp_rmdir_native", rmp_rmdir) &&
         register_native(funcs, "rmp_get_key_native", rmp_get_key) &&
         register_native(funcs, "rmp_close_key_native", rmp_close_key) &&
-        register_native(funcs, "rmp_color_native", rmp_color);
+        register_native(funcs, "rmp_color_native", rmp_color) &&
+        register_native(funcs, "rmp-eval-cmd-native", eval_cmd_native) &&
+        register_native(funcs, "rmp-map-key-native", rmp_map_key_native) &&
+        register_native(funcs, "rmp-unmap-key-native", rmp_unmap_key_native) &&
+        register_native(funcs, "rmp-reg-command-native", reg_cmd_native);
 }
 
 static char *dup_env(const char *name) {
@@ -91,8 +97,10 @@ static bool bootstrap_runtime(RDNState *stack, Vars *vars, Funcs *funcs) {
         return false;
     }
 
-    if (!push_search_path(&g_script_search_paths, "src/api_high_layer") ||
-        !push_search_path(&g_script_search_paths, "src/builtin")) {
+    if (
+            !push_search_path(&g_script_search_paths, "src/api_high_layer") ||
+            !push_search_path(&g_script_search_paths, "src/builtin")
+            ) {
         fprintf(stderr, "failed to register bundled script paths\n");
         return false;
     }
@@ -107,7 +115,32 @@ static bool bootstrap_runtime(RDNState *stack, Vars *vars, Funcs *funcs) {
     if (!evaluate_file(stack, vars, funcs, "src/api_high_layer/api.rdn")) {
         return false;
     }
-    if (!source_if_exists(stack, vars, funcs, "src/builtin/first.rdn")) {
+
+    // if (!source_if_exists(stack, vars, funcs, "src/builtin/first.rdn")) {
+    //     return false;
+    // }
+    
+    if (!source_if_exists(stack, vars, funcs, "src/command.rdn")) {
+        return false;
+    }
+
+    if (!source_if_exists(stack, vars, funcs, "src/api_high_layer/colors.rdn")) {
+        return false;
+    }
+
+    if (!source_if_exists(stack, vars, funcs, "src/first.rdn")) {
+        return false;
+    }
+
+    if (!source_if_exists(stack, vars, funcs, "src/themes.rdn")) {
+        return false;
+    }
+
+    if (!source_if_exists(stack, vars, funcs, "src/ui.rdn")) {
+        return false;
+    }
+
+    if (!source_if_exists(stack, vars, funcs, "src/first_ui.rdn")) {
         return false;
     }
 
@@ -192,6 +225,11 @@ static bool bootstrap_runtime(RDNState *stack, Vars *vars, Funcs *funcs) {
         return false;
     }
 
+    // TODO: for cleaning
+    if (!source_if_exists(stack, vars, funcs, "src/clean.rdn")) {
+        return false;
+    }
+
     free(home);
     free(config_dir);
     free(config_dir_alt);
@@ -266,3 +304,4 @@ cleanup:
 #include "./src/api/directory.c"
 #include "./src/api/keyboard.c"
 #include "./src/api/color.c"
+#include "./src/command.c"

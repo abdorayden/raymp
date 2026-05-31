@@ -1,0 +1,4 @@
+[*
+*   NOTE: this file loaded at the end or quitting raymp
+*   it used to clean any allocations close engine vts and more
+* *]

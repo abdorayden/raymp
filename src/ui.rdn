@@ -1,4 +1,4 @@
-[*
+[* 
 *   Copyright (c) 2024-2026 Ray Den
 *   
 *   Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -21,8 +21,148 @@
 * *]
 
 [*
-*   rmp-open-win: is raymp api function that allows you to draw window in a virtual terminal engine buffer
+*   TODO: handle themes default one and another themes
 * *]
-rmp-open-win defun
 
+"./libs/lists.rdn" load
+
+[* 
+*   ui.rdn — high-level UI wrapper.
+*   Manages a single global VirtualTerminal so callers never pass a VT handle.
+*   The global VT is initialized by rmp-ui-init and stored in rmp-g-vt.
+*   Every operation uses this global VT internally.
+* *]
+
+[* 
+* TODO: never let colors of this api handled manualy 
+* it should use global theme handling
+*   rmp-ui-open-win: draw a bordered window on the global VT.
+*   args: (title x y width height border style)
+*   returns: boolean
+*   example:
+*       ("Logs" 2 2 30 10 LightBorder "") rmp-ui-open-win call
+* *]
+rmp-ui-open-win defun
+    tha-list let
+    tha-list
+    0
+    rmp-g-vt
+    insert 
+    call
+
+    tha-list 7 
+    ("BorderColor") get_field_from_theme call insert call
+
+    tha-list 8 
+    ("BackGround") get_field_from_theme call insert call
+
+    rmp_vt_open_win call true = if
+        null
+    else
+        "open win is failed"
+    end
+end
+
+[* 
+*   rmp-ui-writetext: write text at (x, y) on the global VT.
+*   args: (x y text fg bg style)
+*   returns: boolean
+* *]
+rmp-ui-writetext defun
+    tha-list let
+    tha-list
+    0
+    rmp-g-vt
+    insert call
+    rmp_vt_writetext call true = if
+        null
+    else
+        "write text is failed"
+    end
+
+end
+
+[* 
+*   rmp-ui-add: merge another VT onto the global VT at offset (x, y).
+*   in case u create a new vt using vt api and independed and you want 
+*   to add it to the engine vt
+*   args: (src_vt offset_x offset_y)
+*   returns: boolean
+* *]
+rmp-ui-add defun
+    tha-list let
+    tha-list
+    0
+    rmp-g-vt
+    insert call
+    rmp_vt_merge call true = if
+        null
+    else
+        "add vt to a main vt is failed"
+    end
+
+end
+
+[* 
+*   rmp-ui-getsize: get the global VT dimensions.
+*   args: ()
+*   returns: width? height?
+* *]
+rmp-ui-getsize defun
+    (rmp-g-vt) rmp_vt_getsize call
+end
+
+[* 
+*   rmp-ui-movecursor: move cursor to (x, y) on the global VT.
+*   args: (x y)
+*   returns: boolean
+* *]
+rmp-ui-movecursor defun
+    tha-list let
+    tha-list
+    0
+    rmp-g-vt
+    insert call
+    rmp_vt_movecursor call true = if
+        null
+    else
+        "move cursor is failed"
+    end
+
+end
+
+rmp-ui-moveup defun
+    tha-list let
+    tha-list
+    0
+    rmp-g-vt
+    insert call
+    rmp_vt_moveup call
+end
+
+rmp-ui-movedown defun
+    tha-list let
+    tha-list
+    0
+    rmp-g-vt
+    insert call
+    rmp_vt_movedown call
+end
+
+rmp-ui-moveleft defun
+    tha-list let
+    tha-list
+    0
+    rmp-g-vt
+    insert call
+    rmp_vt_moveleft call
+end
+
+rmp-ui-moveright defun
+    tha-list let
+    tha-list
+    0
+    rmp-g-vt
+    insert call
+    rmp_vt_moveright call
 end

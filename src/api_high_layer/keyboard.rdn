@@ -28,142 +28,81 @@
 * *]
 
 reset
-enum KEY_CTRL_A const
-enum KEY_CTRL_B const
-enum KEY_CTRL_C const
-enum KEY_CTRL_D const
-enum KEY_CTRL_E const
-enum KEY_CTRL_F const
-enum KEY_CTRL_G const
-enum KEY_CTRL_H const
-enum KEY_CTRL_K const
-enum KEY_CTRL_L const
-enum KEY_CTRL_M const
-enum KEY_CTRL_N const
-enum KEY_CTRL_O const
-enum KEY_CTRL_P const
-enum KEY_CTRL_Q const
-enum KEY_CTRL_R const
-enum KEY_CTRL_S const
-enum KEY_CTRL_T const
-enum KEY_CTRL_U const
-enum KEY_CTRL_V const
-enum KEY_CTRL_W const
-enum KEY_CTRL_X const
-enum KEY_CTRL_Y const
-enum KEY_CTRL_Z const
-enum KEY_ALT_A const
-enum KEY_ALT_B const
-enum KEY_ALT_C const
-enum KEY_ALT_D const
-enum KEY_ALT_E const
-enum KEY_ALT_F const
-enum KEY_ALT_G const
-enum KEY_ALT_H const
-enum KEY_ALT_I const
-enum KEY_ALT_J const
-enum KEY_ALT_K const
-enum KEY_ALT_L const
-enum KEY_ALT_M const
-enum KEY_ALT_N const
-enum KEY_ALT_O const
-enum KEY_ALT_P const
-enum KEY_ALT_Q const
-enum KEY_ALT_R const
-enum KEY_ALT_S const
-enum KEY_ALT_T const
-enum KEY_ALT_U const
-enum KEY_ALT_V const
-enum KEY_ALT_W const
-enum KEY_ALT_X const
-enum KEY_ALT_Y const
-enum KEY_ALT_Z const
-enum KEY_ENTER const
-enum KEY_SPACE const
-enum KEY_ESCAPE const
-enum KEY_UP const
-enum KEY_DOWN const
-enum KEY_LEFT const
-enum KEY_RIGHT const
-enum KEY_TAB const
-enum KEY_DELETE const
-enum KEY_HOME const
-enum KEY_END const
-enum KEY_BACKSPACE const
-enum KEY_F1 const
-enum KEY_F2 const
-enum KEY_F3 const
-enum KEY_F4 const
-enum KEY_F5 const
-enum KEY_F6 const
-enum KEY_F7 const
-enum KEY_F8 const
-enum KEY_F9 const
-enum KEY_F10 const
-enum KEY_F11 const
-enum KEY_F12 const
-enum KEY_A const
-enum KEY_B const
-enum KEY_C const
-enum KEY_D const
-enum KEY_E const
-enum KEY_F const
-enum KEY_G const
-enum KEY_H const
-enum KEY_I const
-enum KEY_J const
-enum KEY_K const
-enum KEY_L const
-enum KEY_M const
-enum KEY_N const
-enum KEY_O const
-enum KEY_P const
-enum KEY_Q const
-enum KEY_R const
-enum KEY_S const
-enum KEY_T const
-enum KEY_U const
-enum KEY_V const
-enum KEY_W const
-enum KEY_X const
-enum KEY_Y const
-enum KEY_Z const
-enum KEY_SHIFT_A const
-enum KEY_SHIFT_B const
-enum KEY_SHIFT_C const
-enum KEY_SHIFT_D const
-enum KEY_SHIFT_E const
-enum KEY_SHIFT_F const
-enum KEY_SHIFT_G const
-enum KEY_SHIFT_H const
-enum KEY_SHIFT_I const
-enum KEY_SHIFT_J const
-enum KEY_SHIFT_K const
-enum KEY_SHIFT_L const
-enum KEY_SHIFT_M const
-enum KEY_SHIFT_N const
-enum KEY_SHIFT_O const
-enum KEY_SHIFT_P const
-enum KEY_SHIFT_Q const
-enum KEY_SHIFT_R const
-enum KEY_SHIFT_S const
-enum KEY_SHIFT_T const
-enum KEY_SHIFT_U const
-enum KEY_SHIFT_V const
-enum KEY_SHIFT_W const
-enum KEY_SHIFT_X const
-enum KEY_SHIFT_Y const
-enum KEY_SHIFT_Z const
-enum KEY_0 const
-enum KEY_1 const
-enum KEY_2 const
-enum KEY_3 const
-enum KEY_4 const
-enum KEY_5 const
-enum KEY_6 const
-enum KEY_7 const
-enum KEY_8 const
-enum KEY_9 const
+enum KEY_CTRL_A const enum KEY_CTRL_B const
+enum KEY_CTRL_C const enum KEY_CTRL_D const
+enum KEY_CTRL_E const enum KEY_CTRL_F const
+enum KEY_CTRL_G const enum KEY_CTRL_H const
+enum KEY_CTRL_K const enum KEY_CTRL_L const
+enum KEY_CTRL_M const enum KEY_CTRL_N const
+enum KEY_CTRL_O const enum KEY_CTRL_P const
+enum KEY_CTRL_Q const enum KEY_CTRL_R const
+enum KEY_CTRL_S const enum KEY_CTRL_T const
+enum KEY_CTRL_U const enum KEY_CTRL_V const
+enum KEY_CTRL_W const enum KEY_CTRL_X const
+enum KEY_CTRL_Y const enum KEY_CTRL_Z const
+
+enum KEY_ALT_A  const enum KEY_ALT_B  const
+enum KEY_ALT_C  const enum KEY_ALT_D  const
+enum KEY_ALT_E  const enum KEY_ALT_F  const
+enum KEY_ALT_G  const enum KEY_ALT_H  const
+enum KEY_ALT_I  const enum KEY_ALT_J  const
+enum KEY_ALT_K  const enum KEY_ALT_L  const
+enum KEY_ALT_M  const enum KEY_ALT_N  const
+enum KEY_ALT_O  const enum KEY_ALT_P  const
+enum KEY_ALT_Q  const enum KEY_ALT_R  const
+enum KEY_ALT_S  const enum KEY_ALT_T  const
+enum KEY_ALT_U  const enum KEY_ALT_V  const
+enum KEY_ALT_W  const enum KEY_ALT_X  const
+enum KEY_ALT_Y  const enum KEY_ALT_Z  const
+
+enum KEY_ENTER  const enum KEY_SPACE const
+enum KEY_ESCAPE const enum KEY_UP const
+enum KEY_DOWN   const enum KEY_LEFT const
+enum KEY_RIGHT  const enum KEY_TAB const
+enum KEY_DELETE const enum KEY_HOME const
+enum KEY_END    const enum KEY_BACKSPACE const
+
+enum KEY_F1     const enum KEY_F2 const
+enum KEY_F3     const enum KEY_F4 const
+enum KEY_F5     const enum KEY_F6 const
+enum KEY_F7     const enum KEY_F8 const
+enum KEY_F9     const enum KEY_F10 const
+enum KEY_F11    const enum KEY_F12 const
+
+enum KEY_A const enum KEY_B const
+enum KEY_C const enum KEY_D const
+enum KEY_E const enum KEY_F const
+enum KEY_G const enum KEY_H const
+enum KEY_I const enum KEY_J const
+enum KEY_K const enum KEY_L const
+enum KEY_M const enum KEY_N const
+enum KEY_O const enum KEY_P const
+enum KEY_Q const enum KEY_R const
+enum KEY_S const enum KEY_T const
+enum KEY_U const enum KEY_V const
+enum KEY_W const enum KEY_X const
+enum KEY_Y const enum KEY_Z const
+
+enum KEY_SHIFT_A const enum KEY_SHIFT_B const
+enum KEY_SHIFT_C const enum KEY_SHIFT_D const
+enum KEY_SHIFT_E const enum KEY_SHIFT_F const
+enum KEY_SHIFT_G const enum KEY_SHIFT_H const
+enum KEY_SHIFT_I const enum KEY_SHIFT_J const
+enum KEY_SHIFT_K const enum KEY_SHIFT_L const
+enum KEY_SHIFT_M const enum KEY_SHIFT_N const
+enum KEY_SHIFT_O const enum KEY_SHIFT_P const
+enum KEY_SHIFT_Q const enum KEY_SHIFT_R const
+enum KEY_SHIFT_S const enum KEY_SHIFT_T const
+enum KEY_SHIFT_U const enum KEY_SHIFT_V const
+enum KEY_SHIFT_W const enum KEY_SHIFT_X const
+enum KEY_SHIFT_Y const enum KEY_SHIFT_Z const
+
+enum KEY_0 const enum KEY_1 const
+enum KEY_2 const enum KEY_3 const
+enum KEY_4 const enum KEY_5 const
+enum KEY_6 const enum KEY_7 const
+enum KEY_8 const enum KEY_9 const
+
 enum KEY_PLUS const
 enum KEY_MINUS const
 enum KEY_GT const
