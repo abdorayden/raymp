@@ -1118,6 +1118,9 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         end
 
         mainFrame:clear()
+        -- mainFrame.cursor.x = 1
+        -- mainFrame.cursor.y = 1
+
         local key = api.Terminal:handleKey()
 
         if parser:wasTerminalResized() then
