@@ -1725,14 +1725,14 @@ do -- VirtualTerminal
     --- @param fg FGColors | nil
     --- @param bg BGColors | nil
     --- @param style TextStyle | nil
-    --- @return VirtualTerminal | nil
+    --- @return self | nil
     function RMP.VirtualTerminal:writeTextClipped(x, y, text, width, fg, bg, style)
         if not text then
             return nil
         end
         x = math.floor(x or self.cursor.x)
         y = math.floor(y or self.cursor.y)
-        vt_rmp.writetext_clipped(self.native_vt_rmp, x, y, text, width, fg, bg, style)
+        local _ = vt_rmp.writetext_clipped(self.native_vt_rmp, x, y, text, width, fg, bg, style)
         return self
     end
 

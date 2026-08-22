@@ -656,8 +656,11 @@ ALWAYS_INT lua_writetext_clipped(STATE) {
             int base_x = current_x - 1;
             while (base_x >= start_x) {
                 Cell* base = get_cell(vt, base_x, y);
-                if (!base) { base_x--; continue; }
-                if (base->ch[0] == '\0') { base_x--; continue; }
+                if (!base) break;
+                if (base->ch[0] == '\0' || (base->ch[0] == ' ' && base_x == start_x)) {
+                    base_x--;
+                    continue;
+                }
                 size_t existing = strlen(base->ch);
                 int can_copy = CH_UTF8_SIZE - 1 - (int)existing;
                 if (can_copy > 0) {
@@ -670,7 +673,20 @@ ALWAYS_INT lua_writetext_clipped(STATE) {
                 if (style && style[0]) { strncpy(base->style, style, sizeof(base->style)-1); base->style[sizeof(base->style)-1] = '\0'; }
                 break;
             }
-            ptr = next_char;  
+            if (base_x < start_x) {
+                if ((current_x + 1 - start_x) > max_cols) break;
+                Cell* cell = get_cell(vt, current_x, y);
+                if (cell) {
+                    int to_copy = (byte_len < CH_UTF8_SIZE - 1) ? byte_len : (CH_UTF8_SIZE - 1);
+                    memcpy(cell->ch, ptr, to_copy);
+                    cell->ch[to_copy] = '\0';
+                    strncpy(cell->fg, fg, sizeof(cell->fg)-1); cell->fg[sizeof(cell->fg)-1] = '\0';
+                    strncpy(cell->bg, bg, sizeof(cell->bg)-1); cell->bg[sizeof(cell->bg)-1] = '\0';
+                    strncpy(cell->style, style, sizeof(cell->style)-1); cell->style[sizeof(cell->style)-1] = '\0';
+                }
+                current_x += 1;
+            }
+            ptr = next_char;
             continue;
         }
 
@@ -702,23 +718,24 @@ ALWAYS_INT lua_writetext_clipped(STATE) {
         }
 
         current_x += (disp_width > 0) ? disp_width : 1;
-        ptr = next_char;  
+        ptr = next_char;
     }
+
+    int text_cols = current_x - start_x;
 
     while ((current_x - start_x) < max_cols && current_x <= vt->width) {
         Cell* c = get_cell(vt, current_x, y);
         if (c) {
             strcpy(c->ch, " ");
-            c->fg[0] = '\0';
-            c->bg[0] = '\0';
-            c->style[0] = '\0';
+            strncpy(c->fg, fg, sizeof(c->fg)-1); c->fg[sizeof(c->fg)-1] = '\0';
+            strncpy(c->bg, bg, sizeof(c->bg)-1); c->bg[sizeof(c->bg)-1] = '\0';
+            strncpy(c->style, style, sizeof(c->style)-1); c->style[sizeof(c->style)-1] = '\0';
         }
         current_x++;
     }
 
     vt->is_dirty = true;
-    int cols_written = current_x - start_x;
-    lua_pushinteger(L, cols_written);
+    lua_pushinteger(L, text_cols);
     return 1;
 }
 

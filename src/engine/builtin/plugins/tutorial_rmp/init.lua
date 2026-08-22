@@ -370,6 +370,25 @@ local function parseFormattedText(text, defaultFgColor, defaultBgColor, defaultS
     return result
 end
 
+local theme = nil
+
+-- shared colors
+-- BackGround = "#0f1419",
+-- BorderColor = "#e6e1cf",
+-- TitleBackGround = "#0f1419",
+-- TitleText = "#e6e1cf",
+-- PrimaryContent = "#b8cc52",
+-- SecondaryContent = "#59c2ff",
+-- AccentElements = "#f07178",
+-- Highlight = "#ffb454",
+-- MutedElements = "#d2a6ff"
+local function extColor(variant_text, fg)
+    if type(theme) == "table" and theme[variant_text] ~= nil then
+        return api.colorFromHex(theme[variant_text], fg and api.FG or api.BG)
+    end
+    return nil
+end
+
 local function syntaxHighlightLua(codeLine)
     local tokens = {}
     local pos = 1
@@ -391,7 +410,8 @@ local function syntaxHighlightLua(codeLine)
 
         if char == '"' or char == "'" then
             if currentText ~= "" then
-                table.insert(tokens, { text = currentText, color = api.FGColors.Brights.White, style = nil })
+                table.insert(tokens,
+                    { text = currentText, color = extColor("PrimaryContent", true) or api.FGColors.Brights.White, style = nil })
                 currentText = ""
             end
 
@@ -413,10 +433,12 @@ local function syntaxHighlightLua(codeLine)
             end
 
             local stringText = codeLine:sub(stringStart, pos - 1)
-            table.insert(tokens, { text = stringText, color = api.FGColors.Brights.Green, style = nil })
+            table.insert(tokens,
+                { text = stringText, color = extColor("SecondaryContent", true) or api.FGColors.Brights.Green, style = nil })
         elseif char == "-" and codeLine:sub(pos + 1, pos + 1) == "-" then
             if currentText ~= "" then
-                table.insert(tokens, { text = currentText, color = api.FGColors.Brights.White, style = nil })
+                table.insert(tokens,
+                    { text = currentText, color = extColor("PrimaryContent", true) or api.FGColors.Brights.White, style = nil })
                 currentText = ""
             end
 
@@ -426,10 +448,17 @@ local function syntaxHighlightLua(codeLine)
             end
 
             local commentText = codeLine:sub(commentStart, pos - 1)
-            table.insert(tokens, { text = commentText, color = api.FGColors.Brights.Blue, style = api.TextStyle.Italic })
+            table.insert(tokens,
+                {
+                    text = commentText,
+                    color = extColor("MutedElements", true) or api.FGColors.Brights.Blue,
+                    style = api
+                        .TextStyle.Italic
+                })
         elseif char:match("[%d]") then
             if currentText ~= "" then
-                table.insert(tokens, { text = currentText, color = api.FGColors.Brights.White, style = nil })
+                table.insert(tokens,
+                    { text = currentText, color = extColor("PrimaryContent", true) or api.FGColors.Brights.White, style = nil })
                 currentText = ""
             end
 
@@ -444,10 +473,12 @@ local function syntaxHighlightLua(codeLine)
             end
 
             local numberText = codeLine:sub(numberStart, pos - 1)
-            table.insert(tokens, { text = numberText, color = api.FGColors.Brights.Magenta, style = nil })
+            table.insert(tokens,
+                { text = numberText, color = extColor("AccentElements", true) or api.FGColors.Brights.Magenta, style = nil })
         elseif char:match("[%a_]") then
             if currentText ~= "" then
-                table.insert(tokens, { text = currentText, color = api.FGColors.Brights.White, style = nil })
+                table.insert(tokens,
+                    { text = currentText, color = extColor("PrimaryContent", true) or api.FGColors.Brights.White, style = nil })
                 currentText = ""
             end
 
@@ -464,9 +495,15 @@ local function syntaxHighlightLua(codeLine)
             local identText = codeLine:sub(identStart, pos - 1)
             if keywordSet[identText] then
                 table.insert(tokens,
-                    { text = identText, color = api.FGColors.Brights.Yellow, style = api.TextStyle.Bold })
+                    {
+                        text = identText,
+                        color = extColor("Highlight", true) or api.FGColors.Brights.Yellow,
+                        style = api
+                            .TextStyle.Bold
+                    })
             else
-                table.insert(tokens, { text = identText, color = api.FGColors.Brights.White, style = nil })
+                table.insert(tokens,
+                    { text = identText, color = extColor("PrimaryContent", true) or api.FGColors.Brights.White, style = nil })
             end
         else
             currentText = currentText .. char
@@ -475,7 +512,8 @@ local function syntaxHighlightLua(codeLine)
     end
 
     if currentText ~= "" then
-        table.insert(tokens, { text = currentText, color = api.FGColors.Brights.White, style = nil })
+        table.insert(tokens,
+            { text = currentText, color = extColor("PrimaryContent", true) or api.FGColors.Brights.White, style = nil })
     end
 
     return tokens
@@ -484,6 +522,18 @@ end
 return function(frame, x, y, xx, yy)
     local w = xx - x - 1
     local h = yy - y - 1
+
+    -- listen every frame: TransformDataGet callbacks are one-shot (drained by the
+    -- engine each run), re-registering keeps the shared theme in sync when the
+    -- user switches themes at runtime through the theme manager plugin
+    frame:addEventListener(api.EventType.TransformDataGet, function(data)
+        if data and data.theme then
+            theme = data.theme
+        end
+    end)
+
+    -- resolved once per frame, shared by every writeText/writeTextClipped below
+    local background_color = extColor("BackGround", false)
 
     local current_time = os.time()
     local elapsed_time = current_time - animation_start_time
@@ -496,16 +546,17 @@ return function(frame, x, y, xx, yy)
         local animation_phase = (current_time * 2) % 4
         local color
         if animation_phase < 1 then
-            color = api.FGColors.Brights.Red
+            color = extColor("Highlight", true) or api.FGColors.Brights.Red
         elseif animation_phase < 2 then
-            color = api.FGColors.Brights.Yellow
+            color = extColor("AccentElements", true) or api.FGColors.Brights.Yellow
         elseif animation_phase < 3 then
-            color = api.FGColors.Brights.Green
+            color = extColor("PrimaryContent", true) or api.FGColors.Brights.Green
         else
-            color = api.FGColors.Brights.Cyan
+            color = extColor("SecondaryContent", true) or api.FGColors.Brights.Cyan
         end
 
-        frame:writeText(centered_x, centered_y, animation_text, color, nil, api.TextStyle.Bold)
+        frame:writeText(centered_x, centered_y, animation_text, color, background_color,
+            api.TextStyle.Bold)
 
         local progress_text = ""
         for i = 1, animation_duration do
@@ -516,7 +567,8 @@ return function(frame, x, y, xx, yy)
             end
         end
         local progress_x = x + math.floor((w - #progress_text) / 2)
-        frame:writeText(progress_x, centered_y + 2, progress_text, api.FGColors.Brights.White)
+        frame:writeText(progress_x, centered_y + 2, progress_text, extColor("PrimaryContent", true) or
+            api.FGColors.Brights.White, background_color)
 
         return
     end
@@ -574,15 +626,17 @@ return function(frame, x, y, xx, yy)
                         local tokens = syntaxHighlightLua(codeContent)
                         for _, token in ipairs(tokens) do
                             frame:writeTextClipped(xPos, displayY, token.text, w - (xPos - x - 1), token.color,
-                                nil, token.style)
+                                background_color, token.style)
                             xPos = xPos + #token.text
                         end
                     elseif line:match("^%s*#") then
-                        local formattedParts = parseFormattedText(line, api.FGColors.Brights.Yellow, nil,
+                        local formattedParts = parseFormattedText(line,
+                            extColor("Highlight", true) or api.FGColors.Brights.Yellow, background_color,
                             api.TextStyle.Bold)
                         local xPos = x + 1
                         for _, part in ipairs(formattedParts) do
-                            frame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg, part.bg,
+                            frame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
+                                background_color,
                                 part.style)
                             xPos = xPos + #part.text
                         end
@@ -592,30 +646,41 @@ return function(frame, x, y, xx, yy)
                     elseif line:match("^%s*-") then
                         local bullet_text = line:match("^%s*-%s*(.*)")
                         if bullet_text then
-                            frame:writeTextClipped(x + 1, displayY, "-", w, api.FGColors.Brights.Red)
+                            frame:writeTextClipped(x + 1, displayY, "-", w,
+                                extColor("AccentElements", true) or api.FGColors.Brights.Red,
+                                background_color)
 
-                            local formattedParts = parseFormattedText(" " .. bullet_text, api.FGColors.Brights.White, nil,
+                            local formattedParts = parseFormattedText(" " .. bullet_text,
+                                extColor("PrimaryContent", true) or api.FGColors.Brights.White,
+                                background_color,
                                 nil)
                             local xPos = x + 2
                             for _, part in ipairs(formattedParts) do
-                                frame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg, part.bg,
+                                frame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
+                                    background_color,
                                     part.style)
                                 xPos = xPos + #part.text
                             end
                         else
-                            local formattedParts = parseFormattedText(line, api.FGColors.Brights.White, nil, nil)
+                            local formattedParts = parseFormattedText(line,
+                                extColor("PrimaryContent", true) or api.FGColors.Brights.White,
+                                background_color, nil)
                             local xPos = x + 1
                             for _, part in ipairs(formattedParts) do
-                                frame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg, part.bg,
+                                frame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
+                                    background_color,
                                     part.style)
                                 xPos = xPos + #part.text
                             end
                         end
                     else
-                        local formattedParts = parseFormattedText(line, api.FGColors.Brights.White, nil, nil)
+                        local formattedParts = parseFormattedText(line,
+                            extColor("PrimaryContent", true) or api.FGColors.Brights.White, background_color,
+                            nil)
                         local xPos = x + 1
                         for _, part in ipairs(formattedParts) do
-                            frame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg, part.bg,
+                            frame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
+                                background_color,
                                 part.style)
                             xPos = xPos + #part.text
                         end
