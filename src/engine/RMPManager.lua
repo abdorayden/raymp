@@ -135,15 +135,43 @@ do
         self.theme = nil
     end
 
+    --- template component
+    --- theme table
+    --- variant
+    function EngineFrame:applyTheme(tha_template, th, variant)
+        for _, component in ipairs(tha_template) do
+            if component.title then
+                if type(component.title) == "string" then
+                    local val = component.title
+                    component.title = {
+                        value = val,
+                        foregroundColor = api.colorFromHex(th[variant].TitleText, api.FG),
+                        backgroundColor = api.colorFromHex(th[variant].TitleBackGround, api.BG),
+                    }
+                elseif type(component.title) == "table" then
+                    component.title.foregroundColor = api.colorFromHex(th[variant].TitleText, api.FG)
+                    component.title.backgroundColor = api.colorFromHex(th[variant].TitleBackGround, api.BG)
+                else
+                    component.table = nil
+                end
+            end
+            component.foregroundColor = api.colorFromHex(th[variant].BorderColor, api.FG)
+            component.backgroundColor = api.colorFromHex(th[variant].BackGround, api.BG)
+            if component.children then
+                self:applyTheme(component.children, th, variant)
+            end
+        end
+    end
+
     ---@param thaTheme Theme
     ---@return self
-    function RMP.VirtualTerminal:setTheme(thaTheme)
+    function EngineFrame:setTheme(thaTheme)
         self.theme = thaTheme
         return self
     end
 
     ---@return Theme
-    function RMP.VirtualTerminal:getTheme()
+    function EngineFrame:getTheme()
         return self.theme
     end
 
@@ -152,7 +180,7 @@ do
     ---@param text string
     ---@param style TextStyle
     ---@return self
-    function RMP.VirtualTerminal:write(text, style)
+    function EngineFrame:write(text, style)
         text = text or ""
         local lines = {}
 
@@ -178,7 +206,7 @@ do
 
     ---@param options WinOpt
     ---@return self
-    function RMP.VirtualTerminal:openWin(options)
+    function EngineFrame:openWin(options)
         self:drawBox(
             options.title or "",
             options.x or 1,
@@ -191,6 +219,8 @@ do
         )
         return self
     end
+
+    -- add input handling by the engine to avoid any mistakes of memory allocations
 end
 
 local mainFrame             = EngineFrame()

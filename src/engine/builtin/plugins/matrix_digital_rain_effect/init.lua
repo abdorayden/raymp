@@ -2,10 +2,19 @@ local api = require("rmp.rmp")
 
 local chars = { "$", "?", "!", "#", "&", "A", "B", "C", "1", "2", "3", "0" }
 local streams = {}
+local theme = nil
 
 return function(frame, x, y, xx, yy)
     local h, w = (yy - y), (xx - x)
     local cols = math.floor(w / 2)
+
+    if theme == nil then
+        frame:addEventListener(api.EventType.TransformDataGet, function(data)
+            if data and data.theme then
+                theme = data.theme
+            end
+        end)
+    end
 
     for i = 1, cols do
         if not streams[i] then
@@ -39,11 +48,11 @@ return function(frame, x, y, xx, yy)
             if charY >= 1 and charY <= h then
                 local color
                 if j == 1 then
-                    color = api.BGColors.Brights.White
+                    color = theme and api.colorFromHex(theme.MutedElements) or api.BGColors.Brights.White
                 elseif j == 2 then
-                    color = api.BGColors.Brights.Green
+                    color = theme and api.colorFromHex(theme.Highlight) or api.BGColors.Brights.Green
                 else
-                    color = api.FGColors.NoBrights.Green
+                    color = theme and api.colorFromHex(theme.AccentElements) or api.FGColors.NoBrights.Green
                 end
 
                 frame:writeText(
@@ -51,6 +60,7 @@ return function(frame, x, y, xx, yy)
                     y + charY - 1,
                     stream.chars[j],
                     color,
+                    theme and api.colorFromHex(theme.BackGround, api.BG) or
                     api.BGColors.NoBrights.Black
                 )
             end
