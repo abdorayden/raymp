@@ -109,8 +109,8 @@ local function engine_render_help(w, h, settings, soundCfg)
     -- Add some padding
     local boxWidth = maxTextWidth + 4
     local boxHeight = #helpText + 4 -- +2 for top/bottom padding, +2 more for visual padding
-    local boxX = math.floor((w - boxWidth) / 2)
-    local boxY = math.floor((h - boxHeight) / 2)
+    local boxX = math.max(1, math.floor((w - boxWidth) / 2))
+    local boxY = math.max(1, math.floor((h - boxHeight) / 2))
 
     -- Create a box using the VirtualTerminal's drawBox method
     mainFrame:drawBox(
@@ -125,12 +125,12 @@ local function engine_render_help(w, h, settings, soundCfg)
     for i, line in ipairs(helpText) do
         local textX = boxX + 2     -- Add padding from the left border
         local textY = boxY + 1 + i -- Add padding from the top border
-        mainFrame:moveCursor(textX, textY)
-        mainFrame:writeText(line)
+        mainFrame:writeText(textX, textY, line, api.FGColors.Brights.White, api.BGColors.NoBrights.Black)
     end
 end
+
 return function()
-    local h, w = api.Terminal:getSize()
+    local h, w     = api.Terminal:getSize()
 
     local engine   = mainFrame.engine
     local settings = engine.settings
