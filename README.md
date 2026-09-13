@@ -454,9 +454,8 @@ RMP's plugin system enables modular functionality through isolated Lua contexts.
 ### Creating a Basic Plugin
 Plugins are Lua modules returning a **callback that runs every frame**. The global
 `mainFrame` (and its engine config, `mainFrame.engine`) is always available, so you
-don't need a frame parameter. For window-attached plugins the callback still
-receives the window rect `(x, y, xx, yy)` (the frame is still passed first for
-backward compatibility).
+don't need a frame parameter. Window-attached plugins use
+`return function(x, y, xx, yy)`; global plugins use `return function()`.
 ```lua
 -- plugins/system_monitor.lua
 -- Real-time system monitoring plugin
@@ -469,7 +468,7 @@ local api = require("rmp.rmp")
 -- the global mainFrame is available: mainFrame:writeText(...),
 -- mainFrame.engine.fps, mainFrame.engine.settings.volume, ...
 local vterm = api.VirtualTerminal.new()
-return function(_, x, y, xx, yy)
+return function(x, y, xx, yy)
     local w = xx - x - 1
     local h = yy - y - 1
 

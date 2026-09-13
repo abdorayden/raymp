@@ -4,7 +4,7 @@ local chars = { "$", "?", "!", "#", "&", "A", "B", "C", "1", "2", "3", "0" }
 local streams = {}
 local theme = nil
 
-return function(_, x, y, xx, yy)
+return function(x, y, xx, yy)
     local h, w = (yy - y), (xx - x)
     local cols = math.floor(w / 2)
 

@@ -770,7 +770,7 @@ do
         local callback = function(innerX, innerY, innerXX, innerYY)
             -- Run the window's plugin
             if currentPlugin and type(currentPlugin) == "function" then
-                local ok, pluginResult = pcall(currentPlugin, mainFrame, innerX, innerY, innerXX, innerYY)
+                local ok, pluginResult = pcall(currentPlugin, innerX, innerY, innerXX, innerYY)
                 if not ok then
                     -- FEAT-2: isolate plugin error — log but don't crash
                     logwarn("plugin error in window '" .. tostring(windowConfig.id)
@@ -1388,7 +1388,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
 
         -- OPT-1: Use cached theme function references instead of pcall(require) each frame
         for _, theme_fn in ipairs(builtin_theme_fns) do
-            theme_fn(mainFrame)
+            theme_fn()
         end
 
         -- Parse and render the layout template
@@ -1396,14 +1396,14 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
 
         -- Theme manager
         if loaded_theme_manager and type(loaded_theme_manager) == "function" then
-            loaded_theme_manager(mainFrame)
+            loaded_theme_manager()
         end
 
         -- Help overlay
         if render_help then
             local h_ok, h_obj = pcall(require, "rmp.builtin.plugins.builtin-help-rmp")
             if h_ok and h_obj and type(h_obj) == "function" then
-                h_obj(mainFrame)
+                h_obj()
             end
         end
         if help_fn and key == help_fn then
@@ -1416,7 +1416,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
             local plug = oq:pop()
             if plug then
                 if type(plug) == "function" then
-                    local ok, res = pcall(plug, mainFrame)
+                    local ok, res = pcall(plug)
                     if not ok then
                         logwarn("global plugin error: " .. tostring(res))
                         -- FEAT-2: drop the failing plugin from the queue
@@ -1444,7 +1444,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
 
         -- Notifications
         if notify_plug and type(notify_plug) == "function" then
-            notify_plug(mainFrame)
+            notify_plug()
         end
 
         local notis = drain_notifications()

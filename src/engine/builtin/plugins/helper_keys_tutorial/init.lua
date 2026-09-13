@@ -2,7 +2,7 @@ local api = require("rmp.rmp")
 
 local theme = nil
 
-return function(_, x, y, xx, yy)
+return function(x, y, xx, yy)
     if theme == nil then
         mainFrame:addEventListener(api.EventType.TransformDataGet, function(data)
             if data and data.theme then

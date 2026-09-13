@@ -44,7 +44,7 @@ end
 
 local themeManager = ThemeManager()
 
-return function(_)
+return function()
     local themeName = mainFrame.engine.theme
     if themeName then
         themeManager:selectTheme(themeName)

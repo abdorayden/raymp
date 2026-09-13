@@ -168,8 +168,7 @@ mainFrame.engine.template = {
 # How to create my own plugin ?
 - Plugins are configured in the **plugins** configuration section
 - Plugins are Lua files that return a callback function. The callback runs every frame
-- Plugins have direct access to the global **mainFrame** and its engine configuration (**mainFrame.engine.fps**, ...) — you don't need a frame parameter. For window-attached plugins the callback still receives the window rect **(x, y, xx, yy)** as parameters
-- The frame is also passed as the first parameter for backward compatibility, so old `return function(frame, x, y, xx, yy)` plugins keep working
+- Plugins have direct access to the global **mainFrame** and its engine configuration (**mainFrame.engine.fps**, ...) — you don't need a frame parameter. Window-attached plugins use `return function(x, y, xx, yy)`; global plugins use `return function()`
 - You need to initialize a VirtualTerminal object inside the returned callback function (Why? : The engine uses optimizations, which means after it adds all the components, it cleans their memories to avoid memory leaks)
 - Use global variables as plugin state and the return function as update functionality for each frame
 - plugins can be configured in **init.lua** configuration file , you can put string name of the plugin or u can put table the first index is the plugin name and second index is table with configuration field so u can load those configurations and work with them
@@ -186,7 +185,7 @@ local api = require("rmp.rmp")
 -- u need them if you integrate plugin to specific window
 -- otherwise you can get
 -- width and height of the window by rmp framework
-return function(_, x, y, xx, yy)
+return function(x, y, xx, yy)
     local w = xx - x - 1
     local h = yy - y - 1
     local vterm = api.VirtualTerminal.new()
@@ -523,7 +522,7 @@ local function syntaxHighlightLua(codeLine)
     return tokens
 end
 
-return function(_, x, y, xx, yy)
+return function(x, y, xx, yy)
     local w = xx - x - 1
     local h = yy - y - 1
 

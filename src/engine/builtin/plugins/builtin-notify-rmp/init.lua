@@ -132,7 +132,7 @@ if false then
     notificationQueue:push({ message = "test error", status = "message", duration = 15 })
 end
 
-return function(_)
+return function()
     mainFrame:addEventListener(api.EventType.TransformDataGet, function(data)
         if data and data.theme then
             tha_theme = data.theme

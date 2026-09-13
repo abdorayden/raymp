@@ -129,7 +129,7 @@ local function engine_render_help(w, h, settings, soundCfg)
         mainFrame:writeText(line)
     end
 end
-return function(_)
+return function()
     local h, w = api.Terminal:getSize()
 
     local engine   = mainFrame.engine

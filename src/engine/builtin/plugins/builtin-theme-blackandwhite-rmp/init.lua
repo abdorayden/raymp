@@ -40,7 +40,7 @@ local function apply(tha_template)
     end
 end
 
-return function(_)
+return function()
     doApply = mainFrame.engine.theme == THEME_NAME
     mainFrame:onTemplate(function(template)
         if template then
