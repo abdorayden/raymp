@@ -77,7 +77,7 @@ local function clip_text(text, max_width)
     return t:sub(1, max_width - 3) .. "..."
 end
 
-local function render_notifications(vt)
+local function render_notifications()
     local term_h, term_w = api.Terminal:getSize()
     local colors = get_theme_colors()
     local y_offset = 1
@@ -102,8 +102,8 @@ local function render_notifications(vt)
         end
 
         local title = "[" .. string.upper(noti.status) .. "]"
-        vt:drawBox(title, box_x, box_y, box_width, box_height, api.BoxDrawing.RoundedCorners, fg, colors.bg)
-        vt:writeText(box_x + 2, box_y + 1, message, fg, colors.bg)
+        mainFrame:drawBox(title, box_x, box_y, box_width, box_height, api.BoxDrawing.RoundedCorners, fg, colors.bg)
+        mainFrame:writeText(box_x + 2, box_y + 1, message, fg, colors.bg)
         y_offset = y_offset + box_height + 1
     end
 end
@@ -132,8 +132,8 @@ if false then
     notificationQueue:push({ message = "test error", status = "message", duration = 15 })
 end
 
-return function(frame)
-    frame:addEventListener(api.EventType.TransformDataGet, function(data)
+return function(_)
+    mainFrame:addEventListener(api.EventType.TransformDataGet, function(data)
         if data and data.theme then
             tha_theme = data.theme
         end
@@ -141,7 +141,7 @@ return function(frame)
 
     --- TODO: add event handling so plugins can sent notifications data so this plugin must handle the rendering
     --- the plugins must sent data like message, status (info, error, warning) and duration
-    frame:addEventListener(api.EventType.TransformDataGet, function(data)
+    mainFrame:addEventListener(api.EventType.TransformDataGet, function(data)
         if data and data.notification then
             notificationQueue:push(data.notification)
         end
@@ -152,7 +152,7 @@ return function(frame)
         add_notification(noti.message, noti.status, noti.duration)
     end
     prune_old_notifications()
-    render_notifications(frame)
+    render_notifications()
     --
     --- TODO: create a beautiful popup with diffrent status and add animations to it like noice in nvim
 end

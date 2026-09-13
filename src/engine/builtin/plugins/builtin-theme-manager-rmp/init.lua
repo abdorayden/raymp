@@ -44,17 +44,13 @@ end
 
 local themeManager = ThemeManager()
 
-return function(frame)
-    frame:onConfiguration(function(cfg)
-        if cfg then
-            local settings = cfg:get("settings")
-            if settings and settings.theme then
-                themeManager:selectTheme(settings.theme)
-            end
-        end
-    end)
+return function(_)
+    local themeName = mainFrame.engine.theme
+    if themeName then
+        themeManager:selectTheme(themeName)
+    end
 
-    frame:onDataPut(function()
+    mainFrame:onDataPut(function()
         return {
             ThemeManagerObj = themeManager,
             theme = themeManager:getSelectedTheme()

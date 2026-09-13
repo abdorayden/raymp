@@ -351,14 +351,15 @@ end
 RMP's (theme/Template) system allows complete customization of the user interface through Lua templates.
 
 ### Creating a Custom (Theme/Template)
+Templates are configuration files too: they populate `mainFrame.engine.template`
+directly (returning the table is also merged for backward compatibility).
 ```lua
 -- themes/cyberpunk_theme.lua
 -- Cyberpunk-inspired theme with neon colors and futuristic elements
--- the template lua file are returned a table with tables that has a different id's and types 
 
 local api = require("rmp.rmp")
 
-return {
+mainFrame.engine.template = {
     -- main window with a children
     {
         id = 1,
@@ -451,20 +452,24 @@ return {
 RMP's plugin system enables modular functionality through isolated Lua contexts.
 
 ### Creating a Basic Plugin
+Plugins are Lua modules returning a **callback that runs every frame**. The global
+`mainFrame` (and its engine config, `mainFrame.engine`) is always available, so you
+don't need a frame parameter. For window-attached plugins the callback still
+receives the window rect `(x, y, xx, yy)` (the frame is still passed first for
+backward compatibility).
 ```lua
 -- plugins/system_monitor.lua
 -- Real-time system monitoring plugin
--- the plugin lua file are returned function that accept 4 params and return VirtualTerminal object
 
 local api = require("rmp.rmp")
 
 -- params:
 --  x,y : left top corner position (x position and y position)
 --  xx,yy : right bottom corner position
--- return: 
---      VirtualTerminal
+-- the global mainFrame is available: mainFrame:writeText(...),
+-- mainFrame.engine.fps, mainFrame.engine.settings.volume, ...
 local vterm = api.VirtualTerminal.new()
-return function(x, y, xx, yy)
+return function(_, x, y, xx, yy)
     local w = xx - x - 1
     local h = yy - y - 1
 
@@ -525,76 +530,76 @@ end
 ```
 
 ### Plugin Registration and Configuration
+Configuration files populate the global frame config — `mainFrame.engine` — directly
+instead of returning a table. `mainFrame.engine.fps = 30` is shorthand for
+`mainFrame.engine.settings.fps = 30`. Returning a table still works (it is merged
+onto the engine config).
 ```lua
--- In your theme or main configuration
 -- ~/.rmp/init.lua
-return {
-    -- the default configuration of the sound
-    settings = {
-        fps = 60,
-        volume = 0.5,           -- 0 to 1
-        speed = 1.0,            -- 0.25 to 4.0
-        mode = api.PlaybackMode.ONES, -- playback modes
-        restart_engine = api.KEY_CTRL_R,
-        exit = api.KEY_Q,
+-- the default configuration of the sound
+mainFrame.engine.template = "my_template"
 
-        -- inc or dec
-        inc_speed = 0.1,
-        inc_volume = 0.1,
-        inc_seek = 5
-    },
-    soundMap = {
-        pause_sound = api.KEY_SPACE,
-        resume_sound = api.KEY_SPACE,
-        next_sound = api.KEY_N,
-        prev_sound = api.KEY_P,
-        vol_up = api.KEY_PLUS,
-        vol_down = api.KEY_MINUS,
-        seek_left = api.KEY_LEFT,
-        seek_right = api.KEY_RIGHT,
-        speed_up = api.KEY_UP,
-        speed_down = api.KEY_DOWN,
-        change_playback_mode = api.KEY_TAB
-    },
-    template = "<your template lua file name without extension>",
-    -- plugins
-    plugins = {        
-        {
-            -- if this attr is not nil or exists , the runner ignore activate
-            themeWindowId = 2, -- the window id that the plugin injected in
-            isActivated = true,-- isActivated (true activated by default otherwise is not)
-            activate = api.KEY_E, -- toggle key for activation plugin
-            switchPluginKey = api.KEY_I, -- switch key for multiple plugins that integrated on the same window id
-            names = { -- plugins
-                -- examples
-                "matrix_digital_rain_effect",
-                "music_waves",
-                "text_editor",
-                "tellme_yourname",
-                "digital_clock_with_effects",
-                "3d_cube",
-                "filebrowser"
-            }
+mainFrame.engine.settings.fps = 60
+mainFrame.engine.volume = 0.5           -- 0 to 1
+mainFrame.engine.speed = 1.0            -- 0.25 to 4.0
+mainFrame.engine.mode = api.PlaybackMode.ONES -- playback modes
+mainFrame.engine.restart_engine = api.KEY_CTRL_R
+mainFrame.engine.exit = api.KEY_Q
 
-        },
-        {
-            themeWindowId = 3,
-            isActivated = true,
-            activate = api.KEY_E,
-            names = {
-                "center_text"
-            }
-        },
-        {
-            isActivated = false,
-            activate = api.KEY_O,
-            names = {
-                "other plugins"
-            }
+-- inc or dec
+mainFrame.engine.inc_speed = 0.1
+mainFrame.engine.inc_volume = 0.1
+mainFrame.engine.inc_seek = 5
+
+-- sound keymaps
+mainFrame.engine.soundMap.pause_sound = api.KEY_SPACE
+mainFrame.engine.soundMap.resume_sound = api.KEY_SPACE
+mainFrame.engine.soundMap.next_sound = api.KEY_N
+mainFrame.engine.soundMap.prev_sound = api.KEY_P
+mainFrame.engine.soundMap.vol_up = api.KEY_PLUS
+mainFrame.engine.soundMap.vol_down = api.KEY_MINUS
+mainFrame.engine.soundMap.seek_left = api.KEY_LEFT
+mainFrame.engine.soundMap.seek_right = api.KEY_RIGHT
+mainFrame.engine.soundMap.speed_up = api.KEY_UP
+mainFrame.engine.soundMap.speed_down = api.KEY_DOWN
+mainFrame.engine.soundMap.change_playback_mode = api.KEY_TAB
+
+-- plugins
+mainFrame.engine.plugins = {        
+    {
+        -- if this attr is not nil or exists , the runner ignore activate
+        themeWindowId = 2, -- the window id that the plugin injected in
+        isActivated = true,-- isActivated (true activated by default otherwise is not)
+        activate = api.KEY_E, -- toggle key for activation plugin
+        switchPluginKey = api.KEY_I, -- switch key for multiple plugins that integrated on the same window id
+        names = { -- plugins
+            -- examples
+            "matrix_digital_rain_effect",
+            "music_waves",
+            "text_editor",
+            "tellme_yourname",
+            "digital_clock_with_effects",
+            "3d_cube",
+            "filebrowser"
+        }
+
+    },
+    {
+        themeWindowId = 3,
+        isActivated = true,
+        activate = api.KEY_E,
+        names = {
+            "center_text"
+        }
+    },
+    {
+        isActivated = false,
+        activate = api.KEY_O,
+        names = {
+            "other plugins"
         }
     }
 }
-
 ```
 
 ## 🎮 Game Development Guide

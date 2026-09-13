@@ -71,7 +71,7 @@ local function createKeyToCharFunction()
     end
 end
 
-local function engine_render_help(frame, w, h, settings, soundCfg)
+local function engine_render_help(w, h, settings, soundCfg)
     local ktc = createKeyToCharFunction()
 
     local helpText = {
@@ -113,8 +113,8 @@ local function engine_render_help(frame, w, h, settings, soundCfg)
     local boxY = math.floor((h - boxHeight) / 2)
 
     -- Create a box using the VirtualTerminal's drawBox method
-    frame:drawBox(
-        api.Text.new("Help", api.TextStyle.Bold, api.FGColors.Brights.White, api.BGColors.NoBrights.Black, frame),
+    mainFrame:drawBox(
+        api.Text.new("Help", api.TextStyle.Bold, api.FGColors.Brights.White, api.BGColors.NoBrights.Black, mainFrame),
         boxX, boxY, boxWidth, boxHeight,
         api.BoxDrawing.LightBorder,
         api.FGColors.Brights.White,  -- border color
@@ -125,23 +125,17 @@ local function engine_render_help(frame, w, h, settings, soundCfg)
     for i, line in ipairs(helpText) do
         local textX = boxX + 2     -- Add padding from the left border
         local textY = boxY + 1 + i -- Add padding from the top border
-        frame:moveCursor(textX, textY)
-        frame:writeText(line)
+        mainFrame:moveCursor(textX, textY)
+        mainFrame:writeText(line)
     end
 end
-local settings = nil
-local soundCfg = nil
-
-return function(frame)
+return function(_)
     local h, w = api.Terminal:getSize()
 
-    frame:onConfiguration(function(cfg)
-        if cfg and type(cfg) == "table" and not cfg:isEmpty() then
-            settings = cfg:get("settings")
-            soundCfg = cfg:get("soundCfg")
-        end
-    end)
+    local engine   = mainFrame.engine
+    local settings = engine.settings
+    local soundCfg = engine.soundMap
     if settings and soundCfg then
-        engine_render_help(frame, w, h, settings, soundCfg)
+        engine_render_help(w, h, settings, soundCfg)
     end
 end

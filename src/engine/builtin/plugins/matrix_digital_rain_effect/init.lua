@@ -4,12 +4,12 @@ local chars = { "$", "?", "!", "#", "&", "A", "B", "C", "1", "2", "3", "0" }
 local streams = {}
 local theme = nil
 
-return function(frame, x, y, xx, yy)
+return function(_, x, y, xx, yy)
     local h, w = (yy - y), (xx - x)
     local cols = math.floor(w / 2)
 
     if theme == nil then
-        frame:addEventListener(api.EventType.TransformDataGet, function(data)
+        mainFrame:addEventListener(api.EventType.TransformDataGet, function(data)
             if data and data.theme then
                 theme = data.theme
             end
@@ -55,7 +55,7 @@ return function(frame, x, y, xx, yy)
                     color = theme and api.colorFromHex(theme.AccentElements) or api.FGColors.NoBrights.Green
                 end
 
-                frame:writeText(
+                mainFrame:writeText(
                     x + (i - 1) * 2,
                     y + charY - 1,
                     stream.chars[j],

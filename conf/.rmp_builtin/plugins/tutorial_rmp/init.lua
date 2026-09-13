@@ -32,7 +32,8 @@ all you need is following this tutorial
 
 # How to configure my music player ?
 - First, open the ~/.rmp directory in your text editor
-- Open the **init.lua** configuration file. **init.lua** returns a table with multiple keys:
+- Open the **init.lua** configuration file. **init.lua** populates the engine configuration table **mainFrame.engine** (no `return` needed). The engine pre-seeds defaults, so you only override what you want:
+    **template** - Template name for rendering
     **settings** - Engine settings that are loaded when RayMp starts
         **fps** - Engine FPS rendered
         **help_key** - Engine has its own help window configured with this field
@@ -44,7 +45,6 @@ all you need is following this tutorial
         **inc_volume** - The default increment for volume that the engine uses
         **inc_speed** - The default increment for speed that the engine uses
         **inc_seek** - The default increment for seek that the engine uses
-
     **soundMap** - Sound key maps that the engine handles for managing audio
         **pause_sound** - Configured key to pause the sound
         **resume_sound** - Configured key to resume the sound
@@ -57,7 +57,6 @@ all you need is following this tutorial
         **speed_up** - Configured key to increase the playback speed
         **speed_down** - Configured key to decrease the playback speed
         **change_playback_mode** - Configured key to change the playback mode of the sound
-    **template** - Template name for rendering
     **plugins** - Plugins is a table of plugins that are wrapped in tables
         **themeWindowId** - The ID of the window in the template that is used to integrate plugins for a specific window in the template **(OPTIONAL)**. If the field is nil or not selected, the plugin can access the whole window
         **isActivated** - Boolean field: true to use the plugin, false to ignore it
@@ -65,65 +64,63 @@ all you need is following this tutorial
             Why? : A window can use multiple plugins (for example, animations and more), so we can apply more than 1 plugin to the same window
         **switchPluginKey** - This plugin is optional and used for switching multiple plugins in a window
     }
+- You can also use the shorthand proxy — `mainFrame.engine.fps = 30` is the same as `mainFrame.engine.settings.fps = 30`.
+- Returning a table is still supported: `return { template = "my_template", settings = {...}, ... }` and it will be merged onto the engine config.
 ```lua
 -- Example configuration
-return {
-    settings = {
-        fps = 60,
-        help_key = api.KEY_H,
-        volume = 0.5,                 -- 0 to 1
-        speed = 1.0,                  -- 0.25 to 4.0
-        mode = api.PlaybackMode.ONES, -- playback modes
-        restart_engine = api.KEY_CTRL_R,
-        exit = api.KEY_Q,
+mainFrame.engine.template = "my_template"
 
-        -- inc or dec
-        inc_speed = 0.1,
-        inc_volume = 0.1,
-        inc_seek = 5
-    },
-    soundMap = {
-        pause_sound = api.KEY_SPACE,
-        resume_sound = api.KEY_SPACE,
-        next_sound = api.KEY_N,
-        prev_sound = api.KEY_P,
-        vol_up = api.KEY_PLUS,
-        vol_down = api.KEY_MINUS,
-        seek_left = api.KEY_LEFT,
-        seek_right = api.KEY_RIGHT,
-        speed_up = api.KEY_UP,
-        speed_down = api.KEY_DOWN,
-        change_playback_mode = api.KEY_TAB
-    },
+mainFrame.engine.fps = 60
+mainFrame.engine.help_key = api.KEY_H
+mainFrame.engine.volume = 0.5                 -- 0 to 1
+mainFrame.engine.speed = 1.0                  -- 0.01 to 3.0
+mainFrame.engine.mode = api.PlaybackMode.ONES -- playback modes
+mainFrame.engine.restart_engine = api.KEY_CTRL_R
+mainFrame.engine.exit = api.KEY_Q
 
-    template = "my_template",
-    plugins = {
+-- inc or dec
+mainFrame.engine.inc_speed = 0.1
+mainFrame.engine.inc_volume = 0.1
+mainFrame.engine.inc_seek = 5
+
+mainFrame.engine.soundMap.pause_sound = api.KEY_SPACE
+mainFrame.engine.soundMap.resume_sound = api.KEY_SPACE
+mainFrame.engine.soundMap.next_sound = api.KEY_N
+mainFrame.engine.soundMap.prev_sound = api.KEY_P
+mainFrame.engine.soundMap.vol_up = api.KEY_PLUS
+mainFrame.engine.soundMap.vol_down = api.KEY_MINUS
+mainFrame.engine.soundMap.seek_left = api.KEY_LEFT
+mainFrame.engine.soundMap.seek_right = api.KEY_RIGHT
+mainFrame.engine.soundMap.speed_up = api.KEY_UP
+mainFrame.engine.soundMap.speed_down = api.KEY_DOWN
+mainFrame.engine.soundMap.change_playback_mode = api.KEY_TAB
+
+mainFrame.engine.plugins = {
+    {
+        themeWindowId = "tutorial-window",
+        isActivated = true,
+        names = {
+            "tutorial_rmp"
+        }
+    },
+    {
+        themeWindowId = "helper-window",
+        isActivated = true,
+        names = {
             {
-                themewindowid = "tutorial-window",
-                isactivated = true,
-                names = {
-                    "tutorial_rmp"
+                "helper_keys_tutorial",
+                {
+                    -- example of how to configure you plugin
+                    color = api.FGColors.Brights.Red
                 }
-            },
-            {
-                themewindowid = "helper-window",
-                isactivated = true,
-                names = {
-                    {
-                        "helper_keys_tutorial",
-                        {
-                            -- example of how to configure you plugin
-                            color = api.FGColors.Brights.Red
-                        }
-                    }
-                }
-            },
-    }
+            }
+        }
+    },
 }
 ```
 # How to create my own template ?
-- To create your own template, you have to put your init.lua template file in the **~/.rmp.themes** directory. Choose your template name **(for example foo.lua)**
-- **foo.lua** returns a table with multiple tables that represent components or windows for each table
+- To create your own template, you have to put your init.lua template file in the **~/.rmp/templates** directory. Choose your template name **(for example foo.lua)**
+- **foo.lua** populates **mainFrame.engine.template** with a table of components/windows (returning the table is also accepted and merged)
 - Component fields:
         **id** - The window ID
         **type** - The type of component ["Window" , "Text"]
@@ -142,7 +139,7 @@ return {
 
 ```lua
 -- Example template code
-return {
+mainFrame.engine.template = {
     {
         id = "main_window",
         type = "Window",
@@ -170,9 +167,10 @@ return {
 ```
 # How to create my own plugin ?
 - Plugins are configured in the **plugins** configuration section
-- Plugins are Lua files that return a callback function with 4 parameters if the plugin is integrated into a specific window; otherwise, you can ignore them
-- The return function of plugins returns a VirtualTerminal object after you apply your configurations and add event listeners to it
-- You need to initialize the VirtualTerminal object inside the returned callback function (Why? : The engine uses optimizations, which means after it adds all the components, it cleans their memories to avoid memory leaks)
+- Plugins are Lua files that return a callback function. The callback runs every frame
+- Plugins have direct access to the global **mainFrame** and its engine configuration (**mainFrame.engine.fps**, ...) — you don't need a frame parameter. For window-attached plugins the callback still receives the window rect **(x, y, xx, yy)** as parameters
+- The frame is also passed as the first parameter for backward compatibility, so old `return function(frame, x, y, xx, yy)` plugins keep working
+- You need to initialize a VirtualTerminal object inside the returned callback function (Why? : The engine uses optimizations, which means after it adds all the components, it cleans their memories to avoid memory leaks)
 - Use global variables as plugin state and the return function as update functionality for each frame
 - plugins can be configured in **init.lua** configuration file , you can put string name of the plugin or u can put table the first index is the plugin name and second index is table with configuration field so u can load those configurations and work with them
 
@@ -188,12 +186,18 @@ local api = require("rmp.rmp")
 -- u need them if you integrate plugin to specific window
 -- otherwise you can get
 -- width and height of the window by rmp framework
-return function(x, y, xx, yy)
+return function(_, x, y, xx, yy)
     local w = xx - x - 1
     local h = yy - y - 1
     local vterm = api.VirtualTerminal.new()
 
     vterm:writeText(x + 1, y + 1, "Hello from my plugin!")
+
+    -- the global mainFrame is always available:
+    --   mainFrame:writeText(...)
+    --   -- and the engine configuration:
+    --   mainFrame.engine.settings.fps
+    --   mainFrame.engine.fps
 
     return vterm
 end
@@ -519,14 +523,14 @@ local function syntaxHighlightLua(codeLine)
     return tokens
 end
 
-return function(frame, x, y, xx, yy)
+return function(_, x, y, xx, yy)
     local w = xx - x - 1
     local h = yy - y - 1
 
     -- listen every frame: TransformDataGet callbacks are one-shot (drained by the
     -- engine each run), re-registering keeps the shared theme in sync when the
     -- user switches themes at runtime through the theme manager plugin
-    frame:addEventListener(api.EventType.TransformDataGet, function(data)
+    mainFrame:addEventListener(api.EventType.TransformDataGet, function(data)
         if data and data.theme then
             theme = data.theme
         end
@@ -555,7 +559,7 @@ return function(frame, x, y, xx, yy)
             color = extColor("SecondaryContent", true) or api.FGColors.Brights.Cyan
         end
 
-        frame:writeText(centered_x, centered_y, animation_text, color, background_color,
+        mainFrame:writeText(centered_x, centered_y, animation_text, color, background_color,
             api.TextStyle.Bold)
 
         local progress_text = ""
@@ -567,13 +571,13 @@ return function(frame, x, y, xx, yy)
             end
         end
         local progress_x = x + math.floor((w - #progress_text) / 2)
-        frame:writeText(progress_x, centered_y + 2, progress_text, extColor("PrimaryContent", true) or
+        mainFrame:writeText(progress_x, centered_y + 2, progress_text, extColor("PrimaryContent", true) or
             api.FGColors.Brights.White, background_color)
 
         return
     end
 
-    frame:onKeyboard(function(key)
+    mainFrame:onKeyboard(function(key)
         if key == api.KEY_J or key == api.KEY_DOWN then
             move_down = move_down + 1
         elseif key == api.KEY_K or key == api.KEY_UP then
@@ -581,7 +585,7 @@ return function(frame, x, y, xx, yy)
         end
     end)
 
-    frame:addEventListener(api.EventType.TransformDataPut, function()
+    mainFrame:addEventListener(api.EventType.TransformDataPut, function()
         return {
             UP = "k/key-up",
             DOWN = "j/key-down",
@@ -625,7 +629,7 @@ return function(frame, x, y, xx, yy)
                         local xPos = x + 1
                         local tokens = syntaxHighlightLua(codeContent)
                         for _, token in ipairs(tokens) do
-                            frame:writeTextClipped(xPos, displayY, token.text, w - (xPos - x - 1), token.color,
+                            mainFrame:writeTextClipped(xPos, displayY, token.text, w - (xPos - x - 1), token.color,
                                 background_color, token.style)
                             xPos = xPos + #token.text
                         end
@@ -635,7 +639,7 @@ return function(frame, x, y, xx, yy)
                             api.TextStyle.Bold)
                         local xPos = x + 1
                         for _, part in ipairs(formattedParts) do
-                            frame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
+                            mainFrame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
                                 background_color,
                                 part.style)
                             xPos = xPos + #part.text
@@ -646,7 +650,7 @@ return function(frame, x, y, xx, yy)
                     elseif line:match("^%s*-") then
                         local bullet_text = line:match("^%s*-%s*(.*)")
                         if bullet_text then
-                            frame:writeTextClipped(x + 1, displayY, "-", w,
+                            mainFrame:writeTextClipped(x + 1, displayY, "-", w,
                                 extColor("AccentElements", true) or api.FGColors.Brights.Red,
                                 background_color)
 
@@ -656,7 +660,7 @@ return function(frame, x, y, xx, yy)
                                 nil)
                             local xPos = x + 2
                             for _, part in ipairs(formattedParts) do
-                                frame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
+                                mainFrame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
                                     background_color,
                                     part.style)
                                 xPos = xPos + #part.text
@@ -667,7 +671,7 @@ return function(frame, x, y, xx, yy)
                                 background_color, nil)
                             local xPos = x + 1
                             for _, part in ipairs(formattedParts) do
-                                frame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
+                                mainFrame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
                                     background_color,
                                     part.style)
                                 xPos = xPos + #part.text
@@ -679,7 +683,7 @@ return function(frame, x, y, xx, yy)
                             nil)
                         local xPos = x + 1
                         for _, part in ipairs(formattedParts) do
-                            frame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
+                            mainFrame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
                                 background_color,
                                 part.style)
                             xPos = xPos + #part.text

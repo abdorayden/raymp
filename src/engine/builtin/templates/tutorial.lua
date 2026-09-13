@@ -1,9 +1,15 @@
 local api = require("rmp.rmp")
 
+-- tutorial builtin template dynamic windows for diffrent size the main window
+-- that shows a tutorial and two helpers one shows keys and another window a
+-- simple rain animation. Templates, like all configuration files, populate the
+-- global frame config directly — here the window list goes to
+-- mainFrame.engine.template (no `return` table needed).
+
 tutorial_window_width = "w*0.7"
 for_restore = ""
 
-local temp = {
+mainFrame.engine.template = {
     {
         id = "animation-window",
         type = "Window",
@@ -72,5 +78,3 @@ local temp = {
         backgroundColor = api.Default
     }
 }
-
-return temp

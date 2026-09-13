@@ -23,5 +23,7 @@
 
 ---- tutorial builtin template dynamic windows for diffrent size the main window that shows
 ---  a tutorial and two helpers one shows keys and other window a simple clock animation
+---
+--- templates populate the global frame config directly (mainFrame.engine.template)
 
-return require("rmp.builtin.templates.tutorial")
+require("rmp.builtin.templates.tutorial")

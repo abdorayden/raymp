@@ -20,18 +20,16 @@
 -- /*  THE SOFTWARE. 									*/
 -- /*  											*/
 -- /****************************************************************************************/
---
 
 -- rayden's builtin configurations
 -- this configurations will applied even if u delete this .rmp installed folder
 -- u can modifie the template , configurations by plugins
 --
--- save the required configurations apply the changes and return the variable
--- otherwise u can write your own configurations , tempaltes and also a plugins or u can downnload them from plugin manager
+-- configuration files populate the global frame config via mainFrame.engine
+-- (no `return` table needed):
+--     mainFrame.engine.fps = 30
+--     mainFrame.engine.settings.theme = "default"
 --
 -- use <h> to display the help and read the tutorial carefully
 
--- TODO: add callback in builtin configuration as plugins configurations so if the user loves the UI he can modifie it
--- TODO: add this configurations at installations
-
-return require("rmp.builtin")
+require("rmp.builtin")

@@ -40,19 +40,9 @@ local function apply(tha_template)
     end
 end
 
-return function(frame)
-    frame:onConfiguration(function(cfg)
-        if cfg then
-            local settings = cfg:get("settings")
-            if settings and settings.theme and settings.theme == THEME_NAME then
-                doApply = true
-            else
-                doApply = false
-            end
-        end
-    end)
-
-    frame:onTemplate(function(template)
+return function(_)
+    doApply = mainFrame.engine.theme == THEME_NAME
+    mainFrame:onTemplate(function(template)
         if template then
             if doApply then
                 apply(template)
@@ -60,7 +50,7 @@ return function(frame)
         end
     end)
 
-    frame:addEventListener(api.EventType.TransformDataGet, function(data)
+    mainFrame:addEventListener(api.EventType.TransformDataGet, function(data)
         if data and data.ThemeManagerObj then
             data.ThemeManagerObj:addMyTheme(THEME_NAME, theme)
         end

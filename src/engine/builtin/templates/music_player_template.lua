@@ -5,7 +5,7 @@
 
 local api = require("rmp.rmp")
 
-return {
+mainFrame.engine.template = {
     {
         id = 1,
         type = "Window",

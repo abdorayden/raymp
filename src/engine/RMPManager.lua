@@ -107,6 +107,80 @@ local BG           = api.BG
 local Text         = api.Text
 local TextStyle    = api.TextStyle
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Engine configuration (mainFrame.engine)
+-- ─────────────────────────────────────────────────────────────────────────────
+-- The engine config lives on the global frame as mainFrame.engine. Config
+-- files (~/.rmp/init.lua, builtin defaults) populate it directly instead of
+-- returning a table. Two styles are equivalent:
+--
+--     mainFrame.engine.settings.fps = 30   -- canonical subtables
+--     mainFrame.engine.fps = 30            -- shorthand proxy => settings.fps
+--
+-- Canonical keys:
+--   engine.template  string    template name to render
+--   engine.settings  table     engine/UI settings (fps, volume, keys, ...)
+--   engine.soundMap  table     playback keybindings
+--   engine.plugins   table     plugin groups
+-- ─────────────────────────────────────────────────────────────────────────────
+local ENGINE_KEYS = { template = true, settings = true, soundMap = true, plugins = true }
+
+local engine_proxy = {
+    __index = function(t, k)
+        if ENGINE_KEYS[k] then return rawget(t, k) end
+        local v = rawget(t, k)
+        if v ~= nil then return v end
+        local s = rawget(t, "settings")
+        return s and s[k] or nil
+    end,
+    __newindex = function(t, k, v)
+        if ENGINE_KEYS[k] then
+            rawset(t, k, v)
+        else
+            local s = rawget(t, "settings")
+            if s then s[k] = v else rawset(t, k, v) end
+        end
+    end,
+}
+
+--- Builds a fresh, empty engine config shell. The real defaults are applied
+--- by the builtin configuration (src/engine/builtin/init.lua) or a user config.
+--- The proxy makes `engine.fps = 30` equivalent to `engine.settings.fps = 30`.
+--- @return table
+local function build_engine_shell()
+    local engine = {
+        template = nil,
+        settings = {},
+        soundMap = {},
+        plugins  = {},
+    }
+    return setmetatable(engine, engine_proxy)
+end
+
+--- Re-seeds mainFrame.engine with an empty shell. Must be called before each
+--- configuration load so restarts never inherit state from a previous cycle.
+local function resetEngine()
+    mainFrame.engine = build_engine_shell()
+end
+
+--- Merges a legacy returned-table config on top of the engine config. Keeps
+--- prototype-compatibility: `return { template=..., settings={...}, ... }`.
+--- @param engine table
+--- @param tbl table|nil
+--- @return table
+local function merge_into_engine(engine, tbl)
+    if type(tbl) ~= "table" then return engine end
+    if tbl.template ~= nil then engine.template = tbl.template end
+    if type(tbl.settings) == "table" then
+        for k, v in pairs(tbl.settings) do engine.settings[k] = v end
+    end
+    if type(tbl.soundMap) == "table" then
+        for k, v in pairs(tbl.soundMap) do engine.soundMap[k] = v end
+    end
+    if type(tbl.plugins) == "table" then engine.plugins = tbl.plugins end
+    return engine
+end
+
 ---@class Theme
 ---@field BackGround string
 ---@field BorderColor string
@@ -132,7 +206,8 @@ do
         --- @diagnostic disable-next-line
         self:super("constructor", width, height)
 
-        self.theme = nil
+        self.theme  = nil
+        self.engine = build_engine_shell()
     end
 
     --- template component
@@ -223,7 +298,7 @@ do
     -- add input handling by the engine to avoid any mistakes of memory allocations
 end
 
-local mainFrame             = EngineFrame()
+mainFrame                   = EngineFrame()
 
 local io                    = require("io")
 local os                    = require("os")
@@ -920,7 +995,12 @@ local function setupPlugins(configObj, is_userconfig)
             if type(pluginName) == "function" then
                 ok, mod = true, pluginName
             else
+                -- User-space plugin first; fall back to the builtin list so
+                -- default configs (e.g. matrix_digital_rain_effect) still resolve
                 ok, mod = pcall(require, pluginName)
+                if not ok then
+                    ok, mod = pcall(require, "rmp.builtin.plugins." .. pluginName)
+                end
             end
         else
             ok, mod = pcall(require, "rmp.builtin.plugins." .. pluginName)
@@ -1031,6 +1111,12 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
                                  soundCfg, plugs_cfgs, configObj, is_userconfig)
     local h, w = api.Terminal:getSize()
     mainFrame:clear()
+
+    -- Expose the merged sound mapping back onto the engine config so plugins
+    -- can read the full keymap directly from mainFrame.engine.soundMap
+    if configObj and soundCfg then
+        configObj.soundMap = soundCfg
+    end
 
     local sound                = api.Sound()
     local data_freq_engine     = nil
@@ -1468,6 +1554,9 @@ do
     end
 
     --- Loads and executes ~/.rmp/init.lua, caching the result.
+    --- The file may either populate mainFrame.engine directly (new style,
+    --- e.g. `mainFrame.engine.fps = 30`) or return a table (legacy style,
+    --- which is merged on top of the engine config).
     --- @return boolean, string|nil
     function Config:load()
         if not self.isValidFile then return false, self.isError end
@@ -1478,11 +1567,10 @@ do
             self.isError = "failed to load init.lua: " .. tostring(res)
             return false, self.isError
         end
-        if type(res) ~= "table" then
-            self.isError = "init.lua must return a table"
-            return false, self.isError
+        if type(res) == "table" then
+            merge_into_engine(mainFrame.engine, res)
         end
-        self.cfgObj = res
+        self.cfgObj = mainFrame.engine
         return true, nil
     end
 
@@ -1549,6 +1637,9 @@ end
 -- loadConfiguration
 -- ─────────────────────────────────────────────────────────────────────────────
 local function loadConfiguration()
+    -- Start from a clean engine config on every (re)load
+    resetEngine()
+
     local config = Config()
 
     if config:isValidConfig() then
@@ -1563,7 +1654,7 @@ local function loadConfiguration()
 
         if not themeName or type(themeName) ~= "string" then
             logerror("Invalid or missing 'template' field in configuration.")
-            lognote("Example: return { template = 'my_template', ... }")
+            lognote("Example: mainFrame.engine.template = 'my_template'")
             logfatal("Invalid theme name in configuration.", true)
             return nil, nil, nil
         end
@@ -1578,15 +1669,47 @@ local function loadConfiguration()
             return nil, nil, nil
         end
 
+        -- A template may also be provided directly through the engine config
+        if type(template) ~= "table" and type(cfgObj.template) == "table" then
+            template = cfgObj.template
+        end
+        if type(template) ~= "table" then
+            logfatal("Template must be a .lua file in ~/.rmp/templates/ returning a table.", true)
+            return nil, nil, nil
+        end
+
         return cfgObj, template, true
     else
-        local defaultConfig = require("rmp.builtin.init")
-        local templateOk, template = pcall(require, "rmp.builtin.templates." .. defaultConfig.template)
+        -- No user config: apply the builtin defaults onto mainFrame.engine
+        local ok_builtin, defaultConfig = pcall(require, "rmp.builtin.init")
+        if not ok_builtin then
+            logfatal("Error loading builtin configuration: " .. tostring(defaultConfig))
+            return nil, nil, nil
+        end
+        if type(defaultConfig) == "table" then
+            merge_into_engine(mainFrame.engine, defaultConfig)
+        end
+
+        local cfgObj    = mainFrame.engine
+        local themeName = cfgObj.template
+        if not themeName or type(themeName) ~= "string" then
+            logfatal("Invalid or missing builtin 'template' configuration.", true)
+            return nil, nil, nil
+        end
+
+        local templateOk, template = pcall(require, "rmp.builtin.templates." .. themeName)
         if not templateOk then
             logfatal("Error loading default template: " .. template)
-            return nil
+            return nil, nil, nil
         end
-        return defaultConfig, template, false
+        if type(template) ~= "table" and type(cfgObj.template) == "table" then
+            template = cfgObj.template
+        end
+        if type(template) ~= "table" then
+            logfatal("Error loading default template: must be a table of windows.", true)
+            return nil, nil, nil
+        end
+        return cfgObj, template, false
     end
 end
 
