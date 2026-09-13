@@ -209,37 +209,66 @@ while true do
 end
 ```
 
-### 3. **Cargar un Tema Personalizado**
+### 3. **Cargar una Plantilla Personalizada**
+Las plantillas son los diseños (layouts) de ventanas. Las plantillas del usuario
+son archivos Lua en `~/.rmp/templates/<nombre>.lua` (si no se encuentra el nombre,
+se usa como respaldo la plantilla integrada del engine). Selecciona una
+nombrándola en `~/.rmp/init.lua`:
 ```bash
-cat ~/.rmp/init.lua # archivo de configuración
-# este es el lugar donde configuras tu reproductor de audio de rmp
-# las (plantillas/temas) se encuentran en la carpeta ~/.rmp/themes/
-# puedes descargar o crear tu propia plantilla y agregarla a esta ruta 
-# y cargarla en el archivo de configuración init.lua
+mkdir -p ~/.rmp/templates
+nano ~/.rmp/init.lua
 ```
+```lua
+-- ~/.rmp/init.lua
+mainFrame.engine.template = "mi_layout"   -- carga ~/.rmp/templates/mi_layout.lua
+```
+También puedes asignar una tabla directamente (ver la sección Temas/Plantillas).
 
-### 4. **Cargar un plugin**
+### 4. **Añadir Tu Propio Plugin**
+Coloca un módulo de plugin en `~/.rmp/plugins/` para hacerlo disponible por
+nombre; luego regístralo (y define sus teclas de activación/cambio) a través de
+`mainFrame.engine.plugins`:
 ```bash
-cat ~/.rmp/init.lua # archivo de configuración
-# este es el lugar donde configuras tu reproductor de audio de rmp
-# los (plugins) se encuentran en la carpeta ~/.rmp/plugins/
-# puedes descargar o crear tu propio plugin y agregarlo a esta ruta 
-# y cargarlo en el archivo de configuración init.lua
+mkdir -p ~/.rmp/plugins
+nano ~/.rmp/init.lua
 ```
+```lua
+-- ~/.rmp/init.lua
+mainFrame.engine.plugins = {
+  {
+    themeWindowId = "main",       -- Window.id de la plantilla donde se inyecta
+    isActivated = true,
+    names = { "mi-plugin-rmp" },  -- módulo: ~/.rmp/plugins/mi-plugin-rmp/init.lua
+  },
+}
+```
+Consulta la sección Desarrollo de Plugins para el formato completo del grupo.
 
 ## 🎯 Ejemplos de Uso
 
 ### 🎵 **Reproductor de Música (Modo Predeterminado)**
-La configuración predeterminada proporciona un reproductor de música completo:
-```lua
--- Modo predeterminado: solo ejecuta ./rmp
--- Características incluidas:
--- • Explorador de archivos con escaneo de biblioteca musical
--- • Controles de reproducción (reproducir, pausar, buscar, volumen)
--- • Gestión de listas de reproducción
--- • Detección de formatos de audio
--- • Atajos de teclado para todas las funciones
-```
+Ejecutar `./rmp` sin `~/.rmp/init.lua` carga la configuración integrada
+(`src/engine/builtin/init.lua`): la plantilla `"tutorial"` con los plugins de
+ventana `tutorial_rmp`, `helper_keys_tutorial` y `matrix_digital_rain_effect`,
+los popups de notificación, todos los temas integrados y el keymap de reproducción
+completo (abajo). La config integrada **siempre se carga primero** — un
+`~/.rmp/init.lua` solo sobrescribe los valores que quieras cambiar (estilo
+vim/emacs), así puedes reasignar teclas conservando todos los plugins integrados.
+
+Keymap integrado (reasigna cualquiera de estas teclas, ver Referencia de Keymap):
+
+| Tecla | Acción |
+|---|---|
+| `Espacio` | Reproducir / Pausar |
+| `N` / `P` | Siguiente / Anterior pista |
+| `+` / `-` | Subir / Bajar volumen |
+| `→` / `←` | Avanzar / Retroceder |
+| `↑` / `↓` | Subir / Bajar velocidad |
+| `Tab` | Cambiar modo de reproducción |
+| `H` | Superposición de ayuda |
+| `M` | Mensajes / errores registrados |
+| `Ctrl+R` | Reiniciar el motor (recargar config) |
+| `Q` | Salir |
 
 ### 📱 **Aplicación TUI Personalizada**
 
@@ -527,77 +556,182 @@ end
 ```
 
 ### Registro y Configuración de Plugins
+Los archivos de configuración pueblan la configuración global del frame —
+`mainFrame.engine` — directamente en lugar de devolver una tabla.
+`mainFrame.engine.fps = 30` es una abreviatura de `mainFrame.engine.settings.fps = 30`.
+Seguir devolviendo una tabla también funciona (se fusiona sobre la config del engine).
+
 ```lua
--- En tu tema o configuración principal
 -- ~/.rmp/init.lua
-return {
-    -- la configuración predeterminada del sonido
-    settings = {
-        fps = 60,
-        volume = 0.5,           -- 0 a 1
-        speed = 1.0,            -- 0.25 a 4.0
-        mode = api.PlaybackMode.ONES, -- modos de reproducción
-        restart_engine = api.KEY_CTRL_R,
-        exit = api.KEY_Q,
+-- la configuración predeterminada del sonido
+mainFrame.engine.template = "mi_plantilla"
 
-        -- inc o dec
-        inc_speed = 0.1,
-        inc_volume = 0.1,
-        inc_seek = 5
-    },
-    soundMap = {
-        pause_sound = api.KEY_SPACE,
-        resume_sound = api.KEY_SPACE,
-        next_sound = api.KEY_N,
-        prev_sound = api.KEY_P,
-        vol_up = api.KEY_PLUS,
-        vol_down = api.KEY_MINUS,
-        seek_left = api.KEY_LEFT,
-        seek_right = api.KEY_RIGHT,
-        speed_up = api.KEY_UP,
-        speed_down = api.KEY_DOWN,
-        change_playback_mode = api.KEY_TAB
-    },
-    template = "<nombre de tu archivo lua de plantilla sin extensión>",
-    -- plugins
-    plugins = {        
-        {
-            -- si este atributo no es nil o existe, el ejecutor ignora activar
-            themeWindowId = 2, -- el id de la ventana en la que se inyecta el plugin
-            isActivated = true,-- isActivated (true activado por defecto, de lo contrario no)
-            activate = api.KEY_E, -- tecla de alternancia para activar el plugin
-            switchPluginKey = api.KEY_I, -- tecla para cambiar entre múltiples plugins integrados en el mismo id de ventana
-            names = { -- plugins
-                -- ejemplos
-                "matrix_digital_rain_effect",
-                "music_waves",
-                "text_editor",
-                "tellme_yourname",
-                "digital_clock_with_effects",
-                "3d_cube",
-                "filebrowser"
-            }
+mainFrame.engine.settings.fps = 60
+mainFrame.engine.volume = 0.5           -- 0 a 1
+mainFrame.engine.speed = 1.0            -- 0.01 a 3.0
+mainFrame.engine.mode = api.PlaybackMode.ONES -- modos de reproducción
+mainFrame.engine.restart_engine = api.KEY_CTRL_R
+mainFrame.engine.exit = api.KEY_Q
 
-        },
-        {
-            themeWindowId = 3,
-            isActivated = true,
-            activate = api.KEY_E,
-            names = {
-                "center_text"
-            }
-        },
-        {
-            isActivated = false,
-            activate = api.KEY_O,
-            names = {
-                "other plugins"
-            }
+-- inc o dec
+mainFrame.engine.inc_speed = 0.1
+mainFrame.engine.inc_volume = 0.1
+mainFrame.engine.inc_seek = 5
+
+-- keymap del sonido
+mainFrame.engine.soundMap.pause_sound = api.KEY_SPACE
+mainFrame.engine.soundMap.resume_sound = api.KEY_SPACE
+mainFrame.engine.soundMap.next_sound = api.KEY_N
+mainFrame.engine.soundMap.prev_sound = api.KEY_P
+mainFrame.engine.soundMap.vol_up = api.KEY_PLUS
+mainFrame.engine.soundMap.vol_down = api.KEY_MINUS
+mainFrame.engine.soundMap.seek_left = api.KEY_LEFT
+mainFrame.engine.soundMap.seek_right = api.KEY_RIGHT
+mainFrame.engine.soundMap.speed_up = api.KEY_UP
+mainFrame.engine.soundMap.speed_down = api.KEY_DOWN
+mainFrame.engine.soundMap.change_playback_mode = api.KEY_TAB
+
+-- plugins
+mainFrame.engine.plugins = {
+    {
+        -- si este atributo no es nil o existe, el ejecutor ignora activar
+        themeWindowId = 2, -- el id de la ventana en la que se inyecta el plugin
+        isActivated = true,-- isActivated (true activado por defecto, de lo contrario no)
+        activate = api.KEY_E, -- tecla de alternancia para activar el plugin
+        switchPluginKey = api.KEY_I, -- tecla para cambiar entre múltiples plugins integrados en el mismo id de ventana
+        names = { -- plugins
+            -- ejemplos
+            "matrix_digital_rain_effect",
+            "music_waves",
+            "text_editor",
+            "tellme_yourname",
+            "digital_clock_with_effects",
+            "3d_cube",
+            "filebrowser"
+        }
+    },
+    {
+        themeWindowId = 3,
+        isActivated = true,
+        activate = api.KEY_E,
+        names = {
+            "center_text"
+        }
+    },
+    {
+        isActivated = false,
+        activate = api.KEY_O,
+        names = {
+            "otros plugins"
         }
     }
 }
-
 ```
+
+### Añadir Tus Propios Plugins
+1. Crea `~/.rmp/plugins/<nombre>/init.lua` (cualquier nombre), devolviendo bien
+   `function(x, y, xx, yy)` (anclado a ventana) o `function()` (global).
+   `~/.rmp/plugins/` (5 niveles de profundidad) se añade a la ruta require de Lua,
+   así que el módulo se resuelve como `require("<nombre>")`.
+2. Regístralo en `~/.rmp/init.lua`, añadiendo o reemplazando los grupos de plugins:
+   ```lua
+   mainFrame.engine.plugins = {
+     {
+       themeWindowId = "main",       -- "main" debe coincidir con Window.id de tu plantilla
+       isActivated = true,           -- true = activo al arrancar
+       activate = api.KEY_E,         -- alterna todo el grupo en tiempo de ejecución
+       switchPluginKey = api.KEY_I,  -- cicla entre los plugins del grupo
+       priority = 0,                 -- menor se carga primero
+       names = { "mi-plugin-rmp" },  -- tu nombre de módulo (sin extensión)
+     },
+   }
+   ```
+3. Un grupo sin `themeWindowId` es un plugin *global* (dibujado a pantalla completa).
+
+> ⚠️ El plugin se re-invoca cada frame con el rect interior de la ventana
+> `(x, y, xx, yy)`; mantén tu lógica de dibujo/estado idempotente. Solo los plugins
+> anclados a ventana participan en la recarga en caliente.
+
+### ⚙️ Modelo de Configuración Integrado (Builtin)
+La configuración integrada se aplica **primero** en cada arranque (y en cada
+`restart_engine`), y luego `~/.rmp/init.lua` se superpone encima. Los componentes
+integrados vienen **habilitados** y se pueden alternar mediante
+`mainFrame.engine.builtin`:
+
+```lua
+-- ~/.rmp/init.lua
+mainFrame.engine.builtin = false                 -- interruptor maestro: deshabilitar TODOS los builtins
+
+-- alternativas por función (si falta un flag el valor por defecto es HABILITADO)
+mainFrame.engine.builtin.help          = false   -- deshabilitar la superposición de ayuda (H)
+mainFrame.engine.builtin.notify        = true    -- popups de notificación
+mainFrame.engine.builtin.themes        = false   -- deshabilitar los plugins de tema integrados
+mainFrame.engine.builtin.theme_manager = true    -- plugin auto-selector de temas
+
+-- deshabilitar plugins de ventana integrados (usados por la plantilla predeterminada)
+mainFrame.engine.builtin.plugins = {
+    tutorial_rmp               = false,
+    helper_keys_tutorial       = true,
+    matrix_digital_rain_effect = true,
+}
+```
+
+Poner `mainFrame.engine.builtin = false` (o cualquier flag/plugin en `false`)
+omite con elegancia el trabajo correspondiente en el engine; los flags ausentes
+mantienen su valor por defecto de **habilitado**.
+
+### 🎹 Referencia de Keymap (cambiar teclas y plantillas)
+Los valores integrados definen cada tecla. Sobrescribe cualquiera — o deshabilítała
+poniéndola a `nil` — en `~/.rmp/init.lua`:
+
+```lua
+-- ~/.rmp/init.lua
+-- qué plantilla renderizar: "nombre" (plantilla de usuario, si no integrada), o una tabla inline
+mainFrame.engine.template = "tutorial"
+
+-- ajustes de reproducción / motor
+mainFrame.engine.settings.fps     = 60      -- frames por segundo
+mainFrame.engine.settings.volume  = 0.5     -- 0.0 - 1.0
+mainFrame.engine.settings.speed   = 1.0     -- 0.01 - 3.0
+mainFrame.engine.settings.mode    = api.PlaybackMode.ONES
+mainFrame.engine.settings.freq_bins = 32    -- bandas del espectro para la visualización
+mainFrame.engine.settings.theme   = "desert" -- "default"|"darkandwhite"|"desert"|"elflord"; nil deshabilita
+mainFrame.engine.settings.notify  = true    -- mostrar popups de notificación
+
+-- teclas a nivel de motor (nil deshabilita esa acción)
+mainFrame.engine.settings.exit           = api.KEY_Q
+mainFrame.engine.settings.restart_engine = api.KEY_CTRL_R   -- recargar config
+mainFrame.engine.settings.help_key       = api.KEY_H          -- superposición de ayuda
+mainFrame.engine.settings.messages_key   = api.KEY_M          -- registro de mensajes
+-- mainFrame.engine.settings.reload_key   = api.KEY_CTRL_R    -- recarga en caliente de plugins (FEAT-1)
+
+-- tamaños de paso (cuánto cambian las teclas +/−)
+mainFrame.engine.settings.inc_volume = 0.1
+mainFrame.engine.settings.inc_speed  = 0.1
+mainFrame.engine.settings.inc_seek   = 5    -- segundos
+
+-- keymap de control de sonido (todo es reasignable)
+mainFrame.engine.soundMap.pause_sound  = api.KEY_SPACE
+mainFrame.engine.soundMap.resume_sound = api.KEY_SPACE
+mainFrame.engine.soundMap.next_sound   = api.KEY_N
+mainFrame.engine.soundMap.prev_sound   = api.KEY_P
+mainFrame.engine.soundMap.vol_up       = api.KEY_PLUS
+mainFrame.engine.soundMap.vol_down     = api.KEY_MINUS
+mainFrame.engine.soundMap.seek_left    = api.KEY_LEFT
+mainFrame.engine.soundMap.seek_right   = api.KEY_RIGHT
+mainFrame.engine.soundMap.speed_up     = api.KEY_UP
+mainFrame.engine.soundMap.speed_down   = api.KEY_DOWN
+mainFrame.engine.soundMap.change_playback_mode = api.KEY_TAB
+```
+
+**Teclas/atajos de plantilla:** `mainFrame.engine.template` acepta (1) un string —
+cargado desde `~/.rmp/templates/<nombre>.lua`, con respaldo en las plantillas
+integradas (p. ej. las incluidas `"tutorial"`, `"3_simple"`); o (2) una tabla de
+ventanas inline. Dentro de la plantilla, cada ventana tiene un `id`; los grupos de
+plugins se enlazan a él mediante `themeWindowId`. La abreviatura
+`mainFrame.engine.fps = 60` escribe `mainFrame.engine.settings.fps = 60` — cualquier
+clave fuera de `{template, settings, soundMap, plugins, builtin}` se proxy hacia
+`settings`.
 
 ## 🎮 Guía de Desarrollo de Juegos
 

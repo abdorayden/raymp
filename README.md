@@ -207,40 +207,65 @@ while true do
 end
 ```
 
-### 3. **Load a Custom Theme**
+### 3. **Load a Custom Template**
+Templates are the window layouts. Users' templates are Lua files in
+`~/.rmp/templates/<name>.lua` (if a template name is not found there it falls back
+to the builtin templates). Select one by naming it in `~/.rmp/init.lua`:
 ```bash
-cat ~/.rmp/init.lua # config file
-# this is the place where u configure your rmp audio player
-# the (themes/templates) are located in ~/.rmp/themes/ folder
-# you can download or create you own template and add it to this path 
-# and load it in init.lua config file
+mkdir -p ~/.rmp/templates
+nano ~/.rmp/init.lua
 ```
+```lua
+-- ~/.rmp/init.lua
+mainFrame.engine.template = "my_layout"   -- loads ~/.rmp/templates/my_layout.lua
+```
+You can also assign an inline table directly (see the Theme/Template section).
 
-### 4. **Load a plugins**
+### 4. **Add Your Own Plugin**
+Dropping a plugin module under `~/.rmp/plugins/` makes it available by name, then
+you register it (and pick its activation/switch keys) through
+`mainFrame.engine.plugins`:
 ```bash
-cat ~/.rmp/init.lua # config file
-# this is the place where u configure your rmp audio player
-# the (plugins) are located in ~/.rmp/plugins/ folder
-# you can download or create you own plugin and add it to this path 
-# and load it in init.lua config file
+mkdir -p ~/.rmp/plugins
+nano ~/.rmp/init.lua
 ```
+```lua
+-- ~/.rmp/init.lua
+mainFrame.engine.plugins = {
+  {
+    themeWindowId = "main",       -- Window.id from the template to inject into
+    isActivated = true,
+    names = { "my-plugin-rmp" },  -- module: ~/.rmp/plugins/my-plugin-rmp/init.lua
+  },
+}
+```
+See the Plugin Development section for the full `plugins` group format.
 
 ## 🎯 Usage Examples
 
 ### 🎵 **Music Player (Default Mode)**
-The default configuration provides a full-featured music player. The builtin
-defaults are **always loaded** — a `~/.rmp/init.lua` only overrides the values
-you want to change (vim/emacs style), so you can rebind keys while keeping all
-the builtin plugins:
-```lua
--- Default mode - just run ./rmp
--- Features included:
--- • File browser with music library scanning
--- • Playback controls (play, pause, seek, volume)
--- • Playlist management
--- • Audio format detection
--- • Keyboard shortcuts for all functions
-```
+Running `./rmp` with no `~/.rmp/init.lua` loads the builtin defaults
+(`src/engine/builtin/init.lua`): the `"tutorial"` template with the
+`tutorial_rmp`, `helper_keys_tutorial` and `matrix_digital_rain_effect` window
+plugins, notification popups, all builtin themes, and the full playback keymap
+below. The builtin config is **always loaded first** — a `~/.rmp/init.lua` only
+overrides the values you want to change (vim/emacs style), so you can rebind keys
+while keeping all the builtin plugins.
+
+Builtin keymap (rebind any of these, see the Keymap Reference below):
+
+| Key | Action |
+|---|---|
+| `Space` | Play / Pause |
+| `N` / `P` | Next / Previous track |
+| `+` / `-` | Volume up / down |
+| `→` / `←` | Seek forward / backward |
+| `↑` / `↓` | Speed up / down |
+| `Tab` | Cycle playback mode |
+| `H` | Help overlay |
+| `M` | Logged messages / errors |
+| `Ctrl+R` | Restart engine (reload config) |
+| `Q` | Quit |
 
 ### 📱 **Custom TUI Application**
 
@@ -604,19 +629,44 @@ mainFrame.engine.plugins = {
 }
 ```
 
+### Adding Your Own Plugins
+1. Create `~/.rmp/plugins/<name>/init.lua` (any name), returning either
+   `function(x, y, xx, yy)` (window-attached) or `function()` (global).
+   `~/.rmp/plugins/` (5 levels deep) is added to the Lua require path, so the
+   module resolves as `require("<name>")`.
+2. Register it in `~/.rmp/init.lua`, appending or replacing the plugin groups:
+   ```lua
+   mainFrame.engine.plugins = {
+     {
+       themeWindowId = "main",       -- "main" matches Window.id in your template
+       isActivated = true,           -- true = active on boot
+       activate = api.KEY_E,         -- toggle the whole group on/off at runtime
+       switchPluginKey = api.KEY_I,  -- cycle between plugins in this group
+       priority = 0,                 -- lower loads first
+       names = { "my-plugin-rmp" },  -- your module name (extension excluded)
+     },
+   }
+   ```
+3. A group without `themeWindowId` is a *global* plugin (drawn full-frame).
+
+> ⚠️ Every frame the plugin is re-invoked with the window's inner rect
+> `(x, y, xx, yy)`; keep your draw/state logic idempotent. Only window-attached
+> plugins participate in hot-reload.
+
 ### ⚙️ Builtin Configuration Model
-The builtin configuration (`rmp.builtin.init`) is applied **first** on every
-startup, then `~/.rmp/init.lua` is layered on top. Builtin components ship
-**enabled** but can be toggled through `mainFrame.engine.builtin`:
+The builtin configuration is applied **first** on every startup (and on every
+`restart_engine`), then `~/.rmp/init.lua` is layered on top. Builtin components
+ship **enabled** and can be toggled through `mainFrame.engine.builtin`:
 
 ```lua
 -- ~/.rmp/init.lua
-mainFrame.engine.builtin = false                 -- disable all builtin components
+mainFrame.engine.builtin = false                 -- master switch: disable ALL builtins
 
-mainFrame.engine.builtin.help          = false   -- disable the help overlay (H)
+-- per-feature toggles (a missing flag defaults to ENABLED, so partial overrides are safe)
+mainFrame.engine.builtin.help          = false   -- disable the help overlay (default H)
 mainFrame.engine.builtin.notify        = true    -- notification popups
-mainFrame.engine.builtin.themes        = false   -- disable builtin themes
-mainFrame.engine.builtin.theme_manager = true    -- theme auto-selector
+mainFrame.engine.builtin.themes        = false   -- disable the builtin theme plugins
+mainFrame.engine.builtin.theme_manager = true    -- theme auto-selector plugin
 
 -- disable individual builtin window plugins (used by the default template)
 mainFrame.engine.builtin.plugins = {
@@ -626,7 +676,61 @@ mainFrame.engine.builtin.plugins = {
 }
 ```
 
-If a flag is missing it defaults to enabled, so partial overrides are safe.
+Setting `mainFrame.engine.builtin = false` (or any single flag/plugin to `false`)
+gracefully skips the corresponding work in the engine; missing flags keep their
+default of **enabled**.
+
+### 🎹 Keymap Reference (change keys & templates)
+The builtin defaults define every key. Override any of them — or disable one by
+setting it to `nil` — in `~/.rmp/init.lua`:
+
+```lua
+-- ~/.rmp/init.lua
+-- which template to render: "name" (user template, else builtin), or an inline table
+mainFrame.engine.template = "tutorial"
+
+-- playback / engine settings
+mainFrame.engine.settings.fps     = 60      -- frames per second
+mainFrame.engine.settings.volume  = 0.5     -- 0.0 - 1.0
+mainFrame.engine.settings.speed   = 1.0     -- 0.01 - 3.0
+mainFrame.engine.settings.mode    = api.PlaybackMode.ONES
+mainFrame.engine.settings.freq_bins = 32    -- spectrum bands for visualization
+mainFrame.engine.settings.theme   = "desert" -- "default"|"darkandwhite"|"desert"|"elflord"; nil disables
+mainFrame.engine.settings.notify  = true    -- show notification popups
+
+-- engine-level keys (nil disables that action)
+mainFrame.engine.settings.exit          = api.KEY_Q
+mainFrame.engine.settings.restart_engine = api.KEY_CTRL_R   -- reload config
+mainFrame.engine.settings.help_key      = api.KEY_H          -- help overlay
+mainFrame.engine.settings.messages_key  = api.KEY_M          -- message log
+-- mainFrame.engine.settings.reload_key  = api.KEY_CTRL_R    -- plugin hot-reload (FEAT-1)
+
+-- step sizes (how much the +/- keys change things)
+mainFrame.engine.settings.inc_volume = 0.1
+mainFrame.engine.settings.inc_speed  = 0.1
+mainFrame.engine.settings.inc_seek   = 5    -- seconds
+
+-- sound control keymap (all overrideable)
+mainFrame.engine.soundMap.pause_sound  = api.KEY_SPACE
+mainFrame.engine.soundMap.resume_sound = api.KEY_SPACE
+mainFrame.engine.soundMap.next_sound   = api.KEY_N
+mainFrame.engine.soundMap.prev_sound   = api.KEY_P
+mainFrame.engine.soundMap.vol_up       = api.KEY_PLUS
+mainFrame.engine.soundMap.vol_down     = api.KEY_MINUS
+mainFrame.engine.soundMap.seek_left    = api.KEY_LEFT
+mainFrame.engine.soundMap.seek_right   = api.KEY_RIGHT
+mainFrame.engine.soundMap.speed_up     = api.KEY_UP
+mainFrame.engine.soundMap.speed_down   = api.KEY_DOWN
+mainFrame.engine.soundMap.change_playback_mode = api.KEY_TAB
+```
+
+**Template keys/shortcuts:** `mainFrame.engine.template` accepts (1) a string —
+loaded from `~/.rmp/templates/<name>.lua`, falling back to the builtin templates
+(e.g. the shipped `"tutorial"`, `"3_simple"`); or (2) an inline window table. Inside
+the template, every window has an `id`; plugin groups bind to it via
+`themeWindowId`. The `mainFrame.engine.fps = 60` shorthand writes
+`mainFrame.engine.settings.fps = 60` — anything outside
+`{template, settings, soundMap, plugins, builtin}` proxies into `settings`.
 
 ## 🎮 Game Development Guide
 

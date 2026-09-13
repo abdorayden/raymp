@@ -25,15 +25,14 @@ all you need is following this tutorial
 - All these classes are located in the **RMP framework**, which will be installed by default when you install the RayMp software
 
 # Configuration structure:
-- The **RayMp** engine checks the **~/.rmp** directory **(~ => HOME DIR)**. The structure of the .rmp directory is:
-- **init.lua** - Configuration of the engine, sound keymaps, rendered templates, and plugin configurations
-- **themes**   - Directory of templates that we created or downloaded from the plugin manager. The directory contains names of templates that we choose in the init.lua configuration file
-- **plugins**  - Directory of plugins that we created or downloaded from the plugin manager. The directory contains subdirectories of plugins that we load and configure into the configuration file
+- The **RayMp** engine ships a builtin configuration that is **always applied first** on every startup (and on every **restart_engine**). Your **~/.rmp** directory **(~ => HOME DIR)** is then layered on top, so you only override what you want to change:
+- **init.lua** - Configuration of the engine, sound keymaps, the rendered template, and plugin configurations
+- **templates** - Directory of templates that we created or downloaded. The file name (without extension) is what you put in **mainFrame.engine.template**
+- **plugins** - Directory of plugins that we created or downloaded. Each plugin is a subdirectory (e.g. **my-plugin-rmp/** containing an **init.lua**); you register that directory name in the configuration file
 
 # How to configure my music player ?
-- First, open the ~/.rmp directory in your text editor
-- Open the **init.lua** configuration file. **init.lua** populates the engine configuration table **mainFrame.engine** (no `return` needed). The engine pre-seeds defaults, so you only override what you want:
-    **template** - Template name for rendering
+- Open the **~/.rmp/init.lua** configuration file in your text editor. **init.lua** populates the engine configuration table **mainFrame.engine** (no `return` needed). The engine pre-seeds defaults, so you only override what you want:
+    **template** - Template name for rendering ("name" loads **~/.rmp/templates/<name>.lua**, falling back to the builtin templates like "tutorial"), or an inline table of windows
     **settings** - Engine settings that are loaded when RayMp starts
         **fps** - Engine FPS rendered
         **help_key** - Engine has its own help window configured with this field
@@ -42,6 +41,8 @@ all you need is following this tutorial
         **mode** - The default mode the engine starts with
         **restart_engine** - Key used to restart the whole engine
         **exit** - Key used to exit from the software
+        **messages_key** - Key that toggles the logged messages/errors overlay
+        **theme** - Default theme name ["default", "darkandwhite", "desert", "elflord"]; nil disables theming
         **inc_volume** - The default increment for volume that the engine uses
         **inc_speed** - The default increment for speed that the engine uses
         **inc_seek** - The default increment for seek that the engine uses
@@ -57,18 +58,18 @@ all you need is following this tutorial
         **speed_up** - Configured key to increase the playback speed
         **speed_down** - Configured key to decrease the playback speed
         **change_playback_mode** - Configured key to change the playback mode of the sound
+    **builtin** - Enable / disable the builtin components (help, notify, themes, theme_manager) and the builtin window plugins (tutorial_rmp, helper_keys_tutorial, matrix_digital_rain_effect). A missing flag defaults to ENABLED; `mainFrame.engine.builtin = false` disables everything
     **plugins** - Plugins is a table of plugins that are wrapped in tables
-        **themeWindowId** - The ID of the window in the template that is used to integrate plugins for a specific window in the template **(OPTIONAL)**. If the field is nil or not selected, the plugin can access the whole window
+        **themeWindowId** - The ID of the window in the template that is used to integrate plugins for a specific window in the template **(OPTIONAL)**. If the field is nil or not selected, the plugin is a global plugin over the whole screen
         **isActivated** - Boolean field: true to use the plugin, false to ignore it
         **names** - Table field that accepts multiple plugins
             Why? : A window can use multiple plugins (for example, animations and more), so we can apply more than 1 plugin to the same window
         **switchPluginKey** - This plugin is optional and used for switching multiple plugins in a window
-    }
 - You can also use the shorthand proxy — `mainFrame.engine.fps = 30` is the same as `mainFrame.engine.settings.fps = 30`.
 - Returning a table is still supported: `return { template = "my_template", settings = {...}, ... }` and it will be merged onto the engine config.
 ```lua
--- Example configuration
-mainFrame.engine.template = "my_template"
+-- Example configuration (~/.rmp/init.lua)
+mainFrame.engine.template = "my_template" -- or an inline table; falls back to builtin "tutorial"
 
 mainFrame.engine.fps = 60
 mainFrame.engine.help_key = api.KEY_H
@@ -95,25 +96,25 @@ mainFrame.engine.soundMap.speed_up = api.KEY_UP
 mainFrame.engine.soundMap.speed_down = api.KEY_DOWN
 mainFrame.engine.soundMap.change_playback_mode = api.KEY_TAB
 
+-- enable / disable the builtin components and window plugins
+mainFrame.engine.builtin = {
+    help = true,
+    notify = true,
+    themes = true,
+    theme_manager = true,
+    plugins = {
+        tutorial_rmp = true,
+        helper_keys_tutorial = true,
+        matrix_digital_rain_effect = true,
+    },
+}
+
 mainFrame.engine.plugins = {
     {
         themeWindowId = "tutorial-window",
         isActivated = true,
         names = {
             "tutorial_rmp"
-        }
-    },
-    {
-        themeWindowId = "helper-window",
-        isActivated = true,
-        names = {
-            {
-                "helper_keys_tutorial",
-                {
-                    -- example of how to configure you plugin
-                    color = api.FGColors.Brights.Red
-                }
-            }
         }
     },
 }
@@ -166,7 +167,8 @@ mainFrame.engine.template = {
 }
 ```
 # How to create my own plugin ?
-- Plugins are configured in the **plugins** configuration section
+- Put your plugin module in **~/.rmp/plugins/<name>/init.lua** (any name) — `~/.rmp/plugins/` is added to the Lua require path, so the module resolves as **require("<name>")**
+- Register it in the **plugins** configuration section of **~/.rmp/init.lua** and pick its activation/switch keys there
 - Plugins are Lua files that return a callback function. The callback runs every frame
 - Plugins have direct access to the global **mainFrame** and its engine configuration (**mainFrame.engine.fps**, ...) — you don't need a frame parameter. Window-attached plugins use `return function(x, y, xx, yy)`; global plugins use `return function()`
 - You need to initialize a VirtualTerminal object inside the returned callback function (Why? : The engine uses optimizations, which means after it adds all the components, it cleans their memories to avoid memory leaks)
