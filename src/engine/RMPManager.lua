@@ -22,8 +22,9 @@
 -- The engine is structured as a pipeline:
 --
 --   loadConfiguration()
---       └─► Config:load() — reads ~/.rmp/init.lua (user) or builtin default
---       └─► dofile(template.lua) — loads the layout template table
+--       └─► rmp.builtin.init   — always applies builtin defaults first (vim-like)
+--       └─► Config:load()      — layers ~/.rmp/init.lua on top if it exists
+--       └─► template lookup    — user ~/.rmp/templates/, then builtin templates
 --
 --   setupPlugins(configObj)
 --       └─► Sorts plugin groups by priority
@@ -122,8 +123,25 @@ local TextStyle    = api.TextStyle
 --   engine.settings  table     engine/UI settings (fps, volume, keys, ...)
 --   engine.soundMap  table     playback keybindings
 --   engine.plugins   table     plugin groups
+--   engine.builtin   table|false  builtin enable/disable toggles (see below)
+--
+-- Builtin configuration model (nvim-style):
+--   The builtin defaults are ALWAYS applied first. A ~/.rmp/init.lua is then
+--   layered on top, so you keep the defaults and only override what you want.
+--   Builtin components ship enabled but can be toggled globally:
+--
+--     mainFrame.engine.builtin = false                  -- disable all builtins
+--     mainFrame.engine.builtin.help          = true     -- help overlay (H)
+--     mainFrame.engine.builtin.notify        = true     -- notification popups
+--     mainFrame.engine.builtin.themes        = true     -- builtin theme list
+--     mainFrame.engine.builtin.theme_manager = true     -- theme auto-selector
+--     mainFrame.engine.builtin.plugins = {              -- builtin window plugins
+--         tutorial_rmp               = true,
+--         helper_keys_tutorial       = true,
+--         matrix_digital_rain_effect = true,
+--     }
 -- ─────────────────────────────────────────────────────────────────────────────
-local ENGINE_KEYS = { template = true, settings = true, soundMap = true, plugins = true }
+local ENGINE_KEYS = { template = true, settings = true, soundMap = true, plugins = true, builtin = true }
 
 local engine_proxy = {
     __index = function(t, k)
@@ -144,8 +162,9 @@ local engine_proxy = {
 }
 
 --- Builds a fresh, empty engine config shell. The real defaults are applied
---- by the builtin configuration (src/engine/builtin/init.lua) or a user config.
---- The proxy makes `engine.fps = 30` equivalent to `engine.settings.fps = 30`.
+--- by the builtin configuration (src/engine/builtin/init.lua), then a user
+--- config is layered on top. The proxy makes `engine.fps = 30` equivalent to
+--- `engine.settings.fps = 30`.
 --- @return table
 local function build_engine_shell()
     local engine = {
@@ -153,8 +172,35 @@ local function build_engine_shell()
         settings = {},
         soundMap = {},
         plugins  = {},
+        builtin  = {
+            help          = true,
+            notify        = true,
+            themes        = true,
+            theme_manager = true,
+            plugins       = {
+                tutorial_rmp               = true,
+                helper_keys_tutorial       = true,
+                matrix_digital_rain_effect = true,
+            },
+        },
     }
     return setmetatable(engine, engine_proxy)
+end
+
+--- Returns whether a builtin component is enabled by the user config.
+--- The builtin table defaults every flag to true when the field is missing,
+--- so partial overrides (e.g. `engine.builtin.plugins = { x = false }`) work.
+--- @param engine table
+--- @param group string|nil   "plugins" for window plugins, nil for flat flags
+--- @param name string        flag name within the group
+--- @return boolean
+local function builtin_enabled(engine, group, name)
+    local builtin = engine and engine.builtin
+    if builtin == false then return false end
+    if type(builtin) ~= "table" then return true end
+    local flags = group and builtin[group] or builtin
+    if type(flags) ~= "table" then return flags ~= false end
+    return flags[name] ~= false
 end
 
 --- Re-seeds mainFrame.engine with an empty shell. Must be called before each
@@ -912,6 +958,8 @@ end
 -- Reads the plugins table from the config, sorts groups by priority, then
 -- loads each plugin module with pcall. Window-attached plugins go into a
 -- PlugManager; global plugins go into the otherPlugs Queue.
+-- Any builtin plugin name appearing in a group can be turned off with
+-- mainFrame.engine.builtin.plugins.<name> = false (see builtin_enabled).
 --
 -- Plugin config format (in ~/.rmp/init.lua):
 --
@@ -1016,6 +1064,14 @@ local function setupPlugins(configObj, is_userconfig)
         return nil
     end
 
+    -- Builtin window plugins ship enabled but can be turned off via
+    -- mainFrame.engine.builtin.plugins.<name> = false
+    local function builtin_plugin_skipped(name)
+        local pluginName = (type(name) == "table") and (name.name or name[1]) or name
+        if type(pluginName) ~= "string" then return false end
+        return not builtin_enabled(configObj, "plugins", pluginName)
+    end
+
     for _, plug in ipairs(plugins) do
         if not (plug.isActivated and plug.names) then goto continue end
 
@@ -1023,8 +1079,10 @@ local function setupPlugins(configObj, is_userconfig)
             -- Window-attached plugin group
             local pq = Queue.new()
             for _, name in ipairs(plug.names) do
-                local mod = load_plugin_module(name, is_userconfig)
-                if mod then pq:push(mod) end
+                if not builtin_plugin_skipped(name) then
+                    local mod = load_plugin_module(name, is_userconfig)
+                    if mod then pq:push(mod) end
+                end
             end
             if not pq:isEmpty() then
                 plugs:put(plug.themeWindowId, { plug.switchPluginKey, pq })
@@ -1032,8 +1090,10 @@ local function setupPlugins(configObj, is_userconfig)
         else
             -- Global plugin (no window slot)
             for _, name in ipairs(plug.names) do
-                local mod = load_plugin_module(name, is_userconfig)
-                if mod then otherPlugs:push(mod) end
+                if not builtin_plugin_skipped(name) then
+                    local mod = load_plugin_module(name, is_userconfig)
+                    if mod then otherPlugs:push(mod) end
+                end
             end
         end
 
@@ -1144,10 +1204,12 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         "builtin-theme-elflord-rmp",
     }
     local builtin_theme_fns    = {}
-    for _, name in ipairs(builtin_theme_names) do
-        local ok, mod = pcall(require, "rmp.builtin.plugins." .. name)
-        if ok and mod and type(mod) == "function" then
-            builtin_theme_fns[#builtin_theme_fns + 1] = mod
+    if builtin_enabled(configObj, nil, "themes") then
+        for _, name in ipairs(builtin_theme_names) do
+            local ok, mod = pcall(require, "rmp.builtin.plugins." .. name)
+            if ok and mod and type(mod) == "function" then
+                builtin_theme_fns[#builtin_theme_fns + 1] = mod
+            end
         end
     end
 
@@ -1177,7 +1239,8 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         local mode = validated_setting(settings.mode, "number", 0, 3, 0)
         settings.mode = mode; sound:setPlayBackMode(mode)
 
-        help_fn    = type(settings.help_key) == "number" and settings.help_key or nil
+        help_fn    = (builtin_enabled(configObj, nil, "help")
+            and type(settings.help_key) == "number") and settings.help_key or nil
         reload_key = type(settings.reload_key) == "number" and settings.reload_key or nil
 
         if settings.messages_key == false then
@@ -1201,7 +1264,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
             settings.theme = "default"
         end
 
-        if settings.notify then
+        if settings.notify and builtin_enabled(configObj, nil, "notify") then
             local ok, mod = pcall(require, "rmp.builtin.plugins.builtin-notify-rmp")
             if ok and mod then notify_plug = mod end
         end
@@ -1213,8 +1276,10 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         sound:setPlayBackMode(0)
     end
 
-    local ok_tm, tm = pcall(require, "rmp.builtin.plugins.builtin-theme-manager-rmp")
-    if ok_tm and tm then loaded_theme_manager = tm end
+    if builtin_enabled(configObj, nil, "theme_manager") then
+        local ok_tm, tm = pcall(require, "rmp.builtin.plugins.builtin-theme-manager-rmp")
+        if ok_tm and tm then loaded_theme_manager = tm end
+    end
 
     mainFrame:initMainFrame()
 
@@ -1400,7 +1465,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         end
 
         -- Help overlay
-        if render_help then
+        if render_help and builtin_enabled(configObj, nil, "help") then
             local h_ok, h_obj = pcall(require, "rmp.builtin.plugins.builtin-help-rmp")
             if h_ok and h_obj and type(h_obj) == "function" then
                 h_obj()
@@ -1448,7 +1513,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         end
 
         local notis = drain_notifications()
-        if settings and settings.notify then
+        if settings and settings.notify and builtin_enabled(configObj, nil, "notify") then
             for _, noti in ipairs(notis) do
                 mainFrame:addEventListener(api.EventType.TransformDataPut, function()
                     return { notification = noti }
@@ -1491,8 +1556,8 @@ end
 -- Config
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Loads ~/.rmp/init.lua (the user config file) and resolves paths for
--- templates and plugins. Falls back to the builtin default if the file is
--- not found.
+-- templates and plugins. Always runs AFTER the builtin defaults, so the user
+-- file only needs to override what it wants to change.
 --
 -- Expected structure of ~/.rmp/init.lua:
 --
@@ -1636,81 +1701,88 @@ end
 -- ─────────────────────────────────────────────────────────────────────────────
 -- loadConfiguration
 -- ─────────────────────────────────────────────────────────────────────────────
+-- nvim-style loading:
+--   1. The builtin defaults are ALWAYS applied to mainFrame.engine first, so
+--      the shipped settings, keymap, template and builtin plugins are always
+--      present.
+--   2. If ~/.rmp/init.lua exists it is layered on top — user changes override
+--      the defaults but everything else keeps working.
+--   3. Builtin components ship enabled; toggles live on mainFrame.engine.builtin
+--      (see builtin_enabled / the engine config docs above).
+-- ─────────────────────────────────────────────────────────────────────────────
 local function loadConfiguration()
     -- Start from a clean engine config on every (re)load
     resetEngine()
 
-    local config = Config()
+    -- 1) Always apply builtin defaults first. The builtin config mutates
+    --    mainFrame.engine directly, so require()'s module cache must be
+    --    cleared before each (re)load — otherwise a restart (restart_engine)
+    --    skips re-applying the defaults to the fresh engine shell.
+    package.loaded["rmp.builtin.init"] = nil
+    local ok_builtin, defaultConfig = pcall(require, "rmp.builtin.init")
+    if not ok_builtin then
+        logfatal("Error loading builtin configuration: " .. tostring(defaultConfig))
+        return nil, nil, nil
+    end
+    if type(defaultConfig) == "table" then
+        merge_into_engine(mainFrame.engine, defaultConfig)
+    end
 
-    if config:isValidConfig() then
+    -- 2) Layer the user configuration on top (if it exists)
+    local config = Config()
+    local is_userconfig = config:isValidConfig()
+    if is_userconfig then
         local ok, err = config:load()
         if not ok then
             logfatal("loading user configuration: " .. err)
             return nil, nil, nil
         end
-
-        local cfgObj    = config:getInitFileAsObject()
-        local themeName = cfgObj.template
-
-        if not themeName or type(themeName) ~= "string" then
-            logerror("Invalid or missing 'template' field in configuration.")
-            lognote("Example: mainFrame.engine.template = 'my_template'")
-            logfatal("Invalid theme name in configuration.", true)
-            return nil, nil, nil
-        end
-
-        local templatePath = joinPath(config.homePath:getPath(), ".rmp", "templates", themeName .. ".lua")
-        local templateOk, template = pcall(dofile, templatePath)
-        if not templateOk then
-            logerror("Could not load template '" .. themeName .. "': " .. tostring(template))
-            lognote("Template must be a .lua file in ~/.rmp/templates/ returning a table.")
-            lognote("Example entry: { type='Window', id='main', width='w', height='h', x=0, y=0, border=true }")
-            logfatal("loading user template: Not found or error", true)
-            return nil, nil, nil
-        end
-
-        -- A template may also be provided directly through the engine config
-        if type(template) ~= "table" and type(cfgObj.template) == "table" then
-            template = cfgObj.template
-        end
-        if type(template) ~= "table" then
-            logfatal("Template must be a .lua file in ~/.rmp/templates/ returning a table.", true)
-            return nil, nil, nil
-        end
-
-        return cfgObj, template, true
-    else
-        -- No user config: apply the builtin defaults onto mainFrame.engine
-        local ok_builtin, defaultConfig = pcall(require, "rmp.builtin.init")
-        if not ok_builtin then
-            logfatal("Error loading builtin configuration: " .. tostring(defaultConfig))
-            return nil, nil, nil
-        end
-        if type(defaultConfig) == "table" then
-            merge_into_engine(mainFrame.engine, defaultConfig)
-        end
-
-        local cfgObj    = mainFrame.engine
-        local themeName = cfgObj.template
-        if not themeName or type(themeName) ~= "string" then
-            logfatal("Invalid or missing builtin 'template' configuration.", true)
-            return nil, nil, nil
-        end
-
-        local templateOk, template = pcall(require, "rmp.builtin.templates." .. themeName)
-        if not templateOk then
-            logfatal("Error loading default template: " .. template)
-            return nil, nil, nil
-        end
-        if type(template) ~= "table" and type(cfgObj.template) == "table" then
-            template = cfgObj.template
-        end
-        if type(template) ~= "table" then
-            logfatal("Error loading default template: must be a table of windows.", true)
-            return nil, nil, nil
-        end
-        return cfgObj, template, false
     end
+
+    local cfgObj = mainFrame.engine
+
+    -- 3) Resolve the template:
+    --    a) the template may be provided as an inline table
+    --    b) a named template: look in ~/.rmp/templates/ first, then builtin
+    local template = cfgObj.template
+    if type(template) == "table" then
+        return cfgObj, template, is_userconfig
+    end
+
+    if type(template) ~= "string" then
+        logerror("Invalid or missing 'template' field in configuration.")
+        lognote("Example: mainFrame.engine.template = 'tutorial'")
+        logfatal("Invalid template name in configuration.", true)
+        return nil, nil, nil
+    end
+
+    if is_userconfig then
+        local userTemplatePath = joinPath(config.homePath:getPath(), ".rmp", "templates", template .. ".lua")
+        local okUser, userTemplateOpen = pcall(dofile, userTemplatePath)
+        if okUser and type(userTemplateOpen) == "table" then
+            return cfgObj, userTemplateOpen, true
+        end
+    end
+
+    -- Builtin templates are mutation-style modules (they set
+    -- mainFrame.engine.template inline), so bust the cache to re-run them
+    -- on restarts the same way the builtin init is re-run above.
+    local builtin_template_module = "rmp.builtin.templates." .. template
+    package.loaded[builtin_template_module] = nil
+    local okBuiltinTemplate, builtinTemplate = pcall(require, builtin_template_module)
+    if okBuiltinTemplate and type(builtinTemplate) == "table" then
+        return cfgObj, builtinTemplate, is_userconfig
+    end
+    -- Builtin templates are mutation-style: they set mainFrame.engine.template
+    -- to the window table instead of returning it.
+    if okBuiltinTemplate and type(cfgObj.template) == "table" then
+        return cfgObj, cfgObj.template, is_userconfig
+    end
+
+    logerror("Template '" .. tostring(template) .. "' not found in ~/.rmp/templates/ nor in the builtin templates.")
+    lognote("Example entry: { type='Window', id='main', width='w', height='h', x=0, y=0, border=true }")
+    logfatal("loading template: Not found or error", true)
+    return nil, nil, nil
 end
 
 -- ─────────────────────────────────────────────────────────────────────────────

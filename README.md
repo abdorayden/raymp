@@ -228,7 +228,10 @@ cat ~/.rmp/init.lua # config file
 ## 🎯 Usage Examples
 
 ### 🎵 **Music Player (Default Mode)**
-The default configuration provides a full-featured music player:
+The default configuration provides a full-featured music player. The builtin
+defaults are **always loaded** — a `~/.rmp/init.lua` only overrides the values
+you want to change (vim/emacs style), so you can rebind keys while keeping all
+the builtin plugins:
 ```lua
 -- Default mode - just run ./rmp
 -- Features included:
@@ -600,6 +603,30 @@ mainFrame.engine.plugins = {
     }
 }
 ```
+
+### ⚙️ Builtin Configuration Model
+The builtin configuration (`rmp.builtin.init`) is applied **first** on every
+startup, then `~/.rmp/init.lua` is layered on top. Builtin components ship
+**enabled** but can be toggled through `mainFrame.engine.builtin`:
+
+```lua
+-- ~/.rmp/init.lua
+mainFrame.engine.builtin = false                 -- disable all builtin components
+
+mainFrame.engine.builtin.help          = false   -- disable the help overlay (H)
+mainFrame.engine.builtin.notify        = true    -- notification popups
+mainFrame.engine.builtin.themes        = false   -- disable builtin themes
+mainFrame.engine.builtin.theme_manager = true    -- theme auto-selector
+
+-- disable individual builtin window plugins (used by the default template)
+mainFrame.engine.builtin.plugins = {
+    tutorial_rmp               = false,
+    helper_keys_tutorial       = true,
+    matrix_digital_rain_effect = true,
+}
+```
+
+If a flag is missing it defaults to enabled, so partial overrides are safe.
 
 ## 🎮 Game Development Guide
 
