@@ -5,7 +5,7 @@
 
 local api = require("rmp.rmp")
 
-mainFrame.engine.template = {
+raymp.engine.template = {
     {
         id = 1,
         type = "Window",
@@ -38,7 +38,7 @@ mainFrame.engine.template = {
                 border = api.BoxDrawing.NoBorder,
                 backgroundColor = api.BGColors.NoBrights.Blue
             },
-            
+
             -- Main Content Window
             {
                 id = 2,
@@ -60,7 +60,7 @@ mainFrame.engine.template = {
                 border = api.BoxDrawing.LightBorder,
                 backgroundColor = api.BGColors.NoBrights.Black
             },
-            
+
             -- Sidebar Window
             {
                 id = 4,
@@ -120,7 +120,7 @@ mainFrame.engine.template = {
                     }
                 }
             },
-            
+
             -- Footer/Status Window
             {
                 id = 8,

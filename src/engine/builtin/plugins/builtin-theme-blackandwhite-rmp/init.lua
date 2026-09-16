@@ -41,8 +41,8 @@ local function apply(tha_template)
 end
 
 return function()
-    doApply = mainFrame.engine.theme == THEME_NAME
-    mainFrame:onTemplate(function(template)
+    doApply = raymp.engine.theme == THEME_NAME
+    raymp:onTemplate(function(template)
         if template then
             if doApply then
                 apply(template)
@@ -50,7 +50,7 @@ return function()
         end
     end)
 
-    mainFrame:addEventListener(api.EventType.TransformDataGet, function(data)
+    raymp:addEventListener(api.EventType.TransformDataGet, function(data)
         if data and data.ThemeManagerObj then
             data.ThemeManagerObj:addMyTheme(THEME_NAME, theme)
         end

@@ -27,11 +27,11 @@ all you need is following this tutorial
 # Configuration structure:
 - The **RayMp** engine ships a builtin configuration that is **always applied first** on every startup (and on every **restart_engine**). Your **~/.rmp** directory **(~ => HOME DIR)** is then layered on top, so you only override what you want to change:
 - **init.lua** - Configuration of the engine, sound keymaps, the rendered template, and plugin configurations
-- **templates** - Directory of templates that we created or downloaded. The file name (without extension) is what you put in **mainFrame.engine.template**
+- **templates** - Directory of templates that we created or downloaded. The file name (without extension) is what you put in **raymp.engine.template**
 - **plugins** - Directory of plugins that we created or downloaded. Each plugin is a subdirectory (e.g. **my-plugin-rmp/** containing an **init.lua**); you register that directory name in the configuration file
 
 # How to configure my music player ?
-- Open the **~/.rmp/init.lua** configuration file in your text editor. **init.lua** populates the engine configuration table **mainFrame.engine** (no `return` needed). The engine pre-seeds defaults, so you only override what you want:
+- Open the **~/.rmp/init.lua** configuration file in your text editor. **init.lua** populates the engine configuration table **raymp.engine** (no `return` needed). The engine pre-seeds defaults, so you only override what you want:
     **template** - Template name for rendering ("name" loads **~/.rmp/templates/<name>.lua**, falling back to the builtin templates like "tutorial"), or an inline table of windows
     **settings** - Engine settings that are loaded when RayMp starts
         **fps** - Engine FPS rendered
@@ -58,46 +58,46 @@ all you need is following this tutorial
         **speed_up** - Configured key to increase the playback speed
         **speed_down** - Configured key to decrease the playback speed
         **change_playback_mode** - Configured key to change the playback mode of the sound
-    **builtin** - Enable / disable the builtin components (help, notify, themes, theme_manager) and the builtin window plugins (tutorial_rmp, helper_keys_tutorial, matrix_digital_rain_effect). A missing flag defaults to ENABLED; `mainFrame.engine.builtin = false` disables everything
+    **builtin** - Enable / disable the builtin components (help, notify, themes, theme_manager) and the builtin window plugins (tutorial_rmp, helper_keys_tutorial, matrix_digital_rain_effect). A missing flag defaults to ENABLED; `raymp.engine.builtin = false` disables everything
     **plugins** - Plugins is a table of plugins that are wrapped in tables
         **themeWindowId** - The ID of the window in the template that is used to integrate plugins for a specific window in the template **(OPTIONAL)**. If the field is nil or not selected, the plugin is a global plugin over the whole screen
         **isActivated** - Boolean field: true to use the plugin, false to ignore it
         **names** - Table field that accepts multiple plugins
             Why? : A window can use multiple plugins (for example, animations and more), so we can apply more than 1 plugin to the same window
         **switchPluginKey** - This plugin is optional and used for switching multiple plugins in a window
-- You can also use the shorthand proxy — `mainFrame.engine.fps = 30` is the same as `mainFrame.engine.settings.fps = 30`.
+- You can also use the shorthand proxy — `raymp.engine.fps = 30` is the same as `raymp.engine.settings.fps = 30`.
 - Returning a table is still supported: `return { template = "my_template", settings = {...}, ... }` and it will be merged onto the engine config.
 ```lua
 -- Example configuration (~/.rmp/init.lua)
-mainFrame.engine.template = "my_template" -- or an inline table; falls back to builtin "tutorial"
+raymp.engine.template = "my_template" -- or an inline table; falls back to builtin "tutorial"
 
-mainFrame.engine.fps = 60
-mainFrame.engine.help_key = api.KEY_H
-mainFrame.engine.volume = 0.5                 -- 0 to 1
-mainFrame.engine.speed = 1.0                  -- 0.01 to 3.0
-mainFrame.engine.mode = api.PlaybackMode.ONES -- playback modes
-mainFrame.engine.restart_engine = api.KEY_CTRL_R
-mainFrame.engine.exit = api.KEY_Q
+raymp.engine.fps = 60
+raymp.engine.help_key = api.KEY_H
+raymp.engine.volume = 0.5                 -- 0 to 1
+raymp.engine.speed = 1.0                  -- 0.01 to 3.0
+raymp.engine.mode = api.PlaybackMode.ONES -- playback modes
+raymp.engine.restart_engine = api.KEY_CTRL_R
+raymp.engine.exit = api.KEY_Q
 
 -- inc or dec
-mainFrame.engine.inc_speed = 0.1
-mainFrame.engine.inc_volume = 0.1
-mainFrame.engine.inc_seek = 5
+raymp.engine.inc_speed = 0.1
+raymp.engine.inc_volume = 0.1
+raymp.engine.inc_seek = 5
 
-mainFrame.engine.soundMap.pause_sound = api.KEY_SPACE
-mainFrame.engine.soundMap.resume_sound = api.KEY_SPACE
-mainFrame.engine.soundMap.next_sound = api.KEY_N
-mainFrame.engine.soundMap.prev_sound = api.KEY_P
-mainFrame.engine.soundMap.vol_up = api.KEY_PLUS
-mainFrame.engine.soundMap.vol_down = api.KEY_MINUS
-mainFrame.engine.soundMap.seek_left = api.KEY_LEFT
-mainFrame.engine.soundMap.seek_right = api.KEY_RIGHT
-mainFrame.engine.soundMap.speed_up = api.KEY_UP
-mainFrame.engine.soundMap.speed_down = api.KEY_DOWN
-mainFrame.engine.soundMap.change_playback_mode = api.KEY_TAB
+raymp.engine.soundMap.pause_sound = api.KEY_SPACE
+raymp.engine.soundMap.resume_sound = api.KEY_SPACE
+raymp.engine.soundMap.next_sound = api.KEY_N
+raymp.engine.soundMap.prev_sound = api.KEY_P
+raymp.engine.soundMap.vol_up = api.KEY_PLUS
+raymp.engine.soundMap.vol_down = api.KEY_MINUS
+raymp.engine.soundMap.seek_left = api.KEY_LEFT
+raymp.engine.soundMap.seek_right = api.KEY_RIGHT
+raymp.engine.soundMap.speed_up = api.KEY_UP
+raymp.engine.soundMap.speed_down = api.KEY_DOWN
+raymp.engine.soundMap.change_playback_mode = api.KEY_TAB
 
 -- enable / disable the builtin components and window plugins
-mainFrame.engine.builtin = {
+raymp.engine.builtin = {
     help = true,
     notify = true,
     themes = true,
@@ -109,7 +109,7 @@ mainFrame.engine.builtin = {
     },
 }
 
-mainFrame.engine.plugins = {
+raymp.engine.plugins = {
     {
         themeWindowId = "tutorial-window",
         isActivated = true,
@@ -121,7 +121,7 @@ mainFrame.engine.plugins = {
 ```
 # How to create my own template ?
 - To create your own template, you have to put your init.lua template file in the **~/.rmp/templates** directory. Choose your template name **(for example foo.lua)**
-- **foo.lua** populates **mainFrame.engine.template** with a table of components/windows (returning the table is also accepted and merged)
+- **foo.lua** populates **raymp.engine.template** with a table of components/windows (returning the table is also accepted and merged)
 - Component fields:
         **id** - The window ID
         **type** - The type of component ["Window" , "Text"]
@@ -140,7 +140,7 @@ mainFrame.engine.plugins = {
 
 ```lua
 -- Example template code
-mainFrame.engine.template = {
+raymp.engine.template = {
     {
         id = "main_window",
         type = "Window",
@@ -170,7 +170,7 @@ mainFrame.engine.template = {
 - Put your plugin module in **~/.rmp/plugins/<name>/init.lua** (any name) — `~/.rmp/plugins/` is added to the Lua require path, so the module resolves as **require("<name>")**
 - Register it in the **plugins** configuration section of **~/.rmp/init.lua** and pick its activation/switch keys there
 - Plugins are Lua files that return a callback function. The callback runs every frame
-- Plugins have direct access to the global **mainFrame** and its engine configuration (**mainFrame.engine.fps**, ...) — you don't need a frame parameter. Window-attached plugins use `return function(x, y, xx, yy)`; global plugins use `return function()`
+- Plugins have direct access to the global **raymp** and its engine configuration (**raymp.engine.fps**, ...) — you don't need a frame parameter. Window-attached plugins use `return function(x, y, xx, yy)`; global plugins use `return function()`
 - You need to initialize a VirtualTerminal object inside the returned callback function (Why? : The engine uses optimizations, which means after it adds all the components, it cleans their memories to avoid memory leaks)
 - Use global variables as plugin state and the return function as update functionality for each frame
 - plugins can be configured in **init.lua** configuration file , you can put string name of the plugin or u can put table the first index is the plugin name and second index is table with configuration field so u can load those configurations and work with them
@@ -194,11 +194,11 @@ return function(x, y, xx, yy)
 
     vterm:writeText(x + 1, y + 1, "Hello from my plugin!")
 
-    -- the global mainFrame is always available:
-    --   mainFrame:writeText(...)
+    -- the global raymp is always available:
+    --   raymp:writeText(...)
     --   -- and the engine configuration:
-    --   mainFrame.engine.settings.fps
-    --   mainFrame.engine.fps
+    --   raymp.engine.settings.fps
+    --   raymp.engine.fps
 
     return vterm
 end
@@ -531,7 +531,7 @@ return function(x, y, xx, yy)
     -- listen every frame: TransformDataGet callbacks are one-shot (drained by the
     -- engine each run), re-registering keeps the shared theme in sync when the
     -- user switches themes at runtime through the theme manager plugin
-    mainFrame:addEventListener(api.EventType.TransformDataGet, function(data)
+    raymp:addEventListener(api.EventType.TransformDataGet, function(data)
         if data and data.theme then
             theme = data.theme
         end
@@ -560,7 +560,7 @@ return function(x, y, xx, yy)
             color = extColor("SecondaryContent", true) or api.FGColors.Brights.Cyan
         end
 
-        mainFrame:writeText(centered_x, centered_y, animation_text, color, background_color,
+        raymp:writeText(centered_x, centered_y, animation_text, color, background_color,
             api.TextStyle.Bold)
 
         local progress_text = ""
@@ -572,13 +572,13 @@ return function(x, y, xx, yy)
             end
         end
         local progress_x = x + math.floor((w - #progress_text) / 2)
-        mainFrame:writeText(progress_x, centered_y + 2, progress_text, extColor("PrimaryContent", true) or
+        raymp:writeText(progress_x, centered_y + 2, progress_text, extColor("PrimaryContent", true) or
             api.FGColors.Brights.White, background_color)
 
         return
     end
 
-    mainFrame:onKeyboard(function(key)
+    raymp:onKeyboard(function(key)
         if key == api.KEY_J or key == api.KEY_DOWN then
             move_down = move_down + 1
         elseif key == api.KEY_K or key == api.KEY_UP then
@@ -586,7 +586,7 @@ return function(x, y, xx, yy)
         end
     end)
 
-    mainFrame:addEventListener(api.EventType.TransformDataPut, function()
+    raymp:addEventListener(api.EventType.TransformDataPut, function()
         return {
             UP = "k/key-up",
             DOWN = "j/key-down",
@@ -630,7 +630,7 @@ return function(x, y, xx, yy)
                         local xPos = x + 1
                         local tokens = syntaxHighlightLua(codeContent)
                         for _, token in ipairs(tokens) do
-                            mainFrame:writeTextClipped(xPos, displayY, token.text, w - (xPos - x - 1), token.color,
+                            raymp:writeTextClipped(xPos, displayY, token.text, w - (xPos - x - 1), token.color,
                                 background_color, token.style)
                             xPos = xPos + #token.text
                         end
@@ -640,7 +640,7 @@ return function(x, y, xx, yy)
                             api.TextStyle.Bold)
                         local xPos = x + 1
                         for _, part in ipairs(formattedParts) do
-                            mainFrame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
+                            raymp:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
                                 background_color,
                                 part.style)
                             xPos = xPos + #part.text
@@ -651,7 +651,7 @@ return function(x, y, xx, yy)
                     elseif line:match("^%s*-") then
                         local bullet_text = line:match("^%s*-%s*(.*)")
                         if bullet_text then
-                            mainFrame:writeTextClipped(x + 1, displayY, "-", w,
+                            raymp:writeTextClipped(x + 1, displayY, "-", w,
                                 extColor("AccentElements", true) or api.FGColors.Brights.Red,
                                 background_color)
 
@@ -661,7 +661,7 @@ return function(x, y, xx, yy)
                                 nil)
                             local xPos = x + 2
                             for _, part in ipairs(formattedParts) do
-                                mainFrame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
+                                raymp:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
                                     background_color,
                                     part.style)
                                 xPos = xPos + #part.text
@@ -672,7 +672,7 @@ return function(x, y, xx, yy)
                                 background_color, nil)
                             local xPos = x + 1
                             for _, part in ipairs(formattedParts) do
-                                mainFrame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
+                                raymp:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
                                     background_color,
                                     part.style)
                                 xPos = xPos + #part.text
@@ -684,7 +684,7 @@ return function(x, y, xx, yy)
                             nil)
                         local xPos = x + 1
                         for _, part in ipairs(formattedParts) do
-                            mainFrame:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
+                            raymp:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
                                 background_color,
                                 part.style)
                             xPos = xPos + #part.text

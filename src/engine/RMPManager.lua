@@ -43,7 +43,7 @@
 --                                         calls plugin callbacks
 --             6. otherPlugs loop     — runs global plugins, merges vterminals
 --             7. notify drain        — flushes queued notifications
---             8. mainFrame:run()     — renders frame, sleeps to hit target fps
+--             8. raymp:run()     — renders frame, sleeps to hit target fps
 --
 -- OPTIMIZATIONS APPLIED (tagged OPT-N in code)
 -- ─────────────────────────────────────────────
@@ -87,9 +87,9 @@
 --
 -- =============================================================================
 
--- TODO: change the signature by passing the mainFrame to update function from plugin with additional informations
+-- TODO: change the signature by passing the raymp to update function from plugin with additional informations
 -- TODO: and add ability to merge the events directly without needing the virtual terminal
--- TODO: also it makes it easier to merge a small buffer to the mainFrame that passed in parameter for complex work
+-- TODO: also it makes it easier to merge a small buffer to the raymp that passed in parameter for complex work
 --
 -- so in actual event condition we can update the small buffer that we created before merge it
 -- so if there's a changes it will merge it otherwise it didn't
@@ -109,14 +109,14 @@ local Text         = api.Text
 local TextStyle    = api.TextStyle
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Engine configuration (mainFrame.engine)
+-- Engine configuration (raymp.engine)
 -- ─────────────────────────────────────────────────────────────────────────────
--- The engine config lives on the global frame as mainFrame.engine. Config
+-- The engine config lives on the global frame as raymp.engine. Config
 -- files (~/.rmp/init.lua, builtin defaults) populate it directly instead of
 -- returning a table. Two styles are equivalent:
 --
---     mainFrame.engine.settings.fps = 30   -- canonical subtables
---     mainFrame.engine.fps = 30            -- shorthand proxy => settings.fps
+--     raymp.engine.settings.fps = 30   -- canonical subtables
+--     raymp.engine.fps = 30            -- shorthand proxy => settings.fps
 --
 -- Canonical keys:
 --   engine.template  string    template name to render
@@ -130,18 +130,18 @@ local TextStyle    = api.TextStyle
 --   layered on top, so you keep the defaults and only override what you want.
 --   Builtin components ship enabled but can be toggled globally:
 --
---     mainFrame.engine.builtin = false                  -- disable all builtins
---     mainFrame.engine.builtin.help          = true     -- help overlay (H)
---     mainFrame.engine.builtin.notify        = true     -- notification popups
---     mainFrame.engine.builtin.themes        = true     -- builtin theme list
---     mainFrame.engine.builtin.theme_manager = true     -- theme auto-selector
---     mainFrame.engine.builtin.plugins = {              -- builtin window plugins
+--     raymp.engine.builtin = false                  -- disable all builtins
+--     raymp.engine.builtin.help          = true     -- help overlay (H)
+--     raymp.engine.builtin.notify        = true     -- notification popups
+--     raymp.engine.builtin.themes        = true     -- builtin theme list
+--     raymp.engine.builtin.theme_manager = true     -- theme auto-selector
+--     raymp.engine.builtin.plugins = {              -- builtin window plugins
 --         tutorial_rmp               = true,
 --         helper_keys_tutorial       = true,
 --         matrix_digital_rain_effect = true,
 --     }
 -- ─────────────────────────────────────────────────────────────────────────────
-local ENGINE_KEYS = { template = true, settings = true, soundMap = true, plugins = true, builtin = true }
+local ENGINE_KEYS  = { template = true, settings = true, soundMap = true, plugins = true, builtin = true }
 
 local engine_proxy = {
     __index = function(t, k)
@@ -203,10 +203,10 @@ local function builtin_enabled(engine, group, name)
     return flags[name] ~= false
 end
 
---- Re-seeds mainFrame.engine with an empty shell. Must be called before each
+--- Re-seeds raymp.engine with an empty shell. Must be called before each
 --- configuration load so restarts never inherit state from a previous cycle.
 local function resetEngine()
-    mainFrame.engine = build_engine_shell()
+    raymp.engine = build_engine_shell()
 end
 
 --- Merges a legacy returned-table config on top of the engine config. Keeps
@@ -246,15 +246,39 @@ end
 ---@field height number
 ---@field border BoxDrawing | table
 
-local EngineFrame  = OOP.class("EngineFrame", Frame)
+local EngineFrame = OOP.class("EngineFrame", Frame)
 do
     function EngineFrame:constructor(width, height)
         --- @diagnostic disable-next-line
         self:super("constructor", width, height)
 
-        self.theme  = nil
-        self.engine = build_engine_shell()
+        self.theme             = nil
+        self.engine            = build_engine_shell()
+        self.regestred_plugins = {}
     end
+
+    --- raymp:plug({
+    ---     name = "foo"
+    --- })
+    ---@param obj table
+    function EngineFrame:plug(obj)
+        table.insert(self.engine.plugins, {
+            themeWindowId = obj.windowId,
+            isActivated = obj.activated,
+            switchPluginKey = obj.switchKey, -- not recommended i added just for backward compatibility
+            names = (function()
+                if type(obj.name) == "string" then
+                    return { obj.name }
+                elseif type(obj.name) == "table" then
+                    return obj.name
+                end
+            end)()
+        })
+        self.regestred_plugins[obj.name] = true
+    end
+
+    -- TODO: add notify
+    -- TODO: add input
 
     --- template component
     --- theme table
@@ -344,7 +368,7 @@ do
     -- add input handling by the engine to avoid any mistakes of memory allocations
 end
 
-mainFrame                   = EngineFrame()
+raymp                       = EngineFrame()
 
 local io                    = require("io")
 local os                    = require("os")
@@ -673,7 +697,7 @@ do
     function TemplateParser:constructor(template, plugManager, frame)
         self.template                = template or {}
         self.plugManager             = plugManager
-        self.mainFrame               = frame or mainFrame
+        self.mainFrame               = frame or raymp
         self.windowCache             = {}
         self.pluginCache             = {}
         self.lastTerminalSize        = { w = 0, h = 0 }
@@ -765,7 +789,7 @@ do
         end
 
         return Text(value, textConfig.style, textConfig.foregroundColor,
-            textConfig.backgroundColor, mainFrame)
+            textConfig.backgroundColor, raymp)
     end
 
     --- Creates a window from a Window config node, evaluates its layout
@@ -788,7 +812,7 @@ do
     ---
     --- @param windowConfig table
     --- @param context table
-    --- @param frame VirtualTerminal|nil  Target frame (defaults to mainFrame)
+    --- @param frame VirtualTerminal|nil  Target frame (defaults to raymp)
     function TemplateParser:createWindow(windowConfig, context, frame)
         if not windowConfig or windowConfig.type ~= "Window" then return nil end
 
@@ -796,7 +820,7 @@ do
             if not windowConfig.condition(context) then return nil end
         end
 
-        local targetFrame   = frame or self.mainFrame or mainFrame
+        local targetFrame   = frame or self.mainFrame or raymp
         local width         = self:evaluateExpression(windowConfig.width, context)
         local height        = self:evaluateExpression(windowConfig.height, context)
         local x             = self:evaluateExpression(windowConfig.x, context)
@@ -822,7 +846,7 @@ do
                     logwarn("plugin error in window '" .. tostring(windowConfig.id)
                         .. "': " .. tostring(pluginResult))
                 elseif ok and pluginResult and type(pluginResult) == "table" then
-                    mainFrame:add(pluginResult)
+                    raymp:add(pluginResult)
                 end
             end
 
@@ -835,13 +859,13 @@ do
 
             -- Run inline content callback
             if windowConfig.content and type(windowConfig.content) == "function" then
-                local ok, contentResult = pcall(windowConfig.content, mainFrame,
+                local ok, contentResult = pcall(windowConfig.content, raymp,
                     innerX, innerY, innerXX, innerYY, context)
                 if not ok then
                     logwarn("content error in window '" .. tostring(windowConfig.id)
                         .. "': " .. tostring(contentResult))
                 elseif ok and contentResult and type(contentResult) == "table" then
-                    mainFrame:add(contentResult)
+                    raymp:add(contentResult)
                 end
             end
         end
@@ -871,7 +895,7 @@ do
         if not self.template or type(self.template) ~= "table" then return {}, {} end
 
         local context     = self:createContext()
-        local targetFrame = frame or self.mainFrame or mainFrame
+        local targetFrame = frame or self.mainFrame or raymp
 
         for _, windowConfig in ipairs(self.template) do
             if windowConfig.type == "Window" then
@@ -959,7 +983,7 @@ end
 -- loads each plugin module with pcall. Window-attached plugins go into a
 -- PlugManager; global plugins go into the otherPlugs Queue.
 -- Any builtin plugin name appearing in a group can be turned off with
--- mainFrame.engine.builtin.plugins.<name> = false (see builtin_enabled).
+-- raymp.engine.builtin.plugins.<name> = false (see builtin_enabled).
 --
 -- Plugin config format (in ~/.rmp/init.lua):
 --
@@ -1065,7 +1089,7 @@ local function setupPlugins(configObj, is_userconfig)
     end
 
     -- Builtin window plugins ship enabled but can be turned off via
-    -- mainFrame.engine.builtin.plugins.<name> = false
+    -- raymp.engine.builtin.plugins.<name> = false
     local function builtin_plugin_skipped(name)
         local pluginName = (type(name) == "table") and (name.name or name[1]) or name
         if type(pluginName) ~= "string" then return false end
@@ -1170,10 +1194,10 @@ local sharedTheme = nil
 local function runRMPApplication(plugManager, template, settings, otherPlugs,
                                  soundCfg, plugs_cfgs, configObj, is_userconfig)
     local h, w = api.Terminal:getSize()
-    mainFrame:clear()
+    raymp:clear()
 
     -- Expose the merged sound mapping back onto the engine config so plugins
-    -- can read the full keymap directly from mainFrame.engine.soundMap
+    -- can read the full keymap directly from raymp.engine.soundMap
     if configObj and soundCfg then
         configObj.soundMap = soundCfg
     end
@@ -1221,7 +1245,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
     if settings then
         local fps = validated_setting(settings.fps, "number", 1, 120, 60)
         settings.fps = fps
-        mainFrame:setFps(fps)
+        raymp:setFps(fps)
 
         local freq_bins = validated_setting(settings.freq_bins, "number", 1, nil, 32)
         settings.freq_bins = freq_bins
@@ -1269,7 +1293,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
             if ok and mod then notify_plug = mod end
         end
     else
-        mainFrame:setFps(60)
+        raymp:setFps(60)
         sound:enableVisualization(32)
         sound:setVolume(0.5)
         sound:setSpeed(1.0)
@@ -1281,9 +1305,9 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         if ok_tm and tm then loaded_theme_manager = tm end
     end
 
-    mainFrame:initMainFrame()
+    raymp:initMainFrame()
 
-    local parser        = TemplateParser.new(template, plugManager, mainFrame)
+    local parser        = TemplateParser.new(template, plugManager, raymp)
     local switchKeys    = parser:getPluginSwitchKeys()
     local quit          = false
     local oq            = otherPlugs
@@ -1298,15 +1322,15 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
             if c and type(c) == "table" then configObj = c end
         end
 
-        mainFrame:clear()
-        -- mainFrame.cursor.x = 1
-        -- mainFrame.cursor.y = 1
+        raymp:clear()
+        -- raymp.cursor.x = 1
+        -- raymp.cursor.y = 1
 
         local key = api.Terminal:handleKey()
 
         if parser:wasTerminalResized() then
             h, w = api.Terminal:getSize()
-            mainFrame:resize(w, h)
+            raymp:resize(w, h)
         end
 
         -- Cache sound state once per frame to avoid repeated FFI calls
@@ -1316,16 +1340,16 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         local len       = math.floor(sound:getLength())
         local currSpeed = sound:getSpeed()
 
-        mainFrame:onDataGet(function(data)
+        raymp:onDataGet(function(data)
             if data and data.theme then
                 sharedTheme = data.theme
             end
         end)
 
-        mainFrame:setTheme(sharedTheme)
+        raymp:setTheme(sharedTheme)
 
         -- ── Keyboard event handler ────────────────────────────────────────
-        mainFrame:addEventListener(api.EventType.Keyboard, function(inputKey)
+        raymp:addEventListener(api.EventType.Keyboard, function(inputKey)
             -- Log overlay toggle
             if messages_key and inputKey == messages_key then
                 show_logs                       = not show_logs
@@ -1487,17 +1511,17 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
                         -- FEAT-2: drop the failing plugin from the queue
                         goto skip_push
                     elseif ok and res then
-                        mainFrame:add(res)
+                        raymp:add(res)
                     end
                 elseif type(plug) == "table" then
                     local fn = plug.update or plug.poll or plug.render
                     if fn then
-                        local ok, res = pcall(fn, mainFrame)
+                        local ok, res = pcall(fn, raymp)
                         if not ok then
                             logwarn("global plugin error: " .. tostring(res))
                             goto skip_push
                         elseif ok and res then
-                            mainFrame:add(res)
+                            raymp:add(res)
                         end
                     end
                 end
@@ -1515,24 +1539,24 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         local notis = drain_notifications()
         if settings and settings.notify and builtin_enabled(configObj, nil, "notify") then
             for _, noti in ipairs(notis) do
-                mainFrame:addEventListener(api.EventType.TransformDataPut, function()
+                raymp:addEventListener(api.EventType.TransformDataPut, function()
                     return { notification = noti }
                 end)
             end
         end
 
         -- Sync theme for log overlay
-        mainFrame:addEventListener(api.EventType.TransformDataGet, function(data)
+        raymp:addEventListener(api.EventType.TransformDataGet, function(data)
             if data and data.theme then log_theme = data.theme end
         end)
 
         -- Log overlay (FEAT-4)
         if show_logs then
             local log_vt = api.VirtualTerminal(1, 1)
-            if mainFrame then
-                render_log_overlay(mainFrame, log_overlay_state, log_theme)
+            if raymp then
+                render_log_overlay(raymp, log_overlay_state, log_theme)
             end
-            mainFrame:add(log_vt, true)
+            raymp:add(log_vt, true)
         end
 
         -- Push config/sound/template to plugins via plugs_cfgs HashMap
@@ -1542,7 +1566,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
             plugs_cfgs:put("all", configObj)
         end
 
-        mainFrame:run(key, nil, sound, plugs_cfgs, template_copy, data_freq_engine, quit)
+        raymp:run(key, nil, sound, plugs_cfgs, template_copy, data_freq_engine, quit)
 
         if restart then break end
     end
@@ -1619,8 +1643,8 @@ do
     end
 
     --- Loads and executes ~/.rmp/init.lua, caching the result.
-    --- The file may either populate mainFrame.engine directly (new style,
-    --- e.g. `mainFrame.engine.fps = 30`) or return a table (legacy style,
+    --- The file may either populate raymp.engine directly (new style,
+    --- e.g. `raymp.engine.fps = 30`) or return a table (legacy style,
     --- which is merged on top of the engine config).
     --- @return boolean, string|nil
     function Config:load()
@@ -1633,9 +1657,9 @@ do
             return false, self.isError
         end
         if type(res) == "table" then
-            merge_into_engine(mainFrame.engine, res)
+            merge_into_engine(raymp.engine, res)
         end
-        self.cfgObj = mainFrame.engine
+        self.cfgObj = raymp.engine
         return true, nil
     end
 
@@ -1702,12 +1726,12 @@ end
 -- loadConfiguration
 -- ─────────────────────────────────────────────────────────────────────────────
 -- nvim-style loading:
---   1. The builtin defaults are ALWAYS applied to mainFrame.engine first, so
+--   1. The builtin defaults are ALWAYS applied to raymp.engine first, so
 --      the shipped settings, keymap, template and builtin plugins are always
 --      present.
 --   2. If ~/.rmp/init.lua exists it is layered on top — user changes override
 --      the defaults but everything else keeps working.
---   3. Builtin components ship enabled; toggles live on mainFrame.engine.builtin
+--   3. Builtin components ship enabled; toggles live on raymp.engine.builtin
 --      (see builtin_enabled / the engine config docs above).
 -- ─────────────────────────────────────────────────────────────────────────────
 local function loadConfiguration()
@@ -1715,7 +1739,7 @@ local function loadConfiguration()
     resetEngine()
 
     -- 1) Always apply builtin defaults first. The builtin config mutates
-    --    mainFrame.engine directly, so require()'s module cache must be
+    --    raymp.engine directly, so require()'s module cache must be
     --    cleared before each (re)load — otherwise a restart (restart_engine)
     --    skips re-applying the defaults to the fresh engine shell.
     package.loaded["rmp.builtin.init"] = nil
@@ -1725,7 +1749,7 @@ local function loadConfiguration()
         return nil, nil, nil
     end
     if type(defaultConfig) == "table" then
-        merge_into_engine(mainFrame.engine, defaultConfig)
+        merge_into_engine(raymp.engine, defaultConfig)
     end
 
     -- 2) Layer the user configuration on top (if it exists)
@@ -1739,7 +1763,7 @@ local function loadConfiguration()
         end
     end
 
-    local cfgObj = mainFrame.engine
+    local cfgObj = raymp.engine
 
     -- 3) Resolve the template:
     --    a) the template may be provided as an inline table
@@ -1751,7 +1775,7 @@ local function loadConfiguration()
 
     if type(template) ~= "string" then
         logerror("Invalid or missing 'template' field in configuration.")
-        lognote("Example: mainFrame.engine.template = 'tutorial'")
+        lognote("Example: raymp.engine.template = 'tutorial'")
         logfatal("Invalid template name in configuration.", true)
         return nil, nil, nil
     end
@@ -1765,7 +1789,7 @@ local function loadConfiguration()
     end
 
     -- Builtin templates are mutation-style modules (they set
-    -- mainFrame.engine.template inline), so bust the cache to re-run them
+    -- raymp.engine.template inline), so bust the cache to re-run them
     -- on restarts the same way the builtin init is re-run above.
     local builtin_template_module = "rmp.builtin.templates." .. template
     package.loaded[builtin_template_module] = nil
@@ -1773,7 +1797,7 @@ local function loadConfiguration()
     if okBuiltinTemplate and type(builtinTemplate) == "table" then
         return cfgObj, builtinTemplate, is_userconfig
     end
-    -- Builtin templates are mutation-style: they set mainFrame.engine.template
+    -- Builtin templates are mutation-style: they set raymp.engine.template
     -- to the window table instead of returning it.
     if okBuiltinTemplate and type(cfgObj.template) == "table" then
         return cfgObj, cfgObj.template, is_userconfig
@@ -1827,7 +1851,7 @@ end
         if not ok then
             api.Terminal:handleKey()
             local h, w = api.Terminal:getSize()
-            mainFrame:clear()
+            raymp:clear()
             restart         = true
 
             local boxWidth  = math.min(math.floor(w * 0.9), 120)
@@ -1838,8 +1862,8 @@ end
             local boxY = math.floor((h - boxHeight) / 2)
 
             local box_title = Text(" RMP Engine Error ", TextStyle.Bold,
-                api.FGColors.Brights.White, api.BGColors.NoBrights.Red, mainFrame)
-            mainFrame:drawBox(box_title, boxX, boxY, boxWidth, boxHeight,
+                api.FGColors.Brights.White, api.BGColors.NoBrights.Red, raymp)
+            raymp:drawBox(box_title, boxX, boxY, boxWidth, boxHeight,
                 api.BoxDrawing.DoubleBorder,
                 api.FGColors.Brights.Red,
                 api.BGColors.NoBrights.Black)
@@ -1868,11 +1892,11 @@ end
 
             for _, line_text in ipairs(wrapped_message) do
                 if currentY < boxY + boxHeight - 5 then
-                    mainFrame:writeText(boxX + 2, currentY, line_text,
+                    raymp:writeText(boxX + 2, currentY, line_text,
                         api.FGColors.Brights.White, api.BGColors.NoBrights.Black)
                     currentY = currentY + 1
                 else
-                    mainFrame:writeText(boxX + 2, currentY, "...",
+                    raymp:writeText(boxX + 2, currentY, "...",
                         api.FGColors.Brights.White, api.BGColors.NoBrights.Black)
                     break
                 end
@@ -1881,20 +1905,20 @@ end
             local prompt   = "Press 'Q' to Quit   'R' to Restart"
             local prompt_x = math.floor((w - #prompt) / 2)
             local prompt_y = boxY + boxHeight - 2
-            mainFrame:writeText(prompt_x, prompt_y, prompt,
+            raymp:writeText(prompt_x, prompt_y, prompt,
                 api.FGColors.Brights.Black, api.BGColors.NoBrights.White)
 
-            mainFrame:onKeyboard(function(key)
+            raymp:onKeyboard(function(key)
                 if key == api.KEY_Q then
                     restart = false
                 elseif key == api.KEY_R then
                     restart = true
                 end
             end)
-            mainFrame:run(api.Terminal:handleKey(), nil, nil, nil, nil)
+            raymp:run(api.Terminal:handleKey(), nil, nil, nil, nil)
             if not restart then break end
         end
     end
 
-    mainFrame:cleanupMainFrame()
+    raymp:cleanupMainFrame()
 end)()

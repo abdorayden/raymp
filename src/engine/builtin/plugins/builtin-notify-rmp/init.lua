@@ -102,8 +102,8 @@ local function render_notifications()
         end
 
         local title = "[" .. string.upper(noti.status) .. "]"
-        mainFrame:drawBox(title, box_x, box_y, box_width, box_height, api.BoxDrawing.RoundedCorners, fg, colors.bg)
-        mainFrame:writeText(box_x + 2, box_y + 1, message, fg, colors.bg)
+        raymp:drawBox(title, box_x, box_y, box_width, box_height, api.BoxDrawing.RoundedCorners, fg, colors.bg)
+        raymp:writeText(box_x + 2, box_y + 1, message, fg, colors.bg)
         y_offset = y_offset + box_height + 1
     end
 end
@@ -133,7 +133,7 @@ if false then
 end
 
 return function()
-    mainFrame:addEventListener(api.EventType.TransformDataGet, function(data)
+    raymp:addEventListener(api.EventType.TransformDataGet, function(data)
         if data and data.theme then
             tha_theme = data.theme
         end
@@ -141,7 +141,7 @@ return function()
 
     --- TODO: add event handling so plugins can sent notifications data so this plugin must handle the rendering
     --- the plugins must sent data like message, status (info, error, warning) and duration
-    mainFrame:addEventListener(api.EventType.TransformDataGet, function(data)
+    raymp:addEventListener(api.EventType.TransformDataGet, function(data)
         if data and data.notification then
             notificationQueue:push(data.notification)
         end

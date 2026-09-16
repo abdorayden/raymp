@@ -9,7 +9,7 @@ return function(x, y, xx, yy)
     local cols = math.floor(w / 2)
 
     if theme == nil then
-        mainFrame:addEventListener(api.EventType.TransformDataGet, function(data)
+        raymp:addEventListener(api.EventType.TransformDataGet, function(data)
             if data and data.theme then
                 theme = data.theme
             end
@@ -55,7 +55,7 @@ return function(x, y, xx, yy)
                     color = theme and api.colorFromHex(theme.AccentElements) or api.FGColors.NoBrights.Green
                 end
 
-                mainFrame:writeText(
+                raymp:writeText(
                     x + (i - 1) * 2,
                     y + charY - 1,
                     stream.chars[j],

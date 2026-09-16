@@ -5,7 +5,7 @@
 
 local api = require("rmp.rmp")
 
-mainFrame.engine.template = {
+raymp.engine.template = {
     {
         id = 1,
         type = "Window",

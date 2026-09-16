@@ -5,7 +5,7 @@
 
 local api = require("rmp.rmp")
 
-mainFrame.engine.template = {
+raymp.engine.template = {
     {
         id = 1,
         type = "Window",
@@ -38,7 +38,7 @@ mainFrame.engine.template = {
                 border = api.BoxDrawing.NoBorder,
                 backgroundColor = api.BGColors.NoBrights.Black
             },
-            
+
             -- Main Matrix Panel
             {
                 id = 2,
@@ -57,7 +57,7 @@ mainFrame.engine.template = {
                 border = api.BoxDrawing.LightBorder,
                 backgroundColor = api.BGColors.NoBrights.Black
             },
-            
+
             -- Side Terminal
             {
                 id = 4,
@@ -76,7 +76,7 @@ mainFrame.engine.template = {
                 border = api.BoxDrawing.LightBorder,
                 backgroundColor = api.BGColors.NoBrights.Black
             },
-            
+
             -- Neon Status Bar
             {
                 id = 5,
@@ -98,7 +98,7 @@ mainFrame.engine.template = {
                 border = api.BoxDrawing.NoBorder,
                 backgroundColor = api.BGColors.NoBrights.Black
             },
-            
+
             -- HUD Element 1
             {
                 id = 6,
@@ -117,7 +117,7 @@ mainFrame.engine.template = {
                 border = api.BoxDrawing.RoundedCorners,
                 backgroundColor = api.BGColors.NoBrights.Black
             },
-            
+
             -- HUD Element 2
             {
                 id = 7,
@@ -136,7 +136,7 @@ mainFrame.engine.template = {
                 border = api.BoxDrawing.RoundedCorners,
                 backgroundColor = api.BGColors.NoBrights.Black
             },
-            
+
             -- Network Indicator
             {
                 id = 8,
@@ -160,7 +160,7 @@ mainFrame.engine.template = {
                     }
                 }
             },
-            
+
             -- Command Prompt
             {
                 id = 10,

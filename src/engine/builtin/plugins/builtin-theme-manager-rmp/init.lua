@@ -45,12 +45,12 @@ end
 local themeManager = ThemeManager()
 
 return function()
-    local themeName = mainFrame.engine.theme
+    local themeName = raymp.engine.theme
     if themeName then
         themeManager:selectTheme(themeName)
     end
 
-    mainFrame:onDataPut(function()
+    raymp:onDataPut(function()
         return {
             ThemeManagerObj = themeManager,
             theme = themeManager:getSelectedTheme()

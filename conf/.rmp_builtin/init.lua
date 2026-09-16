@@ -25,10 +25,10 @@
 -- this configurations will applied even if u delete this .rmp installed folder
 -- u can modifie the template , configurations by plugins
 --
--- configuration files populate the global frame config via mainFrame.engine
+-- configuration files populate the global frame config via raymp.engine
 -- (no `return` table needed):
---     mainFrame.engine.fps = 30
---     mainFrame.engine.settings.theme = "default"
+--     raymp.engine.fps = 30
+--     raymp.engine.settings.theme = "default"
 --
 -- use <h> to display the help and read the tutorial carefully
 

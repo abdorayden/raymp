@@ -113,8 +113,8 @@ local function engine_render_help(w, h, settings, soundCfg)
     local boxY = math.max(1, math.floor((h - boxHeight) / 2))
 
     -- Create a box using the VirtualTerminal's drawBox method
-    mainFrame:drawBox(
-        api.Text.new("Help", api.TextStyle.Bold, api.FGColors.Brights.White, api.BGColors.NoBrights.Black, mainFrame),
+    raymp:drawBox(
+        api.Text.new("Help", api.TextStyle.Bold, api.FGColors.Brights.White, api.BGColors.NoBrights.Black, raymp),
         boxX, boxY, boxWidth, boxHeight,
         api.BoxDrawing.LightBorder,
         api.FGColors.Brights.White,  -- border color
@@ -125,14 +125,14 @@ local function engine_render_help(w, h, settings, soundCfg)
     for i, line in ipairs(helpText) do
         local textX = boxX + 2     -- Add padding from the left border
         local textY = boxY + 1 + i -- Add padding from the top border
-        mainFrame:writeText(textX, textY, line, api.FGColors.Brights.White, api.BGColors.NoBrights.Black)
+        raymp:writeText(textX, textY, line, api.FGColors.Brights.White, api.BGColors.NoBrights.Black)
     end
 end
 
 return function()
     local h, w     = api.Terminal:getSize()
 
-    local engine   = mainFrame.engine
+    local engine   = raymp.engine
     local settings = engine.settings
     local soundCfg = engine.soundMap
     if settings and soundCfg then

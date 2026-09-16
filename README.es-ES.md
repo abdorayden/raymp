@@ -220,21 +220,21 @@ nano ~/.rmp/init.lua
 ```
 ```lua
 -- ~/.rmp/init.lua
-mainFrame.engine.template = "mi_layout"   -- carga ~/.rmp/templates/mi_layout.lua
+raymp.engine.template = "mi_layout"   -- carga ~/.rmp/templates/mi_layout.lua
 ```
 También puedes asignar una tabla directamente (ver la sección Temas/Plantillas).
 
 ### 4. **Añadir Tu Propio Plugin**
 Coloca un módulo de plugin en `~/.rmp/plugins/` para hacerlo disponible por
 nombre; luego regístralo (y define sus teclas de activación/cambio) a través de
-`mainFrame.engine.plugins`:
+`raymp.engine.plugins`:
 ```bash
 mkdir -p ~/.rmp/plugins
 nano ~/.rmp/init.lua
 ```
 ```lua
 -- ~/.rmp/init.lua
-mainFrame.engine.plugins = {
+raymp.engine.plugins = {
   {
     themeWindowId = "main",       -- Window.id de la plantilla donde se inyecta
     isActivated = true,
@@ -557,42 +557,42 @@ end
 
 ### Registro y Configuración de Plugins
 Los archivos de configuración pueblan la configuración global del frame —
-`mainFrame.engine` — directamente en lugar de devolver una tabla.
-`mainFrame.engine.fps = 30` es una abreviatura de `mainFrame.engine.settings.fps = 30`.
+`raymp.engine` — directamente en lugar de devolver una tabla.
+`raymp.engine.fps = 30` es una abreviatura de `raymp.engine.settings.fps = 30`.
 Seguir devolviendo una tabla también funciona (se fusiona sobre la config del engine).
 
 ```lua
 -- ~/.rmp/init.lua
 -- la configuración predeterminada del sonido
-mainFrame.engine.template = "mi_plantilla"
+raymp.engine.template = "mi_plantilla"
 
-mainFrame.engine.settings.fps = 60
-mainFrame.engine.volume = 0.5           -- 0 a 1
-mainFrame.engine.speed = 1.0            -- 0.01 a 3.0
-mainFrame.engine.mode = api.PlaybackMode.ONES -- modos de reproducción
-mainFrame.engine.restart_engine = api.KEY_CTRL_R
-mainFrame.engine.exit = api.KEY_Q
+raymp.engine.settings.fps = 60
+raymp.engine.volume = 0.5           -- 0 a 1
+raymp.engine.speed = 1.0            -- 0.01 a 3.0
+raymp.engine.mode = api.PlaybackMode.ONES -- modos de reproducción
+raymp.engine.restart_engine = api.KEY_CTRL_R
+raymp.engine.exit = api.KEY_Q
 
 -- inc o dec
-mainFrame.engine.inc_speed = 0.1
-mainFrame.engine.inc_volume = 0.1
-mainFrame.engine.inc_seek = 5
+raymp.engine.inc_speed = 0.1
+raymp.engine.inc_volume = 0.1
+raymp.engine.inc_seek = 5
 
 -- keymap del sonido
-mainFrame.engine.soundMap.pause_sound = api.KEY_SPACE
-mainFrame.engine.soundMap.resume_sound = api.KEY_SPACE
-mainFrame.engine.soundMap.next_sound = api.KEY_N
-mainFrame.engine.soundMap.prev_sound = api.KEY_P
-mainFrame.engine.soundMap.vol_up = api.KEY_PLUS
-mainFrame.engine.soundMap.vol_down = api.KEY_MINUS
-mainFrame.engine.soundMap.seek_left = api.KEY_LEFT
-mainFrame.engine.soundMap.seek_right = api.KEY_RIGHT
-mainFrame.engine.soundMap.speed_up = api.KEY_UP
-mainFrame.engine.soundMap.speed_down = api.KEY_DOWN
-mainFrame.engine.soundMap.change_playback_mode = api.KEY_TAB
+raymp.engine.soundMap.pause_sound = api.KEY_SPACE
+raymp.engine.soundMap.resume_sound = api.KEY_SPACE
+raymp.engine.soundMap.next_sound = api.KEY_N
+raymp.engine.soundMap.prev_sound = api.KEY_P
+raymp.engine.soundMap.vol_up = api.KEY_PLUS
+raymp.engine.soundMap.vol_down = api.KEY_MINUS
+raymp.engine.soundMap.seek_left = api.KEY_LEFT
+raymp.engine.soundMap.seek_right = api.KEY_RIGHT
+raymp.engine.soundMap.speed_up = api.KEY_UP
+raymp.engine.soundMap.speed_down = api.KEY_DOWN
+raymp.engine.soundMap.change_playback_mode = api.KEY_TAB
 
 -- plugins
-mainFrame.engine.plugins = {
+raymp.engine.plugins = {
     {
         -- si este atributo no es nil o existe, el ejecutor ignora activar
         themeWindowId = 2, -- el id de la ventana en la que se inyecta el plugin
@@ -635,7 +635,7 @@ mainFrame.engine.plugins = {
    así que el módulo se resuelve como `require("<nombre>")`.
 2. Regístralo en `~/.rmp/init.lua`, añadiendo o reemplazando los grupos de plugins:
    ```lua
-   mainFrame.engine.plugins = {
+   raymp.engine.plugins = {
      {
        themeWindowId = "main",       -- "main" debe coincidir con Window.id de tu plantilla
        isActivated = true,           -- true = activo al arrancar
@@ -656,27 +656,27 @@ mainFrame.engine.plugins = {
 La configuración integrada se aplica **primero** en cada arranque (y en cada
 `restart_engine`), y luego `~/.rmp/init.lua` se superpone encima. Los componentes
 integrados vienen **habilitados** y se pueden alternar mediante
-`mainFrame.engine.builtin`:
+`raymp.engine.builtin`:
 
 ```lua
 -- ~/.rmp/init.lua
-mainFrame.engine.builtin = false                 -- interruptor maestro: deshabilitar TODOS los builtins
+raymp.engine.builtin = false                 -- interruptor maestro: deshabilitar TODOS los builtins
 
 -- alternativas por función (si falta un flag el valor por defecto es HABILITADO)
-mainFrame.engine.builtin.help          = false   -- deshabilitar la superposición de ayuda (H)
-mainFrame.engine.builtin.notify        = true    -- popups de notificación
-mainFrame.engine.builtin.themes        = false   -- deshabilitar los plugins de tema integrados
-mainFrame.engine.builtin.theme_manager = true    -- plugin auto-selector de temas
+raymp.engine.builtin.help          = false   -- deshabilitar la superposición de ayuda (H)
+raymp.engine.builtin.notify        = true    -- popups de notificación
+raymp.engine.builtin.themes        = false   -- deshabilitar los plugins de tema integrados
+raymp.engine.builtin.theme_manager = true    -- plugin auto-selector de temas
 
 -- deshabilitar plugins de ventana integrados (usados por la plantilla predeterminada)
-mainFrame.engine.builtin.plugins = {
+raymp.engine.builtin.plugins = {
     tutorial_rmp               = false,
     helper_keys_tutorial       = true,
     matrix_digital_rain_effect = true,
 }
 ```
 
-Poner `mainFrame.engine.builtin = false` (o cualquier flag/plugin en `false`)
+Poner `raymp.engine.builtin = false` (o cualquier flag/plugin en `false`)
 omite con elegancia el trabajo correspondiente en el engine; los flags ausentes
 mantienen su valor por defecto de **habilitado**.
 
@@ -687,49 +687,49 @@ poniéndola a `nil` — en `~/.rmp/init.lua`:
 ```lua
 -- ~/.rmp/init.lua
 -- qué plantilla renderizar: "nombre" (plantilla de usuario, si no integrada), o una tabla inline
-mainFrame.engine.template = "tutorial"
+raymp.engine.template = "tutorial"
 
 -- ajustes de reproducción / motor
-mainFrame.engine.settings.fps     = 60      -- frames por segundo
-mainFrame.engine.settings.volume  = 0.5     -- 0.0 - 1.0
-mainFrame.engine.settings.speed   = 1.0     -- 0.01 - 3.0
-mainFrame.engine.settings.mode    = api.PlaybackMode.ONES
-mainFrame.engine.settings.freq_bins = 32    -- bandas del espectro para la visualización
-mainFrame.engine.settings.theme   = "desert" -- "default"|"darkandwhite"|"desert"|"elflord"; nil deshabilita
-mainFrame.engine.settings.notify  = true    -- mostrar popups de notificación
+raymp.engine.settings.fps     = 60      -- frames por segundo
+raymp.engine.settings.volume  = 0.5     -- 0.0 - 1.0
+raymp.engine.settings.speed   = 1.0     -- 0.01 - 3.0
+raymp.engine.settings.mode    = api.PlaybackMode.ONES
+raymp.engine.settings.freq_bins = 32    -- bandas del espectro para la visualización
+raymp.engine.settings.theme   = "desert" -- "default"|"darkandwhite"|"desert"|"elflord"; nil deshabilita
+raymp.engine.settings.notify  = true    -- mostrar popups de notificación
 
 -- teclas a nivel de motor (nil deshabilita esa acción)
-mainFrame.engine.settings.exit           = api.KEY_Q
-mainFrame.engine.settings.restart_engine = api.KEY_CTRL_R   -- recargar config
-mainFrame.engine.settings.help_key       = api.KEY_H          -- superposición de ayuda
-mainFrame.engine.settings.messages_key   = api.KEY_M          -- registro de mensajes
--- mainFrame.engine.settings.reload_key   = api.KEY_CTRL_R    -- recarga en caliente de plugins (FEAT-1)
+raymp.engine.settings.exit           = api.KEY_Q
+raymp.engine.settings.restart_engine = api.KEY_CTRL_R   -- recargar config
+raymp.engine.settings.help_key       = api.KEY_H          -- superposición de ayuda
+raymp.engine.settings.messages_key   = api.KEY_M          -- registro de mensajes
+-- raymp.engine.settings.reload_key   = api.KEY_CTRL_R    -- recarga en caliente de plugins (FEAT-1)
 
 -- tamaños de paso (cuánto cambian las teclas +/−)
-mainFrame.engine.settings.inc_volume = 0.1
-mainFrame.engine.settings.inc_speed  = 0.1
-mainFrame.engine.settings.inc_seek   = 5    -- segundos
+raymp.engine.settings.inc_volume = 0.1
+raymp.engine.settings.inc_speed  = 0.1
+raymp.engine.settings.inc_seek   = 5    -- segundos
 
 -- keymap de control de sonido (todo es reasignable)
-mainFrame.engine.soundMap.pause_sound  = api.KEY_SPACE
-mainFrame.engine.soundMap.resume_sound = api.KEY_SPACE
-mainFrame.engine.soundMap.next_sound   = api.KEY_N
-mainFrame.engine.soundMap.prev_sound   = api.KEY_P
-mainFrame.engine.soundMap.vol_up       = api.KEY_PLUS
-mainFrame.engine.soundMap.vol_down     = api.KEY_MINUS
-mainFrame.engine.soundMap.seek_left    = api.KEY_LEFT
-mainFrame.engine.soundMap.seek_right   = api.KEY_RIGHT
-mainFrame.engine.soundMap.speed_up     = api.KEY_UP
-mainFrame.engine.soundMap.speed_down   = api.KEY_DOWN
-mainFrame.engine.soundMap.change_playback_mode = api.KEY_TAB
+raymp.engine.soundMap.pause_sound  = api.KEY_SPACE
+raymp.engine.soundMap.resume_sound = api.KEY_SPACE
+raymp.engine.soundMap.next_sound   = api.KEY_N
+raymp.engine.soundMap.prev_sound   = api.KEY_P
+raymp.engine.soundMap.vol_up       = api.KEY_PLUS
+raymp.engine.soundMap.vol_down     = api.KEY_MINUS
+raymp.engine.soundMap.seek_left    = api.KEY_LEFT
+raymp.engine.soundMap.seek_right   = api.KEY_RIGHT
+raymp.engine.soundMap.speed_up     = api.KEY_UP
+raymp.engine.soundMap.speed_down   = api.KEY_DOWN
+raymp.engine.soundMap.change_playback_mode = api.KEY_TAB
 ```
 
-**Teclas/atajos de plantilla:** `mainFrame.engine.template` acepta (1) un string —
+**Teclas/atajos de plantilla:** `raymp.engine.template` acepta (1) un string —
 cargado desde `~/.rmp/templates/<nombre>.lua`, con respaldo en las plantillas
 integradas (p. ej. las incluidas `"tutorial"`, `"3_simple"`); o (2) una tabla de
 ventanas inline. Dentro de la plantilla, cada ventana tiene un `id`; los grupos de
 plugins se enlazan a él mediante `themeWindowId`. La abreviatura
-`mainFrame.engine.fps = 60` escribe `mainFrame.engine.settings.fps = 60` — cualquier
+`raymp.engine.fps = 60` escribe `raymp.engine.settings.fps = 60` — cualquier
 clave fuera de `{template, settings, soundMap, plugins, builtin}` se proxy hacia
 `settings`.
 

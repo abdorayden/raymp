@@ -4,12 +4,12 @@ local api = require("rmp.rmp")
 -- that shows a tutorial and two helpers one shows keys and another window a
 -- simple rain animation. Templates, like all configuration files, populate the
 -- global frame config directly — here the window list goes to
--- mainFrame.engine.template (no `return` table needed).
+-- raymp.engine.template (no `return` table needed).
 
 tutorial_window_width = "w*0.7"
 for_restore = ""
 
-mainFrame.engine.template = {
+raymp.engine.template = {
     {
         id = "animation-window",
         type = "Window",
@@ -78,3 +78,4 @@ mainFrame.engine.template = {
         backgroundColor = api.Default
     }
 }
+
