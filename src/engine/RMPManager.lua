@@ -183,9 +183,9 @@ local function build_engine_shell()
             themes        = true,
             theme_manager = true,
             plugins       = {
-                tutorial_rmp               = true,
-                helper_keys_tutorial       = true,
-                matrix_digital_rain_effect = true,
+                tutorial_rmp                        = true,
+                helper_keys_tutorial                = true,
+                matrix_digital_rain_effect          = true,
                 ["builtin-theme-manager-rmp"]       = true,
                 ["builtin-theme-default-rmp"]       = true,
                 ["builtin-theme-blackandwhite-rmp"] = true,
@@ -1180,18 +1180,18 @@ local function setupPlugins(configObj, is_userconfig)
     -- switches and can also be toggled individually via
     -- engine.builtin.plugins.<name> = false.
     local builtin_theme_plugins = {
-        "builtin-theme-manager-rmp",      -- theme auto-selector (selects settings.theme)
-        "builtin-theme-default-rmp",      -- vim-like colorschemes
+        "builtin-theme-manager-rmp", -- theme auto-selector (selects settings.theme)
+        "builtin-theme-default-rmp", -- vim-like colorschemes
         "builtin-theme-blackandwhite-rmp",
         "builtin-theme-desert-rmp",
         "builtin-theme-elflord-rmp",
     }
     local builtin_theme_group = {
-        ["builtin-theme-manager-rmp"]        = "theme_manager",
-        ["builtin-theme-default-rmp"]        = "themes",
-        ["builtin-theme-blackandwhite-rmp"]  = "themes",
-        ["builtin-theme-desert-rmp"]         = "themes",
-        ["builtin-theme-elflord-rmp"]        = "themes",
+        ["builtin-theme-manager-rmp"]       = "theme_manager",
+        ["builtin-theme-default-rmp"]       = "themes",
+        ["builtin-theme-blackandwhite-rmp"] = "themes",
+        ["builtin-theme-desert-rmp"]        = "themes",
+        ["builtin-theme-elflord-rmp"]       = "themes",
     }
     for _, name in ipairs(builtin_theme_plugins) do
         local group = builtin_theme_group[name]
@@ -1279,25 +1279,25 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         configObj.soundMap = soundCfg
     end
 
-    local sound                = api.Sound()
-    local data_freq_engine     = nil
-    local valid_restart        = false
-    local help_fn              = nil
-    local exit                 = api.KEY_Q
-    local messages_key         = api.KEY_M
-    local reload_key           = nil -- FEAT-1: hot-reload key
-    local show_logs            = false
-    local log_theme            = nil
-    local notify_plug          = nil
-    local render_help          = false
+    local sound             = api.Sound()
+    local data_freq_engine  = nil
+    local valid_restart     = false
+    local help_fn           = nil
+    local exit              = api.KEY_Q
+    local messages_key      = api.KEY_M
+    local reload_key        = nil    -- FEAT-1: hot-reload key
+    local show_logs         = false
+    local log_theme         = nil
+    local notify_plug       = nil
+    local render_help       = false
 
     -- FEAT-4: log overlay state
-    local log_overlay_state    = { scroll = 0, filter = "", filter_active = false }
+    local log_overlay_state = { scroll = 0, filter = "", filter_active = false }
 
     -- Apply settings using OPT-3 helper
-    local inc_speed  = 0.1
-    local inc_volume = 0.1
-    local inc_seek   = 5
+    local inc_speed         = 0.1
+    local inc_volume        = 0.1
+    local inc_seek          = 5
 
     if settings then
         local fps = validated_setting(settings.fps, "number", 1, 120, 60)
