@@ -35,20 +35,23 @@
 --
 --   runRMPApplication(...)
 --       └─► Main loop (60 fps by default):
---             1. handleKey()         — non-blocking key read
---             2. keyboard events     — sound controls, plugin switch, quit
---             3. sound:update()      — advances playback state
---             4. builtin themes      — loaded once, cached (see OPT-1)
+--             1. handleKey()          — non-blocking key read
+--             2. keyboard events      — sound controls, plugin switch, quit
+--             3. sound:update()       — advances playback state
+--             4. builtin themes       — shipped as global plugins; their plug()
+--                                     — functions run inside the otherPlugs loop
 --             5. parser:parseTemplate() — walks template, creates windows,
 --                                         calls plugin callbacks
---             6. otherPlugs loop     — runs global plugins, merges vterminals
---             7. notify drain        — flushes queued notifications
---             8. raymp:run()     — renders frame, sleeps to hit target fps
+--             6. otherPlugs loop      — runs global plugins (incl. themes),
+--                                        merges vterminals
+--             7. notify drain         — flushes queued notifications
+--             8. raymp:run()          — renders frame, sleeps to hit target fps
 --
 -- OPTIMIZATIONS APPLIED (tagged OPT-N in code)
 -- ─────────────────────────────────────────────
---   OPT-1  Builtin themes are required once at startup and cached in a table.
---          Previously they were pcall(require,...) on every single frame.
+--   OPT-1  Builtin plugins (including themes) are required once through
+--          setupPlugins; the per-frame calls reuse the cached module without
+--          any per-frame require() or hash lookup.
 --
 --   OPT-2  soundCfg merging uses a single helper (merge_sound_cfg) instead of
 --          11 repeated if/type() blocks.
@@ -139,6 +142,8 @@ local TextStyle    = api.TextStyle
 --         tutorial_rmp               = true,
 --         helper_keys_tutorial       = true,
 --         matrix_digital_rain_effect = true,
+--         builtin-theme-default-rmp  = true,        -- themes are real plugins too
+--         -- builtin-theme-manager-rmp, builtin-theme-desert-rmp, ...
 --     }
 -- ─────────────────────────────────────────────────────────────────────────────
 local ENGINE_KEYS  = { template = true, settings = true, soundMap = true, plugins = true, builtin = true }
@@ -181,6 +186,11 @@ local function build_engine_shell()
                 tutorial_rmp               = true,
                 helper_keys_tutorial       = true,
                 matrix_digital_rain_effect = true,
+                ["builtin-theme-manager-rmp"]       = true,
+                ["builtin-theme-default-rmp"]       = true,
+                ["builtin-theme-blackandwhite-rmp"] = true,
+                ["builtin-theme-desert-rmp"]        = true,
+                ["builtin-theme-elflord-rmp"]       = true,
             },
         },
     }
@@ -1163,6 +1173,34 @@ local function setupPlugins(configObj, is_userconfig)
         ::continue::
     end
 
+    -- Builtin themes ship enabled and are loaded through the plugin manager
+    -- exactly like the other builtin plugins, so they share the same lifecycle
+    -- (module required once, plug() called every frame from otherPlugs). They
+    -- are gated by the flat engine.builtin.themes / engine.builtin.theme_manager
+    -- switches and can also be toggled individually via
+    -- engine.builtin.plugins.<name> = false.
+    local builtin_theme_plugins = {
+        "builtin-theme-manager-rmp",      -- theme auto-selector (selects settings.theme)
+        "builtin-theme-default-rmp",      -- vim-like colorschemes
+        "builtin-theme-blackandwhite-rmp",
+        "builtin-theme-desert-rmp",
+        "builtin-theme-elflord-rmp",
+    }
+    local builtin_theme_group = {
+        ["builtin-theme-manager-rmp"]        = "theme_manager",
+        ["builtin-theme-default-rmp"]        = "themes",
+        ["builtin-theme-blackandwhite-rmp"]  = "themes",
+        ["builtin-theme-desert-rmp"]         = "themes",
+        ["builtin-theme-elflord-rmp"]        = "themes",
+    }
+    for _, name in ipairs(builtin_theme_plugins) do
+        local group = builtin_theme_group[name]
+        if group and builtin_enabled(configObj, nil, group) and not builtin_plugin_skipped(name) then
+            local mod = load_plugin_module(name, false)
+            if mod then otherPlugs:push(mod) end
+        end
+    end
+
     return PlugManager.new(plugs), otherPlugs, plugins_configurations
 end
 
@@ -1251,30 +1289,10 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
     local show_logs            = false
     local log_theme            = nil
     local notify_plug          = nil
-    local loaded_theme_manager = nil
     local render_help          = false
 
     -- FEAT-4: log overlay state
     local log_overlay_state    = { scroll = 0, filter = "", filter_active = false }
-
-    -- OPT-1: Cache builtin themes at startup — require() is memoised by Lua
-    -- but we still pay the hash lookup + pcall overhead on every frame.
-    -- Load once here and call the cached functions in the loop.
-    local builtin_theme_names  = {
-        "builtin-theme-blackandwhite-rmp",
-        "builtin-theme-default-rmp",
-        "builtin-theme-desert-rmp",
-        "builtin-theme-elflord-rmp",
-    }
-    local builtin_theme_fns    = {}
-    if builtin_enabled(configObj, nil, "themes") then
-        for _, name in ipairs(builtin_theme_names) do
-            local ok, mod = pcall(require, "rmp.builtin.plugins." .. name)
-            if ok and mod and type(mod) == "function" then
-                builtin_theme_fns[#builtin_theme_fns + 1] = mod
-            end
-        end
-    end
 
     -- Apply settings using OPT-3 helper
     local inc_speed  = 0.1
@@ -1345,11 +1363,6 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         sound:setVolume(0.5)
         sound:setSpeed(1.0)
         sound:setPlayBackMode(0)
-    end
-
-    if builtin_enabled(configObj, nil, "theme_manager") then
-        local ok_tm, tm = pcall(require, "rmp.builtin.plugins.builtin-theme-manager-rmp")
-        if ok_tm and tm then loaded_theme_manager = tm end
     end
 
     raymp:initMainFrame()
@@ -1522,18 +1535,8 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
             data_freq_engine = sound:getFrequencyData()
         end
 
-        -- OPT-1: Use cached theme function references instead of pcall(require) each frame
-        for _, theme_fn in ipairs(builtin_theme_fns) do
-            theme_fn()
-        end
-
         -- Parse and render the layout template
         parser:parseTemplate(template_copy)
-
-        -- Theme manager
-        if loaded_theme_manager and type(loaded_theme_manager) == "function" then
-            loaded_theme_manager()
-        end
 
         -- Help overlay
         if render_help and builtin_enabled(configObj, nil, "help") then
