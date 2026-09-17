@@ -1822,8 +1822,10 @@ local function loadConfiguration()
     if is_userconfig then
         local userTemplatePath = joinPath(config.homePath:getPath(), ".rmp", "templates", template .. ".lua")
         local okUser, userTemplateOpen = pcall(dofile, userTemplatePath)
-        if okUser and type(userTemplateOpen) == "table" then
-            return cfgObj, userTemplateOpen, true
+        -- User templates may be mutation-style (setting raymp.engine.template)
+        -- or return the window table directly — accept either convention.
+        if okUser and (type(userTemplateOpen) == "table" or type(cfgObj.template) == "table") then
+            return cfgObj, userTemplateOpen or cfgObj.template, true
         end
     end
 
