@@ -18,7 +18,7 @@ local THEME_NAME = "black_and_white"
 local doApply = false
 
 return function()
-    doApply = raymp.engine.theme == THEME_NAME
+    doApply = raymp.engine.settings.theme == THEME_NAME
     raymp:onTemplate(function(template)
         if template then
             if doApply then

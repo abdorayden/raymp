@@ -1327,6 +1327,14 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
             settings.theme = "default"
         end
 
+        -- Sync the active theme name so the builtin theme-manager (and theme
+        -- plugins that still read engine.theme) auto-select settings.theme.
+        -- settings.theme stays the single source of truth; engine.theme is a
+        -- legacy alias the theme-manager resolves into the selected colors.
+        if type(settings.theme) == "string" then
+            raymp.engine.theme = settings.theme
+        end
+
         if settings.notify and builtin_enabled(configObj, nil, "notify") then
             local ok, mod = pcall(require, "rmp.builtin.plugins.builtin-notify-rmp")
             if ok and mod then notify_plug = mod end
@@ -1381,7 +1389,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
 
         raymp:onDataGet(function(data)
             if data and data.theme then
-                sharedTheme = data.theme
+                sharedTheme = data.theme.def or data.theme
             end
         end)
 
