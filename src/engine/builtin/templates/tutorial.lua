@@ -78,4 +78,3 @@ raymp.engine.template = {
         backgroundColor = api.Default
     }
 }
-

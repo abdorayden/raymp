@@ -3,13 +3,7 @@ local api = require("rmp.rmp")
 local theme = nil
 
 return function(x, y, xx, yy)
-    if theme == nil then
-        raymp:addEventListener(api.EventType.TransformDataGet, function(data)
-            if data and data.theme then
-                theme = data.theme
-            end
-        end)
-    end
+    theme = raymp:getTheme()
 
     raymp:writeText(x, y, "Keys:",
         theme and api.colorFromHex(theme.Highlight) or api.FGColors.Brights.Red,

@@ -17,37 +17,12 @@ local theme = {
     MutedElements = "#a8a8a8"
 }
 
-local function apply(tha_template)
-    for _, component in ipairs(tha_template) do
-        if component.title then
-            if type(component.title) == "string" then
-                local val = component.title
-                component.title = {
-                    value = val,
-                    foregroundColor = api.colorFromHex(theme.TitleText, api.FG),
-                    backgroundColor = api.colorFromHex(theme.TitleBackGround, api.BG),
-                }
-            elseif type(component.title) == "table" then
-                component.title.foregroundColor = api.colorFromHex(theme.TitleText, api.FG)
-                component.title.backgroundColor = api.colorFromHex(theme.TitleBackGround, api.BG)
-            else
-                component.table = nil
-            end
-        end
-        component.foregroundColor = api.colorFromHex(theme.BorderColor, api.FG)
-        component.backgroundColor = api.colorFromHex(theme.BackGround, api.BG)
-        if component.children then
-            apply(component.children)
-        end
-    end
-end
-
 return function()
     doApply = raymp.engine.theme == THEME_NAME
     raymp:onTemplate(function(template)
         if template then
             if doApply then
-                apply(template)
+                raymp:applyTheme(template)
             end
         end
     end)

@@ -8,13 +8,7 @@ return function(x, y, xx, yy)
     local h, w = (yy - y), (xx - x)
     local cols = math.floor(w / 2)
 
-    if theme == nil then
-        raymp:addEventListener(api.EventType.TransformDataGet, function(data)
-            if data and data.theme then
-                theme = data.theme
-            end
-        end)
-    end
+    theme = raymp:getTheme()
 
     for i = 1, cols do
         if not streams[i] then

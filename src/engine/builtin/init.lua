@@ -71,4 +71,3 @@ raymp.engine.plugins = {
         }
     },
 }
-

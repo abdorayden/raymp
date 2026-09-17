@@ -71,7 +71,7 @@ local function createKeyToCharFunction()
     end
 end
 
-local function engine_render_help(w, h, settings, soundCfg)
+local function engine_render_help(w, h, settings, soundCfg, fg_box, bg_box, fg_text, bg_text)
     local ktc = createKeyToCharFunction()
 
     local helpText = {
@@ -117,25 +117,33 @@ local function engine_render_help(w, h, settings, soundCfg)
         api.Text.new("Help", api.TextStyle.Bold, api.FGColors.Brights.White, api.BGColors.NoBrights.Black, raymp),
         boxX, boxY, boxWidth, boxHeight,
         api.BoxDrawing.LightBorder,
-        api.FGColors.Brights.White,  -- border color
-        api.BGColors.NoBrights.Black -- background color
+        fg_box,
+        bg_box
     )
 
     -- Draw the help text inside the box
     for i, line in ipairs(helpText) do
         local textX = boxX + 2     -- Add padding from the left border
         local textY = boxY + 1 + i -- Add padding from the top border
-        raymp:writeText(textX, textY, line, api.FGColors.Brights.White, api.BGColors.NoBrights.Black)
+        raymp:writeText(textX, textY, line, fg_text, bg_text)
     end
 end
 
 return function()
     local h, w     = api.Terminal:getSize()
 
+    local theme    = raymp:getTheme()
+
+    local fg_box   = theme.BorderColor
+    local bg_box   = theme.BackGround
+
+    local fg_text  = theme.TitleText
+    local bg_text  = theme.TitleBackGround
+
     local engine   = raymp.engine
     local settings = engine.settings
     local soundCfg = engine.soundMap
     if settings and soundCfg then
-        engine_render_help(w, h, settings, soundCfg)
+        engine_render_help(w, h, settings, soundCfg, fg_box, bg_box, fg_text, bg_text)
     end
 end

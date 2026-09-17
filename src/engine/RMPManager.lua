@@ -246,15 +246,51 @@ end
 ---@field height number
 ---@field border BoxDrawing | table
 
+local TemplateBuilder = OOP.class("TemplateBuilder")
+do
+    -- local tpl = api.Template.new()
+    --
+    -- tpl:window("animation-window")          -- id required, auto-validated
+    --     :title("🎵 NOW PLAYING")            -- plain string → auto-wrapped Text node
+    --     :titleBg(api.BGColors.NoBrights.Magenta)  -- idempotent with :title("")
+    --     :pos("w - w*0.3 + 1", "h/2 + 1")        -- x,y shorthand
+    --     :size("w*0.3 + 1", "h/2")               -- width,height shorthand
+    --     :border(api.BoxDrawing.RoundedCorners)
+    --     :condition(function(context) return context.w >= 80 end)
+    --
+    -- tpl:window("tutorial-window")
+    --     :title(function(ctx) return "[ RMP ] " .. os.date("%H:%M:%S") end)  -- dynamic
+    --     :text({ value = "...", fg = api.FGColors.Brights.Cyan })             -- explicit Text opts
+    --     :pos(1, 1):size("w", "h")
+    --     :content(function(innerX, innerY, innerXX, innerYY, context)
+    --         -- same signature the TemplateParser passes today
+    --     end)
+    --
+    -- return tpl:build()   -- returns array-of-windows (USER template style)
+    -- -- or  tpl:apply()   -- mutates raymp.engine.template + returns nil (BUILTIN style)
+    function TemplateBuilder:constructor()
+
+    end
+
+    -- here where the method returns a table that can be parsed with the engine
+    -- this class is used for new API template also a backward compatible
+    -- it's recommended but it's fine to not update the old generated template
+    function TemplateBuilder:build()
+
+    end
+end
+
 local EngineFrame = OOP.class("EngineFrame", Frame)
 do
     function EngineFrame:constructor(width, height)
         --- @diagnostic disable-next-line
         self:super("constructor", width, height)
 
-        self.theme             = nil
-        self.engine            = build_engine_shell()
-        self.regestred_plugins = {}
+        self.theme            = nil
+        self.engine           = build_engine_shell()
+        -- TODO: implement template_builder
+        -- raymp.engine.template = rayden.template_builder:window():x():children():...:build()
+        self.template_builder = TemplateBuilder()
     end
 
     --- raymp:plug({
@@ -263,8 +299,9 @@ do
     ---@param obj table
     function EngineFrame:plug(obj)
         table.insert(self.engine.plugins, {
+            priority = obj.priority,
             themeWindowId = obj.windowId,
-            isActivated = obj.activated,
+            isActivated = obj.activated or true,
             switchPluginKey = obj.switchKey, -- not recommended i added just for backward compatibility
             names = (function()
                 if type(obj.name) == "string" then
@@ -274,8 +311,10 @@ do
                 end
             end)()
         })
-        self.regestred_plugins[obj.name] = true
     end
+
+    -- TODO: update my configurations and plugins that i uploaded on github
+    -- TODO: make buildin plugins more customizable
 
     -- TODO: add notify
     -- TODO: add input
