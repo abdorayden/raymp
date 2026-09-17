@@ -134,11 +134,11 @@ return function()
 
     local theme    = raymp:getTheme()
 
-    local fg_box   = theme.BorderColor
-    local bg_box   = theme.BackGround
+    local fg_box   = api.colorFromHex(theme.BorderColor)
+    local bg_box   = api.colorFromHex(theme.BackGround, api.BG)
 
-    local fg_text  = theme.TitleText
-    local bg_text  = theme.TitleBackGround
+    local fg_text  = api.colorFromHex(theme.TitleText)
+    local bg_text  = api.colorFromHex(theme.TitleBackGround, api.BG)
 
     local engine   = raymp.engine
     local settings = engine.settings
