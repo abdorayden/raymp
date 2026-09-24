@@ -173,11 +173,11 @@ local engine_proxy = {
 --- @return table
 local function build_engine_shell()
     local engine = {
-        template = nil,
-        settings = {},
-        soundMap = {},
-        plugins  = {},
-        builtin  = {
+        template         = nil,
+        settings         = {},
+        soundMap         = {},
+        plugins          = {},
+        builtin          = {
             help          = true,
             notify        = true,
             themes        = true,
@@ -193,6 +193,23 @@ local function build_engine_shell()
                 ["builtin-theme-elflord-rmp"]       = true,
             },
         },
+        --- the message passed in params just for additional infotmation
+        --- you can ignore it and use your own box
+        notification_box = function(message)
+            local _, term_w = api.Terminal:getSize()
+            local y_offset = 1
+            local box_width = math.min(term_w - 2, math.max(12, #message + 4))
+            local box_height = 3
+            local box_x = math.max(1, term_w - box_width)
+            local box_y = y_offset
+            return {
+                x = box_x,
+                y = box_y,
+                width = box_width,
+                height = box_height,
+            }
+        end
+
     }
     return setmetatable(engine, engine_proxy)
 end
@@ -298,6 +315,7 @@ do
 
         self.theme            = nil
         self.engine           = build_engine_shell()
+
         -- TODO: implement template_builder
         -- raymp.engine.template = rayden.template_builder:window():x():children():...:build()
         self.template_builder = TemplateBuilder()
@@ -327,6 +345,28 @@ do
     -- TODO: make buildin plugins more customizable
 
     -- TODO: add notify
+    function EngineFrame:notify(message, conf)
+        local status = "info"
+        local duration = 3
+        if conf then
+            status = conf.status or "info"
+            duration = conf.duration or 3
+        end
+        self:addEventListener(api.EventType.TransformDataPut, function()
+            return {
+                notification = {
+                    message = message,
+                    -- status = "info",
+                    -- status = "error",
+                    -- status = "warning",
+                    -- status = "message",
+                    status = status,
+                    duration = duration
+                }
+            }
+        end)
+    end
+
     -- TODO: add input
 
     --- template component
@@ -1285,7 +1325,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
     local help_fn           = nil
     local exit              = api.KEY_Q
     local messages_key      = api.KEY_M
-    local reload_key        = nil    -- FEAT-1: hot-reload key
+    local reload_key        = nil -- FEAT-1: hot-reload key
     local show_logs         = false
     local log_theme         = nil
     local notify_plug       = nil
@@ -1526,6 +1566,8 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
 
             if inputKey == soundCfg.change_playback_mode then
                 sound:setPlayBackMode((sound:getPlayBackMode() + 1) % 4)
+                -- TODO: rayden was here
+                soundCfg.mode = sound:getPlayBackMode()
             end
         end)
 

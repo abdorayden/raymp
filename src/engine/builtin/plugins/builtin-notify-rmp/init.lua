@@ -21,7 +21,6 @@
 local api = require("rmp.rmp")
 local util = require("rmp.util")
 
-local VirtualTerminal = api.VirtualTerminal
 local Queue = util.Queue
 local colorFromHex = api.colorFromHex
 local FG = api.FG
@@ -78,7 +77,7 @@ local function clip_text(text, max_width)
 end
 
 local function render_notifications()
-    local term_h, term_w = api.Terminal:getSize()
+    local term_w, term_h = raymp:getSize()
     local colors = get_theme_colors()
     local y_offset = 1
     for _, noti in ipairs(active_notifications) do
@@ -93,10 +92,14 @@ local function render_notifications()
             fg = colors.secondary
         end
         local message = clip_text(noti.message, math.max(4, math.min(MAX_WIDTH, term_w - 6)))
-        local box_width = math.min(term_w - 2, math.max(12, #message + 4))
-        local box_height = 3
-        local box_x = math.max(1, term_w - box_width)
-        local box_y = y_offset
+        local obj = raymp.engine.notification_box(message)
+
+        local box_width = obj.width
+        local box_height = obj.height
+        local box_x = obj.x
+        local box_y = obj.y
+
+
         if box_y + box_height - 1 > term_h then
             break
         end
