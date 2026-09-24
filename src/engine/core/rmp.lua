@@ -2537,6 +2537,16 @@ do
         return self
     end
 
+    function RMP.SimpleInput:setX(x)
+        x = x or 1
+        self.x = x
+    end
+
+    function RMP.SimpleInput:setY(y)
+        y = y or 1
+        self.y = y
+    end
+
     function RMP.SimpleInput:render(vterm)
         --- @diagnostic disable-next-line
         if self.active then

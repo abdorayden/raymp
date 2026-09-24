@@ -203,10 +203,11 @@ local function build_engine_shell()
                 local box_x = math.max(1, term_w - box_width)
                 local box_y = 1
                 return {
-                    x = box_x,
-                    y = box_y,
-                    width = box_width,
+                    x      = box_x,
+                    y      = box_y,
+                    width  = box_width,
                     height = box_height,
+                    border = api.BoxDrawing.RoundedCorners
                 }
             end,
             stacked = true

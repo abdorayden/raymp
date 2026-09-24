@@ -104,7 +104,8 @@ local function render_notifications()
         end
 
         local title = "[" .. string.upper(noti.status) .. "]"
-        raymp:drawBox(title, box_x, box_y, box_width, box_height, api.BoxDrawing.RoundedCorners, fg, colors.bg)
+        raymp:drawBox(title, box_x, box_y, box_width, box_height, obj.border or api.BoxDrawing.RoundedCorners, fg,
+            colors.bg)
         raymp:writeText(box_x + 2, box_y + 1, message, fg, colors.bg)
         if raymp.engine.notification.stacked then
             y_offset = y_offset + box_height + 1
