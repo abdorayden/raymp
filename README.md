@@ -556,6 +556,36 @@ return function(x, y, xx, yy)
 end
 ```
 
+### Prompting the user from a plugin
+
+Use `raymp:input(conf)` for a **modal** text prompt. One prompt runs at a time
+(FIFO); while active it grabs all keys, so playback/log/plugin keymaps don't
+fire on typing characters. Enter submits, Esc cancels.
+
+```lua
+-- Queue a search prompt (bottom-center by default when x/y are omitted).
+local prompt = raymp:input({
+    label   = "Search: ",
+    default = "",
+    width   = 40,
+    validator = function(value)           -- optional; Enter only commits if it passes
+        if value == "" then return false, "empty search" end
+        return true
+    end,
+    on_submit = function(value)
+        raymp:notify("Searching for: " .. value, { status = "info", duration = 3 })
+        -- do the search, open another prompt, etc.
+    end,
+    on_cancel = function()
+        raymp:notify("Search cancelled", { status = "warning", duration = 3 })
+    end,
+})
+
+-- The handle can be used to ask/act on the prompt later:
+--   prompt:isActive() → boolean; prompt:getValue() → current text; prompt:cancel()
+-- (raymp:notify also ships with the engine — same one-shot popup pattern.)
+```
+
 ### Plugin Registration and Configuration
 Configuration files populate the global frame config — `raymp.engine` — directly
 instead of returning a table. `raymp.engine.fps = 30` is shorthand for

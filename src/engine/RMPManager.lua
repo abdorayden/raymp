@@ -99,17 +99,22 @@
 --
 -- see if we can handle themes diffrently
 
-local api          = require("rmp.rmp")
-local utils        = require("rmp.util")
-local OOP          = require("rmp.oop")
+local api            = require("rmp.rmp")
+local utils          = require("rmp.util")
+local OOP            = require("rmp.oop")
 
-local joinPath     = api.Path.joinPath
-local colorFromHex = api.colorFromHex
-local Frame        = api.Frame
-local FG           = api.FG
-local BG           = api.BG
-local Text         = api.Text
-local TextStyle    = api.TextStyle
+-- Engine-level modal input state (raymp:input). Declared early so the
+-- EngineFrame:input() method below can capture these locals.
+local pending_inputs = utils.Queue.new()
+local current_input  = nil
+
+local joinPath       = api.Path.joinPath
+local colorFromHex   = api.colorFromHex
+local Frame          = api.Frame
+local FG             = api.FG
+local BG             = api.BG
+local Text           = api.Text
+local TextStyle      = api.TextStyle
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Engine configuration (raymp.engine)
@@ -146,9 +151,9 @@ local TextStyle    = api.TextStyle
 --         -- builtin-theme-manager-rmp, builtin-theme-desert-rmp, ...
 --     }
 -- ─────────────────────────────────────────────────────────────────────────────
-local ENGINE_KEYS  = { template = true, settings = true, soundMap = true, plugins = true, builtin = true }
+local ENGINE_KEYS    = { template = true, settings = true, soundMap = true, plugins = true, builtin = true }
 
-local engine_proxy = {
+local engine_proxy   = {
     __index = function(t, k)
         if ENGINE_KEYS[k] then return rawget(t, k) end
         local v = rawget(t, k)
@@ -370,7 +375,44 @@ do
         end)
     end
 
-    -- TODO: add input
+    --- Queue a modal text-input prompt from a plugin. One prompt is active at a
+    --- time (FIFO); while active it grabs all keys so engine/plugin keymaps are
+    --- suppressed. conf uses the rmp.rmp.SimpleInput option names plus callbacks:
+    ---   {
+    ---     label = "Search: ", x = nil, y = nil, width = 30,
+    ---     default = "", placeholder = "...", maxLength = 100,
+    ---     validator = function(v) return true, "err" end,
+    ---     on_submit = function(value) ... end,
+    ---     on_cancel = function() ... end,
+    ---   }
+    --- Esc cancels, Enter submits (if the validator passes).
+    --- @param conf table
+    --- @return table|nil handle with isActive()/getValue()/cancel()
+    function EngineFrame:input(conf)
+        if type(conf) ~= "table" then
+            return nil
+        end
+        pending_inputs:push(conf)
+        return {
+            isActive = function()
+                return current_input ~= nil and current_input.conf == conf
+                    and current_input.simple:isActive()
+            end,
+            getValue = function()
+                if current_input and current_input.conf == conf then
+                    return current_input.simple:getValue()
+                end
+                return tostring(conf.value or conf.default or "")
+            end,
+            cancel = function()
+                conf.cancelled = true
+                if current_input and current_input.conf == conf then
+                    current_input.simple:blur()
+                    current_input = nil
+                end
+            end,
+        }
+    end
 
     --- template component
     --- theme table
@@ -532,6 +574,107 @@ local function reset_logs()
     log_index             = {}
     log_seq               = 0
     pending_notifications = Queue.new()
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Engine-level input (raymp:input)
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Plugins queue modal text-input prompts through EngineFrame:input(); the main
+-- loop drains the queue (FIFO, one active at a time) and, while a prompt is
+-- active, grabs all keys so engine/plugin keymaps and sound controls don't fire
+-- on typing characters. Built on rmp.rmp.SimpleInput (focus/_handleKey).
+-- (pending_inputs / current_input are declared at the top of the file so the
+-- EngineFrame:input() method and these helpers share the same cells.)
+-- ─────────────────────────────────────────────────────────────────────────────
+
+local function reset_inputs()
+    pending_inputs = Queue.new()
+    current_input  = nil
+end
+
+--- Pops the next non-cancelled prompt from the queue and focuses it. Default
+--- x/y center the field at the bottom of the frame.
+--- @param frame rmp.rmp.Frame
+local function activate_next_input(frame)
+    while not pending_inputs:isEmpty() do
+        local conf = pending_inputs:pop()
+        if not conf.cancelled then
+            if not conf.x or not conf.y then
+                local w, h = frame:getSize()
+                local field_w = #(conf.label or "") + (conf.width or 30)
+                if not conf.x then
+                    conf.x = math.max(1, math.floor((w - field_w) / 2))
+                end
+                if not conf.y then
+                    conf.y = math.max(1, h - 2)
+                end
+            end
+            local opts = {}
+            for _, k in ipairs({
+                "x", "y", "width", "label", "placeholder", "maxLength",
+                "validator", "fg_normal", "bg_normal", "fg_active",
+                "bg_active", "fg_error", "chr",
+            }) do
+                if conf[k] ~= nil then opts[k] = conf[k] end
+            end
+            opts.value = conf.default or conf.value or ""
+            local inp = api.SimpleInput.new(opts)
+            inp:focus()
+            current_input = {
+                conf     = conf,
+                simple   = inp,
+                last_key = nil,
+            }
+            break
+        end
+    end
+end
+
+--- Feeds one key into the active prompt. When the prompt closes (blur) it
+--- dispatches on_submit (Enter, valid) or on_cancel (Escape). Callbacks are
+--- pcall-guarded. Returns true when the key was consumed by the modal prompt.
+--- @param key integer
+--- @return boolean
+local function feed_input(key)
+    local sess = current_input
+    if not sess or not sess.simple:isActive() or key == nil then
+        return false
+    end
+
+    sess.last_key = key
+    sess.simple:_handleKey(key)
+
+    if not sess.simple:isActive() then
+        local conf = sess.conf
+        if not conf.cancelled then
+            local callback = sess.last_key == api.KEY_ENTER and conf.on_submit
+                or conf.on_cancel
+            if type(callback) == "function" then
+                local ok, res = pcall(callback, sess.simple:getValue())
+                if not ok then
+                    logwarn("input callback error: " .. tostring(res))
+                end
+            end
+        end
+        current_input = nil
+    end
+    return true
+end
+
+--- Draws the active prompt on top of the frame and flushes the frame's
+--- keyboard/focus event queues so plugin listeners can't consume typing keys
+--- (listeners are re-registered per frame, so flushing keeps them from firing).
+--- @param frame rmp.rmp.Frame
+local function render_input(frame)
+    local sess = current_input
+    if not sess or not sess.simple:isActive() then
+        return
+    end
+    sess.simple:_renderField(frame)
+    local kq = frame.events:get(api.EventType.Keyboard)
+    while kq and not kq:isEmpty() do kq:pop() end
+    local fq = frame.events:get(api.EventType.Focuse)
+    while fq and not fq:isEmpty() do fq:pop() end
 end
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -1436,6 +1579,17 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
             raymp:resize(w, h)
         end
 
+        -- Engine-level modal input (raymp:input): activate the next queued
+        -- prompt, then feed the key. While active, the engine key handler
+        -- below is skipped so typing never drives playback/log/quit keys.
+        if not current_input then
+            activate_next_input(raymp)
+        end
+        local input_modal = current_input ~= nil and current_input.simple:isActive()
+        if input_modal and feed_input(key) then
+            key = nil
+        end
+
         -- Cache sound state once per frame to avoid repeated FFI calls
         local isPlaying = sound:isPlaying()
         local currVol   = sound:getVolume()
@@ -1452,127 +1606,130 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         raymp:setTheme(sharedTheme)
 
         -- ── Keyboard event handler ────────────────────────────────────────
-        raymp:addEventListener(api.EventType.Keyboard, function(inputKey)
-            -- Log overlay toggle
-            if messages_key and inputKey == messages_key then
-                show_logs                       = not show_logs
-                log_overlay_state.scroll        = 0
-                log_overlay_state.filter        = ""
-                log_overlay_state.filter_active = false
-                return
-            end
+        -- Skipped while a modal raymp:input prompt is active (it grabs keys)
+        if not input_modal then
+            raymp:addEventListener(api.EventType.Keyboard, function(inputKey)
+                -- Log overlay toggle
+                if messages_key and inputKey == messages_key then
+                    show_logs                       = not show_logs
+                    log_overlay_state.scroll        = 0
+                    log_overlay_state.filter        = ""
+                    log_overlay_state.filter_active = false
+                    return
+                end
 
-            -- Log overlay navigation (FEAT-4: includes filter input)
-            if show_logs then
-                if log_overlay_state.filter_active then
-                    -- Typing into filter
+                -- Log overlay navigation (FEAT-4: includes filter input)
+                if show_logs then
+                    if log_overlay_state.filter_active then
+                        -- Typing into filter
+                        if inputKey == api.KEY_ESCAPE then
+                            log_overlay_state.filter        = ""
+                            log_overlay_state.filter_active = false
+                        elseif inputKey == api.KEY_ENTER then
+                            log_overlay_state.filter_active = false
+                        elseif inputKey == api.KEY_BACKSPACE then
+                            local f = log_overlay_state.filter
+                            log_overlay_state.filter = f:sub(1, #f - 1)
+                        else
+                            -- Append printable character
+                            local ch = inputKey and string.char(inputKey)
+                            if ch and ch:match("[%g ]") then
+                                log_overlay_state.filter = log_overlay_state.filter .. ch
+                            end
+                        end
+                        return
+                    end
+                    if inputKey == api.KEY_UP or inputKey == api.KEY_K then
+                        log_overlay_state.scroll = log_overlay_state.scroll + 1
+                        return
+                    end
+                    if inputKey == api.KEY_DOWN or inputKey == api.KEY_J then
+                        log_overlay_state.scroll = math.max(0, log_overlay_state.scroll - 1)
+                        return
+                    end
+                    if inputKey == api.KEY_SLASH then
+                        log_overlay_state.filter_active = true
+                        return
+                    end
                     if inputKey == api.KEY_ESCAPE then
-                        log_overlay_state.filter        = ""
-                        log_overlay_state.filter_active = false
-                    elseif inputKey == api.KEY_ENTER then
-                        log_overlay_state.filter_active = false
-                    elseif inputKey == api.KEY_BACKSPACE then
-                        local f = log_overlay_state.filter
-                        log_overlay_state.filter = f:sub(1, #f - 1)
-                    else
-                        -- Append printable character
-                        local ch = inputKey and string.char(inputKey)
-                        if ch and ch:match("[%g ]") then
-                            log_overlay_state.filter = log_overlay_state.filter .. ch
+                        if #(log_overlay_state.filter or "") > 0 then
+                            log_overlay_state.filter = ""
+                        else
+                            show_logs = false
+                        end
+                        return
+                    end
+                    if inputKey == exit then quit = true end
+                    return
+                end
+
+                -- Plugin switch keys
+                for windowId, switchKey in pairs(switchKeys) do
+                    if inputKey == switchKey then
+                        parser:updatePlugin(windowId)
+                    end
+                end
+
+                -- FEAT-1: Hot-reload — reloads all window-attached plugins
+                if reload_key and inputKey == reload_key then
+                    -- Reload is per-slot; the plugin name is not tracked here
+                    -- so we clear all pluginCache entries to force re-require.
+                    parser.pluginCache = {}
+                    lognote("hot-reload triggered — plugin caches cleared")
+                end
+
+                if inputKey == exit then quit = true end
+                if valid_restart and settings and inputKey == settings.restart_engine then
+                    restart = true
+                end
+
+                -- Sound controls
+                if soundCfg.pause_sound ~= soundCfg.resume_sound then
+                    if inputKey == soundCfg.pause_sound and isPlaying then sound:pause() end
+                    if inputKey == soundCfg.resume_sound and not isPlaying then
+                        sound:play(); sound:resume()
+                    end
+                else
+                    if inputKey == soundCfg.resume_sound then
+                        if not isPlaying then
+                            sound:play(); sound:resume()
+                        else
+                            sound:pause()
                         end
                     end
-                    return
                 end
-                if inputKey == api.KEY_UP or inputKey == api.KEY_K then
-                    log_overlay_state.scroll = log_overlay_state.scroll + 1
-                    return
+
+                if inputKey == soundCfg.next_sound then sound:nextTrack() end
+                if inputKey == soundCfg.prev_sound then sound:prevTrack() end
+
+                if inputKey == soundCfg.vol_up then
+                    sound:setVolume(math.min(1, currVol + inc_volume))
                 end
-                if inputKey == api.KEY_DOWN or inputKey == api.KEY_J then
-                    log_overlay_state.scroll = math.max(0, log_overlay_state.scroll - 1)
-                    return
+                if inputKey == soundCfg.vol_down then
+                    sound:setVolume(math.max(0, currVol - inc_volume))
                 end
-                if inputKey == api.KEY_SLASH then
-                    log_overlay_state.filter_active = true
-                    return
+
+                if inputKey == soundCfg.seek_left and isPlaying then
+                    sound:seek(math.max(0, currPos - inc_seek))
                 end
-                if inputKey == api.KEY_ESCAPE then
-                    if #(log_overlay_state.filter or "") > 0 then
-                        log_overlay_state.filter = ""
-                    else
-                        show_logs = false
-                    end
-                    return
+                if inputKey == soundCfg.seek_right and isPlaying then
+                    sound:seek(math.min(len - 1, currPos + inc_seek))
                 end
-                if inputKey == exit then quit = true end
-                return
-            end
 
-            -- Plugin switch keys
-            for windowId, switchKey in pairs(switchKeys) do
-                if inputKey == switchKey then
-                    parser:updatePlugin(windowId)
+                if inputKey == soundCfg.speed_up then
+                    sound:setSpeed(math.min(3.0, currSpeed + inc_speed))
                 end
-            end
-
-            -- FEAT-1: Hot-reload — reloads all window-attached plugins
-            if reload_key and inputKey == reload_key then
-                -- Reload is per-slot; the plugin name is not tracked here
-                -- so we clear all pluginCache entries to force re-require.
-                parser.pluginCache = {}
-                lognote("hot-reload triggered — plugin caches cleared")
-            end
-
-            if inputKey == exit then quit = true end
-            if valid_restart and settings and inputKey == settings.restart_engine then
-                restart = true
-            end
-
-            -- Sound controls
-            if soundCfg.pause_sound ~= soundCfg.resume_sound then
-                if inputKey == soundCfg.pause_sound and isPlaying then sound:pause() end
-                if inputKey == soundCfg.resume_sound and not isPlaying then
-                    sound:play(); sound:resume()
+                if inputKey == soundCfg.speed_down then
+                    sound:setSpeed(math.max(0.1, currSpeed - inc_speed))
                 end
-            else
-                if inputKey == soundCfg.resume_sound then
-                    if not isPlaying then
-                        sound:play(); sound:resume()
-                    else
-                        sound:pause()
-                    end
+
+                if inputKey == soundCfg.change_playback_mode then
+                    sound:setPlayBackMode((sound:getPlayBackMode() + 1) % 4)
+                    -- TODO: rayden was here
+                    soundCfg.mode = sound:getPlayBackMode()
                 end
-            end
-
-            if inputKey == soundCfg.next_sound then sound:nextTrack() end
-            if inputKey == soundCfg.prev_sound then sound:prevTrack() end
-
-            if inputKey == soundCfg.vol_up then
-                sound:setVolume(math.min(1, currVol + inc_volume))
-            end
-            if inputKey == soundCfg.vol_down then
-                sound:setVolume(math.max(0, currVol - inc_volume))
-            end
-
-            if inputKey == soundCfg.seek_left and isPlaying then
-                sound:seek(math.max(0, currPos - inc_seek))
-            end
-            if inputKey == soundCfg.seek_right and isPlaying then
-                sound:seek(math.min(len - 1, currPos + inc_seek))
-            end
-
-            if inputKey == soundCfg.speed_up then
-                sound:setSpeed(math.min(3.0, currSpeed + inc_speed))
-            end
-            if inputKey == soundCfg.speed_down then
-                sound:setSpeed(math.max(0.1, currSpeed - inc_speed))
-            end
-
-            if inputKey == soundCfg.change_playback_mode then
-                sound:setPlayBackMode((sound:getPlayBackMode() + 1) % 4)
-                -- TODO: rayden was here
-                soundCfg.mode = sound:getPlayBackMode()
-            end
-        end)
+            end)
+        end
 
         -- Advance sound engine and grab frequency data
         sound:update()
@@ -1660,6 +1817,10 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
             plugs_cfgs:put("settings", settings)
             plugs_cfgs:put("all", configObj)
         end
+
+        -- Draw the modal input prompt on top and flush key queues before the
+        -- frame is flushed/rendered, so plugin listeners never see typing keys.
+        render_input(raymp)
 
         raymp:run(key, nil, sound, plugs_cfgs, template_copy, data_freq_engine, quit)
 
@@ -1916,6 +2077,7 @@ end
     local restart = true
     while restart do
         reset_logs()
+        reset_inputs()
 
         local ok, error_value = pcall(function()
             restart = false
