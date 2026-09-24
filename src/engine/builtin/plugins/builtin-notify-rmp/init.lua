@@ -92,13 +92,12 @@ local function render_notifications()
             fg = colors.secondary
         end
         local message = clip_text(noti.message, math.max(4, math.min(MAX_WIDTH, term_w - 6)))
-        local obj = raymp.engine.notification_box(message)
+        local obj = raymp.engine.notification.box(message)
 
         local box_width = obj.width
         local box_height = obj.height
         local box_x = obj.x
-        local box_y = obj.y
-
+        local box_y = obj.y + y_offset
 
         if box_y + box_height - 1 > term_h then
             break
@@ -107,7 +106,9 @@ local function render_notifications()
         local title = "[" .. string.upper(noti.status) .. "]"
         raymp:drawBox(title, box_x, box_y, box_width, box_height, api.BoxDrawing.RoundedCorners, fg, colors.bg)
         raymp:writeText(box_x + 2, box_y + 1, message, fg, colors.bg)
-        y_offset = y_offset + box_height + 1
+        if raymp.engine.notification.stacked then
+            y_offset = y_offset + box_height + 1
+        end
     end
 end
 

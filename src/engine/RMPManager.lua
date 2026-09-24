@@ -173,11 +173,11 @@ local engine_proxy = {
 --- @return table
 local function build_engine_shell()
     local engine = {
-        template         = nil,
-        settings         = {},
-        soundMap         = {},
-        plugins          = {},
-        builtin          = {
+        template     = nil,
+        settings     = {},
+        soundMap     = {},
+        plugins      = {},
+        builtin      = {
             help          = true,
             notify        = true,
             themes        = true,
@@ -195,20 +195,22 @@ local function build_engine_shell()
         },
         --- the message passed in params just for additional infotmation
         --- you can ignore it and use your own box
-        notification_box = function(message)
-            local _, term_w = api.Terminal:getSize()
-            local y_offset = 1
-            local box_width = math.min(term_w - 2, math.max(12, #message + 4))
-            local box_height = 3
-            local box_x = math.max(1, term_w - box_width)
-            local box_y = y_offset
-            return {
-                x = box_x,
-                y = box_y,
-                width = box_width,
-                height = box_height,
-            }
-        end
+        notification = {
+            box = function(message)
+                local _, term_w = api.Terminal:getSize()
+                local box_width = math.min(term_w - 2, math.max(12, #message + 4))
+                local box_height = 3
+                local box_x = math.max(1, term_w - box_width)
+                local box_y = 1
+                return {
+                    x = box_x,
+                    y = box_y,
+                    width = box_width,
+                    height = box_height,
+                }
+            end,
+            stacked = true
+        }
 
     }
     return setmetatable(engine, engine_proxy)
