@@ -592,6 +592,51 @@ local function reset_inputs()
     current_input  = nil
 end
 
+--- Maps an RMP key enum (api.KEY_A, api.KEY_COLON, ...) to its printable
+--- character. RMP keys are enum integers, not ASCII, so string.char() would be
+--- wrong (e.g. api.KEY_A is the 72nd enum value). Reuses the class method
+--- SimpleInput._keyToChar whose implicit `self` parameter is unused.
+--- @param inputKey integer
+--- @return string|nil
+local function key_to_char(inputKey)
+    if not (api.SimpleInput and inputKey ~= nil) then return nil end
+    local ok, ch = pcall(api.SimpleInput._keyToChar, api.SimpleInput, inputKey)
+    if ok then return ch end
+    return nil
+end
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Plugin runtime error quarantine
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Runtime plugin errors are isolated instead of taking down the engine: the
+-- failing plugin is logged with its module name and disabled so it cannot
+-- re-trigger the error every frame (the "glitching red window" scenario).
+-- name_by_fn maps a loaded plugin function back to its module name (populated
+-- by setupPlugins); disabled holds names that must no longer run until the
+-- engine restarts.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+local plugin_registry = { name_by_fn = {}, disabled = {} }
+
+--- Extracts a plugin module name from an error message such as
+--- ".../plugins/my-plugin-rmp/init.lua:42: attempt to index a nil value".
+--- @param err any
+--- @return string|nil
+local function plugin_name_from_error(err)
+    local s = tostring(err)
+    return s:match("plugins[/\\]([%w%-_]+)[/\\]") or s:match("plugins[/\\]([%w%-_]+)%.lua")
+end
+
+--- Logs a plugin runtime error and quarantines the responsible plugin.
+--- @param context string  what was happening (e.g. "template rendering")
+--- @param err any
+local function log_plugin_error(context, err)
+    local name = plugin_name_from_error(err)
+    logwarn(context .. " error: " .. tostring(err)
+        .. (name and (" [plugin: " .. name .. " disabled]") or ""))
+    if name then plugin_registry.disabled[name] = true end
+end
+
 --- Pops the next non-cancelled prompt from the queue and focuses it. Default
 --- x/y center the field at the bottom of the frame.
 --- @param frame rmp.rmp.Frame
@@ -813,7 +858,7 @@ local function render_log_overlay(frame, state, theme)
 
     local hint = state.filter_active
         and "Typing filter — Esc: clear filter"
-        or "Up/Down: scroll   /: filter   Esc: close"
+        or "Up/Down or K/J: scroll   /: filter   Esc: close"
     frame:writeText(boxX + 2, boxY + boxHeight - 2, hint, colors.title_fg, colors.title_bg)
 
     return max_scroll
@@ -929,16 +974,50 @@ local ComponentType = { Window = "Window", Text = "Text" }
 -- ─────────────────────────────────────────────────────────────────────────────
 local TemplateParser = OOP.class("TemplateParser")
 do
-    function TemplateParser:constructor(template, plugManager, frame)
+    function TemplateParser:constructor(template, plugManager, frame, registry)
         self.template                = template or {}
         self.plugManager             = plugManager
         self.mainFrame               = frame or raymp
+        self.plugRegistry            = registry
         self.windowCache             = {}
         self.pluginCache             = {}
         self.lastTerminalSize        = { w = 0, h = 0 }
         self.compiledExpressions     = {}
         self.compiledExpressionsSize = 0
         self.exprKeyOrder            = {} -- OPT-7: eviction order list
+    end
+
+    --- Returns the active (enabled) plugin for a window slot, rotating past any
+    --- plugin that was disabled after a runtime error. Returns nil when the slot
+    --- has no usable plugin.
+    --- @param id string
+    --- @return function|nil
+    function TemplateParser:nextEnabledPlugin(id)
+        if not id or not self.plugManager then return nil end
+
+        -- Drop a cached plugin that was disabled at runtime
+        if self.pluginCache[id] and self:_disabled(self.pluginCache[id]) then
+            self.pluginCache[id] = nil
+        end
+        if self.pluginCache[id] then return self.pluginCache[id] end
+
+        -- Rotate past disabled plugins (each getNextPlug call advances the slot)
+        for _ = 1, 32 do
+            local plugin, err = self.plugManager:getNextPlug(id)
+            if plugin and not err and not self:_disabled(plugin) then
+                self.pluginCache[id] = plugin
+                return plugin
+            end
+        end
+        return nil
+    end
+
+    --- True when the plugin function was disabled after a runtime error.
+    --- @param fn function
+    --- @return boolean
+    function TemplateParser:_disabled(fn)
+        return fn and self.plugRegistry and type(fn) == "function"
+            and self.plugRegistry.disabled[self.plugRegistry.name_by_fn[fn]] == true
     end
 
     --- Evaluates a numeric layout expression string such as "w/2" or "h-4".
@@ -1062,24 +1141,29 @@ do
         local y             = self:evaluateExpression(windowConfig.y, context)
         local title         = windowConfig.title and self:parseText(windowConfig.title, context) or nil
 
-        -- Resolve plugin for this window slot (cached per slot id)
-        local currentPlugin = self.pluginCache[windowConfig.id]
-        if not currentPlugin and windowConfig.id and self.plugManager then
-            local plugin, err = self.plugManager:getNextPlug(windowConfig.id)
-            if plugin and not err then
-                currentPlugin = plugin
-                self.pluginCache[windowConfig.id] = plugin
-            end
-        end
+        -- Resolve plugin for this window slot (cached per slot id), skipping
+        -- any plugin disabled after a runtime error.
+        local currentPlugin = self:nextEnabledPlugin(windowConfig.id)
 
-        local callback = function(innerX, innerY, innerXX, innerYY)
+        local callback      = function(innerX, innerY, innerXX, innerYY)
             -- Run the window's plugin
             if currentPlugin and type(currentPlugin) == "function" then
                 local ok, pluginResult = pcall(currentPlugin, innerX, innerY, innerXX, innerYY)
                 if not ok then
-                    -- FEAT-2: isolate plugin error — log but don't crash
-                    logwarn("plugin error in window '" .. tostring(windowConfig.id)
-                        .. "': " .. tostring(pluginResult))
+                    -- Quarantine: disable the failing plugin and clear the cache
+                    -- so it cannot re-trigger the same error every frame.
+                    local pname = self.plugRegistry
+                        and self.plugRegistry.name_by_fn[currentPlugin]
+                        or nil
+                    if pname then
+                        self.plugRegistry.disabled[pname] = true
+                        logwarn("window plugin '" .. pname
+                            .. "' disabled after runtime error: " .. tostring(pluginResult))
+                    else
+                        logwarn("plugin error in window '" .. tostring(windowConfig.id)
+                            .. "': " .. tostring(pluginResult))
+                    end
+                    self.pluginCache[windowConfig.id] = nil
                 elseif ok and pluginResult and type(pluginResult) == "table" then
                     raymp:add(pluginResult)
                 end
@@ -1318,7 +1402,12 @@ local function setupPlugins(configObj, is_userconfig)
             end
         end
 
-        if ok and mod then return mod end
+        if ok and mod then
+            if type(pluginName) == "string" then
+                plugin_registry.name_by_fn[mod] = pluginName
+            end
+            return mod
+        end
         logwarn("Could not load plugin '" .. label .. "': " .. tostring(mod))
         return nil
     end
@@ -1480,10 +1569,64 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
     -- FEAT-4: log overlay state
     local log_overlay_state = { scroll = 0, filter = "", filter_active = false }
 
+    -- While the log overlay is open it owns the keyboard exclusively: the main
+    -- loop runs this handler instead of dispatching to the frame's listeners,
+    -- so plugin hotkeys (playback, theme, etc.) never collide with overlay
+    -- navigation. Preserves the legacy keys: K/J scroll, / filter, Esc close.
+    local function overlay_handle_key(inputKey)
+        if messages_key and inputKey == messages_key then
+            show_logs                       = false
+            log_overlay_state.scroll        = 0
+            log_overlay_state.filter        = ""
+            log_overlay_state.filter_active = false
+            return
+        end
+        if log_overlay_state.filter_active then
+            -- Typing into filter
+            if inputKey == api.KEY_ESCAPE then
+                log_overlay_state.filter        = ""
+                log_overlay_state.filter_active = false
+            elseif inputKey == api.KEY_ENTER then
+                log_overlay_state.filter_active = false
+            elseif inputKey == api.KEY_BACKSPACE then
+                local f = log_overlay_state.filter
+                log_overlay_state.filter = f:sub(1, #f - 1)
+            else
+                -- Append printable character (RMP keys are enum ints, not ASCII)
+                local ch = key_to_char(inputKey)
+                if ch and ch:match("[%g ]") then
+                    log_overlay_state.filter = log_overlay_state.filter .. ch
+                end
+            end
+            return
+        end
+        if inputKey == api.KEY_UP or inputKey == api.KEY_K then
+            log_overlay_state.scroll = log_overlay_state.scroll + 1
+            return
+        end
+        if inputKey == api.KEY_DOWN or inputKey == api.KEY_J then
+            log_overlay_state.scroll = math.max(0, log_overlay_state.scroll - 1)
+            return
+        end
+        if inputKey == api.KEY_SLASH then
+            log_overlay_state.filter_active = true
+            return
+        end
+        if inputKey == api.KEY_ESCAPE then
+            if #(log_overlay_state.filter or "") > 0 then
+                log_overlay_state.filter = ""
+            else
+                show_logs = false
+            end
+            return
+        end
+        if inputKey == exit then quit = true end
+    end
+
     -- Apply settings using OPT-3 helper
-    local inc_speed         = 0.1
-    local inc_volume        = 0.1
-    local inc_seek          = 5
+    local inc_speed  = 0.1
+    local inc_volume = 0.1
+    local inc_seek   = 5
 
     if settings then
         local fps = validated_setting(settings.fps, "number", 1, 120, 60)
@@ -1553,7 +1696,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
 
     raymp:initMainFrame()
 
-    local parser        = TemplateParser.new(template, plugManager, raymp)
+    local parser        = TemplateParser.new(template, plugManager, raymp, plugin_registry)
     local switchKeys    = parser:getPluginSwitchKeys()
     local quit          = false
     local oq            = otherPlugs
@@ -1590,6 +1733,15 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
             key = nil
         end
 
+        -- Log overlay exclusivity: while it is open the overlay owns every key.
+        -- Consuming the key (nil) makes handleEvent drain the Focuse/Keyboard
+        -- queues, so plugin listeners and the engine's sound/switch bindings
+        -- never see overlay navigation keys.
+        if show_logs and not input_modal then
+            overlay_handle_key(key)
+            key = nil
+        end
+
         -- Cache sound state once per frame to avoid repeated FFI calls
         local isPlaying = sound:isPlaying()
         local currVol   = sound:getVolume()
@@ -1609,57 +1761,13 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         -- Skipped while a modal raymp:input prompt is active (it grabs keys)
         if not input_modal then
             raymp:addEventListener(api.EventType.Keyboard, function(inputKey)
-                -- Log overlay toggle
+                -- Log overlay toggle (opening; closing is handled by
+                -- overlay_handle_key in the main loop while it is open)
                 if messages_key and inputKey == messages_key then
-                    show_logs                       = not show_logs
+                    show_logs                       = true
                     log_overlay_state.scroll        = 0
                     log_overlay_state.filter        = ""
                     log_overlay_state.filter_active = false
-                    return
-                end
-
-                -- Log overlay navigation (FEAT-4: includes filter input)
-                if show_logs then
-                    if log_overlay_state.filter_active then
-                        -- Typing into filter
-                        if inputKey == api.KEY_ESCAPE then
-                            log_overlay_state.filter        = ""
-                            log_overlay_state.filter_active = false
-                        elseif inputKey == api.KEY_ENTER then
-                            log_overlay_state.filter_active = false
-                        elseif inputKey == api.KEY_BACKSPACE then
-                            local f = log_overlay_state.filter
-                            log_overlay_state.filter = f:sub(1, #f - 1)
-                        else
-                            -- Append printable character
-                            local ch = inputKey and string.char(inputKey)
-                            if ch and ch:match("[%g ]") then
-                                log_overlay_state.filter = log_overlay_state.filter .. ch
-                            end
-                        end
-                        return
-                    end
-                    if inputKey == api.KEY_UP or inputKey == api.KEY_K then
-                        log_overlay_state.scroll = log_overlay_state.scroll + 1
-                        return
-                    end
-                    if inputKey == api.KEY_DOWN or inputKey == api.KEY_J then
-                        log_overlay_state.scroll = math.max(0, log_overlay_state.scroll - 1)
-                        return
-                    end
-                    if inputKey == api.KEY_SLASH then
-                        log_overlay_state.filter_active = true
-                        return
-                    end
-                    if inputKey == api.KEY_ESCAPE then
-                        if #(log_overlay_state.filter or "") > 0 then
-                            log_overlay_state.filter = ""
-                        else
-                            show_logs = false
-                        end
-                        return
-                    end
-                    if inputKey == exit then quit = true end
                     return
                 end
 
@@ -1737,30 +1845,45 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
             data_freq_engine = sound:getFrequencyData()
         end
 
-        -- Parse and render the layout template
-        parser:parseTemplate(template_copy)
+        -- Parse and render the layout template (plugin callbacks are isolated so a
+        -- dynamic/condition/content error can't take down the engine loop)
+        local ok_tpl, tpl_err = pcall(parser.parseTemplate, parser, template_copy)
+        if not ok_tpl then
+            log_plugin_error("template rendering", tpl_err)
+        end
 
         -- Help overlay
         if render_help and builtin_enabled(configObj, nil, "help") then
             local h_ok, h_obj = pcall(require, "rmp.builtin.plugins.builtin-help-rmp")
             if h_ok and h_obj and type(h_obj) == "function" then
-                h_obj()
+                local ok_help, help_err = pcall(h_obj)
+                if not ok_help then log_plugin_error("help overlay", help_err) end
             end
         end
         if help_fn and key == help_fn then
             render_help = not render_help
         end
 
-        -- Global plugins (FEAT-2: errors are isolated per plugin)
+        -- Global plugins (FEAT-2: errors are isolated per plugin; now with
+        -- quarantine — the failing plugin is disabled so it can't re-error)
         local qq = Queue()
         while oq and not oq:isEmpty() do
             local plug = oq:pop()
             if plug then
+                local pname = (type(plug) == "function")
+                    and plugin_registry.name_by_fn[plug] or nil
+                if pname and plugin_registry.disabled[pname] then
+                    -- previously disabled after a runtime error
+                    goto skip_push
+                end
                 if type(plug) == "function" then
                     local ok, res = pcall(plug)
                     if not ok then
-                        logwarn("global plugin error: " .. tostring(res))
-                        -- FEAT-2: drop the failing plugin from the queue
+                        if pname then plugin_registry.disabled[pname] = true end
+                        logwarn((pname and ("global plugin '" .. pname
+                                .. "' disabled after runtime error: ") or "global plugin error: ")
+                            .. tostring(res))
+                        -- drop the failing plugin from the queue
                         goto skip_push
                     elseif ok and res then
                         raymp:add(res)
@@ -1770,7 +1893,10 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
                     if fn then
                         local ok, res = pcall(fn, raymp)
                         if not ok then
-                            logwarn("global plugin error: " .. tostring(res))
+                            if pname then plugin_registry.disabled[pname] = true end
+                            logwarn((pname and ("global plugin '" .. pname
+                                    .. "' disabled after runtime error: ") or "global plugin error: ")
+                                .. tostring(res))
                             goto skip_push
                         elseif ok and res then
                             raymp:add(res)
@@ -1785,7 +1911,8 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
 
         -- Notifications
         if notify_plug and type(notify_plug) == "function" then
-            notify_plug()
+            local ok_notify, notif_err = pcall(notify_plug)
+            if not ok_notify then log_plugin_error("notification", notif_err) end
         end
 
         local notis = drain_notifications()
@@ -1822,7 +1949,15 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         -- frame is flushed/rendered, so plugin listeners never see typing keys.
         render_input(raymp)
 
-        raymp:run(key, nil, sound, plugs_cfgs, template_copy, data_freq_engine, quit)
+        -- Flush the frame to the terminal. Plugin listeners (keyboard/focus/mouse)
+        -- run inside here through handleEvent without their own protection, so
+        -- the whole dispatch is isolated: a plugin error is logged + quarantined
+        -- instead of crashing the engine loop into the red error window.
+        local ok_run, run_err = pcall(raymp.run, raymp, key, nil, sound,
+            plugs_cfgs, template_copy, data_freq_engine, quit)
+        if not ok_run then
+            log_plugin_error("plugin listener", run_err)
+        end
 
         if restart then break end
     end
@@ -2078,6 +2213,7 @@ end
     while restart do
         reset_logs()
         reset_inputs()
+        plugin_registry.disabled = {} -- restart re-enables quarantined plugins
 
         local ok, error_value = pcall(function()
             restart = false
@@ -2167,6 +2303,14 @@ end
             raymp:writeText(prompt_x, prompt_y, prompt,
                 api.FGColors.Brights.Black, api.BGColors.NoBrights.White)
 
+            -- Quarantine stale listeners: a plugin that caused the fatal error must not
+            -- re-trigger while the user reads the message (the old "glitching"
+            -- window came from exactly that recursive re-entry).
+            local err_kq = raymp.events:get(api.EventType.Keyboard)
+            while err_kq and not err_kq:isEmpty() do err_kq:pop() end
+            local err_fq = raymp.events:get(api.EventType.Focuse)
+            while err_fq and not err_fq:isEmpty() do err_fq:pop() end
+
             raymp:onKeyboard(function(key)
                 if key == api.KEY_Q then
                     restart = false
@@ -2174,7 +2318,7 @@ end
                     restart = true
                 end
             end)
-            raymp:run(api.Terminal:handleKey(), nil, nil, nil, nil)
+            pcall(raymp.run, raymp, api.Terminal:handleKey(), nil, nil, nil, nil)
             if not restart then break end
         end
     end
