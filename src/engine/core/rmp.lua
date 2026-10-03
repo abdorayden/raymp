@@ -1742,7 +1742,7 @@ do -- VirtualTerminal
     --- @param fg FGColors | nil | string
     --- @param bg BGColors | nil | string
     --- @param style TextStyle | nil
-    --- @return VirtualTerminal | nil
+    --- @return self | nil
     function RMP.VirtualTerminal:writeText(x, y, text, fg, bg, style)
         if not text then
             return nil
@@ -1754,7 +1754,7 @@ do -- VirtualTerminal
     end
 
     if true then
-        --- @param title string | Text | nil
+        --- @param title string | rmp.rmp.Text | nil
         --- @param x integer
         --- @param y integer
         --- @param width integer
@@ -1793,7 +1793,7 @@ do -- VirtualTerminal
         end
     else
         --- NOTE: disabled lua implementation just in case
-        --- @param title string | Text
+        --- @param title string | rmp.rmp.Text
         --- @param x integer
         --- @param y integer
         --- @param width integer
@@ -1918,7 +1918,7 @@ do -- VirtualTerminal
         end
     end
 
-    --- @return VirtualTerminal
+    --- @return rmp.rmp.VirtualTerminal
     function RMP.VirtualTerminal:getVT()
         return self.native_vt_rmp
     end
@@ -1927,7 +1927,7 @@ do -- VirtualTerminal
     --- similare to  vt:merge(vt1)
     --- local _ = vt + vt1
     --- similare to local _ = vt:merge(vt1)
-    --- @param thatTerm VirtualTerminal
+    --- @param thatTerm rmp.rmp.VirtualTerminal
     --- @return self
     function RMP.VirtualTerminal:__add(thatTerm)
         -- NOTE: if u want to distroy the terminal just use meger method
@@ -1937,7 +1937,7 @@ do -- VirtualTerminal
     -- these methods are used to merge two virtual terminal
     -- if there is no way to pass vterm object to function parameters
     -- so you can merge the other virtual terminal to the main object
-    --- @param thatTerm VirtualTerminal
+    --- @param thatTerm rmp.rmp.VirtualTerminal
     --- @param distroy boolean | nil
     --- @param offsetX integer | nil
     --- @param offsetY integer | nil

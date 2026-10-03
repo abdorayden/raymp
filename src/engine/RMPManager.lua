@@ -1931,11 +1931,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
 
         -- Log overlay (FEAT-4)
         if show_logs then
-            local log_vt = api.VirtualTerminal(1, 1)
-            if raymp then
-                render_log_overlay(raymp, log_overlay_state, log_theme)
-            end
-            raymp:add(log_vt, true)
+            render_log_overlay(raymp, log_overlay_state, log_theme)
         end
 
         -- Push config/sound/template to plugins via plugs_cfgs HashMap
