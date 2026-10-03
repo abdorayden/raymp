@@ -767,21 +767,36 @@ end
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Theme color extraction
 -- ─────────────────────────────────────────────────────────────────────────────
+local theme_colors_cache = { key = nil, colors = nil }
+
 local function get_theme_colors(theme)
-    local function fg(hex) return theme and colorFromHex(hex, FG) end
-    local function bg(hex) return theme and colorFromHex(hex, BG) end
-    local base_bg = bg(theme and theme.BackGround) or api.BGColors.NoBrights.Black
+    local t = theme
+    if t and type(t) == "table" and t.def then t = t.def end
+    local function fg(hex) return t and colorFromHex(hex, FG) end
+    local function bg(hex) return t and colorFromHex(hex, BG) end
+    local base_bg = bg(t and t.BackGround) or api.BGColors.NoBrights.Black
     return {
         bg        = base_bg,
-        border    = fg(theme and theme.BorderColor) or api.FGColors.NoBrights.White,
-        title_fg  = fg(theme and theme.TitleText) or api.FGColors.Brights.White,
-        title_bg  = bg(theme and theme.TitleBackGround) or base_bg,
-        primary   = fg(theme and theme.PrimaryContent) or api.FGColors.Brights.Cyan,
-        secondary = fg(theme and theme.SecondaryContent) or api.FGColors.Brights.Green,
-        accent    = fg(theme and theme.AccentElements) or api.FGColors.Brights.Red,
-        highlight = fg(theme and theme.Highlight) or api.FGColors.Brights.Yellow,
-        muted     = fg(theme and theme.MutedElements) or api.FGColors.NoBrights.White,
+        border    = fg(t and t.BorderColor) or api.FGColors.NoBrights.White,
+        title_fg  = fg(t and t.TitleText) or api.FGColors.Brights.White,
+        title_bg  = bg(t and t.TitleBackGround) or base_bg,
+        primary   = fg(t and t.PrimaryContent) or api.FGColors.Brights.Cyan,
+        secondary = fg(t and t.SecondaryContent) or api.FGColors.Brights.Green,
+        accent    = fg(t and t.AccentElements) or api.FGColors.Brights.Red,
+        highlight = fg(t and t.Highlight) or api.FGColors.Brights.Yellow,
+        muted     = fg(t and t.MutedElements) or api.FGColors.NoBrights.White,
     }
+end
+
+local function get_theme_colors_cached(theme)
+    local key = theme
+    if theme_colors_cache.key == key then
+        return theme_colors_cache.colors
+    end
+    local c = get_theme_colors(theme)
+    theme_colors_cache.key = key
+    theme_colors_cache.colors = c
+    return c
 end
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -816,14 +831,14 @@ local function build_log_lines(width, colors, filter)
 end
 
 local function render_log_overlay(frame, state, theme)
-    local colors    = get_theme_colors(theme)
-    local h, w      = api.Terminal:getSize()
-    local boxWidth  = math.min(math.floor(w * 0.9), 120)
-    local boxHeight = math.floor(h * 0.8)
-    if w < 60 then boxWidth = w end
-    if h < 20 then boxHeight = h end
-    local boxX = math.floor((w - boxWidth) / 2)
-    local boxY = math.floor((h - boxHeight) / 2)
+        local colors    = get_theme_colors_cached(theme)
+        local h, w      = api.Terminal:getSize()
+        local boxWidth  = math.min(math.floor(w * 0.9), 120)
+        local boxHeight = math.floor(h * 0.8)
+        if w < 60 then boxWidth = w end
+        if h < 20 then boxHeight = h end
+        local boxX = math.floor((w - boxWidth) / 2)
+        local boxY = math.floor((h - boxHeight) / 2)
 
     local box_title = Text(" RMP Messages ", TextStyle.Bold, colors.title_fg, colors.title_bg, frame)
     frame:drawBox(box_title, boxX, boxY, boxWidth, boxHeight,
@@ -985,6 +1000,7 @@ do
         self.compiledExpressions     = {}
         self.compiledExpressionsSize = 0
         self.exprKeyOrder            = {} -- OPT-7: eviction order list
+        self.cachedContext           = nil
     end
 
     --- Returns the active (enabled) plugin for a window slot, rotating past any
@@ -1033,9 +1049,9 @@ do
 
         -- Build cache key: expression + current context values
         local cacheKey = expr
-        for k, v in pairs(context) do
-            cacheKey = cacheKey .. ":" .. tostring(v)
-        end
+            local cw = context and context.w or 0
+            local ch = context and context.h or 0
+            cacheKey = cacheKey .. ":" .. tostring(cw) .. ":" .. tostring(ch)
 
         local cachedFunc = self.compiledExpressions[cacheKey]
         if not cachedFunc then
@@ -1072,7 +1088,13 @@ do
     --- @return table
     function TemplateParser:createContext()
         local h, w = api.Terminal:getSize()
-        return { w = w, h = h, lw = w - 1, lh = h - 1 }
+        if self.cachedContext and self.lastTerminalSize.w == w and self.lastTerminalSize.h == h then
+            return self.cachedContext
+        end
+        self.lastTerminalSize.w = w
+        self.lastTerminalSize.h = h
+        self.cachedContext = { w = w, h = h, lw = w - 1, lh = h - 1 }
+        return self.cachedContext
     end
 
     --- Parses a Text config node into a Text object.
@@ -1749,9 +1771,11 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         local len       = math.floor(sound:getLength())
         local currSpeed = sound:getSpeed()
 
-        raymp:onDataGet(function(data)
+        raymp:addEventListener(api.EventType.TransformDataGet, function(data)
             if data and data.theme then
-                sharedTheme = data.theme.def or data.theme
+                local t = data.theme.def or data.theme
+                sharedTheme = t
+                log_theme = t
             end
         end)
 
@@ -1845,6 +1869,16 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
             data_freq_engine = sound:getFrequencyData()
         end
 
+        -- Theme propagation: ensure sharedTheme is current before parsing template
+        raymp:onDataGet(function(data)
+            if data and data.theme then
+                local t = data.theme.def or data.theme
+                sharedTheme = t
+                log_theme = t
+            end
+        end)
+        raymp:setTheme(sharedTheme)
+
         -- Parse and render the layout template (plugin callbacks are isolated so a
         -- dynamic/condition/content error can't take down the engine loop)
         local ok_tpl, tpl_err = pcall(parser.parseTemplate, parser, template_copy)
@@ -1924,10 +1958,7 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
             end
         end
 
-        -- Sync theme for log overlay
-        raymp:addEventListener(api.EventType.TransformDataGet, function(data)
-            if data and data.theme then log_theme = data.theme end
-        end)
+        -- Theme already synced via unified TransformDataGet listener above
 
         -- Log overlay (FEAT-4)
         if show_logs then

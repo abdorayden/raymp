@@ -538,7 +538,7 @@ return function(x, y, xx, yy)
     end)
 
     -- resolved once per frame, shared by every writeText/writeTextClipped below
-    local background_color = extColor("BackGround", false)
+    local background_color = extColor("BackGround", false) or api.BGColors.NoBrights.Black
 
     local current_time = os.time()
     local elapsed_time = current_time - animation_start_time
