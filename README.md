@@ -683,6 +683,11 @@ raymp.engine.plugins = {
 > `(x, y, xx, yy)`; keep your draw/state logic idempotent. Only window-attached
 > plugins participate in hot-reload.
 
+**Runtime errors are quarantined:** a plugin that throws at runtime is logged
+by name (with `file:line`) and **disabled** so it cannot re-trigger the error
+every frame — window slots rotate to the next plugin, global plugins drop from
+the queue. Press `M` to inspect the message log; `R` (restart) re-enables them.
+
 ### ⚙️ Builtin Configuration Model
 The builtin configuration is applied **first** on every startup (and on every
 `restart_engine`), then `~/.rmp/init.lua` is layered on top. Builtin components

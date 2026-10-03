@@ -652,6 +652,44 @@ raymp.engine.plugins = {
 > `(x, y, xx, yy)`; mantén tu lógica de dibujo/estado idempotente. Solo los plugins
 > anclados a ventana participan en la recarga en caliente.
 
+**Los errores en tiempo de ejecución se ponen en cuarentena:** un plugin que
+lanza un error se registra por nombre (con `archivo:línea`) y se **deshabilita**
+para que no vuelva a disparar el error cada frame — los huecos de ventana rotan
+al siguiente plugin y los plugins globales se eliminan de la cola. Pulsa `M`
+para inspeccionar el registro de mensajes; `R` (reiniciar) los vuelve a habilitar.
+
+### Solicitando entrada al usuario desde un plugin
+
+Usa `raymp:input(conf)` para una **entrada de texto modal**. Solo se ejecuta un
+prompt a la vez (FIFO); mientras está activo captura todas las teclas, así los
+keymaps de reproducción, registro y plugins no se disparan al escribir
+caracteres. `Enter` envía, `Esc` cancela.
+
+```lua
+-- Encolar un prompt de búsqueda (centrado en la parte inferior por defecto si
+-- se omiten x/y).
+local prompt = raymp:input({
+    label   = "Buscar: ",
+    default = "",
+    width   = 40,
+    validator = function(value)           -- opcional; Enter solo envía si pasa
+        if value == "" then return false, "búsqueda vacía" end
+        return true
+    end,
+    on_submit = function(value)
+        raymp:notify("Buscando: " .. value, { status = "info", duration = 3 })
+        -- hacer la búsqueda, abrir otro prompt, etc.
+    end,
+    on_cancel = function()
+        raymp:notify("Búsqueda cancelada", { status = "warning", duration = 3 })
+    end,
+})
+
+-- El handle permite consultar/actuar sobre el prompt más tarde:
+--   prompt:isActive() → boolean; prompt:getValue() → texto actual; prompt:cancel()
+-- (raymp:notify también viaja con el engine — el mismo patrón de popup de una sola vez.)
+```
+
 ### ⚙️ Modelo de Configuración Integrado (Builtin)
 La configuración integrada se aplica **primero** en cada arranque (y en cada
 `restart_engine`), y luego `~/.rmp/init.lua` se superpone encima. Los componentes
