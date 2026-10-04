@@ -3,18 +3,32 @@ local api = require("rmp.rmp")
 local Path = api.Path
 
 local path = Path()
-path:setPath(path.joinPath(path:getHomePath(),"Music"))
 
+if raymp.nplayer == nil then
+    raymp.nplayer = {}
+end
+
+local loaded = false
 local songs =  {}
+
+if raymp.nplayer.def_path ~= nil and raymp.nplayer.def_path ~= "defualt" then
+    path:setPath(raymp.nplayer.def_path)
+    loaded = true
+elseif raymp.nplayer.def_path == "default" then
+    path:setPath(path.joinPath(path:getHomePath(),"Music"))
+    loaded = true
+end
+
 
 -- listDir() returns an array of { is_file = boolean, name = string } entries,
 -- or nil plus an error message when the directory cannot be opened
-local entries, _ = path:listDir()
-
-if entries then
-    for _, entry in ipairs(entries) do
-        if entry.is_file then
-            table.insert(songs, path.joinPath(path:getPath(),entry.name))
+if loaded then
+    local entries, _ = path:listDir()
+    if entries then
+        for _, entry in ipairs(entries) do
+            if entry.is_file then
+                table.insert(songs, path.joinPath(path:getPath(),entry.name))
+            end
         end
     end
 end

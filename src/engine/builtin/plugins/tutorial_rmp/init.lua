@@ -27,7 +27,7 @@ if raymp.tutr == nil then
     raymp.tutr = {}
 end
 if raymp.tutr.key == nil then
-    raymp.tutr.key = api.KEY_ALT_T 
+    raymp.tutr.key = api.KEY_ALT_T
 end
 
 --- Reads one optional tutorial value from the engine configuration.
