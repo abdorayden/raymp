@@ -49,13 +49,13 @@ soundMap.change_playback_mode = api.KEY_TAB
 
 -- plugins
 raymp.engine.plugins = {
-    -- {
-    --     themeWindowId = "tutorial-window",
-    --     isActivated = true,
-    --     names = {
-    --         "tutorial_rmp"
-    --     }
-    -- },
+    {
+        -- themeWindowId = "tutorial-window",
+        isActivated = true,
+        names = {
+            "tutorial_rmp"
+        }
+    },
     {
         themeWindowId = "master",
         isActivated = true,
@@ -63,4 +63,33 @@ raymp.engine.plugins = {
             "builtin-now-playing-rmp"
         }
     },
+
+    {
+        isActivated = true,
+        names = {
+            "builtin-theme-elflord-rmp"
+        }
+    },
+
+    {
+        isActivated = true,
+        names = {
+            "builtin-theme-desert-rmp"
+        }
+    },
+
+    {
+        isActivated = true,
+        names = {
+            "builtin-theme-default-rmp"
+        }
+    },
+
+    {
+        isActivated = true,
+        names = {
+            "builtin-theme-blackandwhite-rmp"
+        }
+    },
+
 }

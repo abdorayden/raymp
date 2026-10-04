@@ -2189,7 +2189,6 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         end)
 
         raymp:setTheme(sharedTheme)
-
         -- ── Keyboard event handler ────────────────────────────────────────
         -- Skipped while a modal raymp:input prompt is active (it grabs keys)
         if not input_modal then

@@ -23,6 +23,13 @@ local DEFAULTS = {
     toggle_key  = nil,
 }
 
+if raymp.tutr == nil then
+    raymp.tutr = {}
+end
+if raymp.tutr.key == nil then
+    raymp.tutr.key = api.KEY_ALT_T 
+end
+
 --- Reads one optional tutorial value from the engine configuration.
 local function option(name)
     local conf = raymp.engine.tutorial or raymp.engine.tutorial_rmp
@@ -338,7 +345,7 @@ local function wrapLine(line, maxWidth)
     local currentPos = 1
 
     while currentPos <= #line do
-        local endPos = currentPos + maxWidth - 1
+        local endPos = math.floor(currentPos + maxWidth - 1) 
 
         if endPos >= #line then
             table.insert(wrappedLines, line:sub(currentPos))
@@ -565,18 +572,39 @@ local function syntaxHighlightLua(codeLine)
     return tokens
 end
 
-return function(x, y, xx, yy)
-    local w = xx - x - 1
-    local h = yy - y - 1
+local run = false
 
-    -- listen every frame: TransformDataGet callbacks are one-shot (drained by the
-    -- engine each run), re-registering keeps the shared theme in sync when the
-    -- user switches themes at runtime through the theme manager plugin
-    raymp:addEventListener(api.EventType.TransformDataGet, function(data)
-        if data and data.theme then
-            theme = data.theme
+return function()
+    local w,h = raymp:getSize()
+
+    raymp:addEventListener(api.EventType.Keyboard,function(key)
+        if key == raymp.tutr.key then
+            run = not run
         end
     end)
+
+    if run == false then
+        return
+    end
+
+    raymp:onFocuse(function(key)
+        if key == api.KEY_J or key == api.KEY_DOWN then
+            move_down = move_down + 1
+        elseif key == api.KEY_K or key == api.KEY_UP then
+            move_down = math.max(0, move_down - 1)
+        elseif key == raymp.tutr.key then
+            run = not run
+        end
+    end)
+
+    local x = w / 8
+    local y = h / 8
+
+    w = w - (w * 0.2)
+    h = h - (h * 0.2)
+
+    -- NOTE: recomended
+    theme = raymp:getTheme()
 
     -- resolved once per frame, shared by every writeText/writeTextClipped below
     local background_color = extColor("BackGround", false) or api.BGColors.NoBrights.Black
@@ -584,13 +612,17 @@ return function(x, y, xx, yy)
     local current_time = os.time()
     local elapsed_time = current_time - animation_start_time
 
+    local color
+
+    color = extColor("BorderColor", true) or api.FGColors.Brights.Red
+    raymp:drawBox(nil , x , y - 2 , w + 1 , h + 3, api.BoxDrawing.RoundedCorners , color , background_color)
+
     if elapsed_time < animation_duration then
         local animation_text = "Welcome to RayMp!"
         local centered_x = x + math.floor((w - #animation_text) / 2)
         local centered_y = y + math.floor(h / 2)
 
         local animation_phase = (current_time * 2) % 4
-        local color
         if animation_phase < 1 then
             color = extColor("Highlight", true) or api.FGColors.Brights.Red
         elseif animation_phase < 2 then
@@ -618,21 +650,6 @@ return function(x, y, xx, yy)
 
         return
     end
-
-    raymp:onKeyboard(function(key)
-        if key == api.KEY_J or key == api.KEY_DOWN then
-            move_down = move_down + 1
-        elseif key == api.KEY_K or key == api.KEY_UP then
-            move_down = math.max(0, move_down - 1)
-        end
-    end)
-
-    raymp:addEventListener(api.EventType.TransformDataPut, function()
-        return {
-            UP = "k/key-up",
-            DOWN = "j/key-down",
-        }
-    end)
 
     local totalLines = 0
     for _, originalLine in ipairs(t) do
@@ -671,7 +688,7 @@ return function(x, y, xx, yy)
                         local xPos = x + 1
                         local tokens = syntaxHighlightLua(codeContent)
                         for _, token in ipairs(tokens) do
-                            raymp:writeTextClipped(xPos, displayY, token.text, w - (xPos - x - 1), token.color,
+                            raymp:writeText(xPos, displayY, token.text,  token.color,
                                 background_color, token.style)
                             xPos = xPos + #token.text
                         end
@@ -681,7 +698,7 @@ return function(x, y, xx, yy)
                             api.TextStyle.Bold)
                         local xPos = x + 1
                         for _, part in ipairs(formattedParts) do
-                            raymp:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
+                            raymp:writeText(xPos, displayY, part.text, part.fg,
                                 background_color,
                                 part.style)
                             xPos = xPos + #part.text
@@ -692,7 +709,7 @@ return function(x, y, xx, yy)
                     elseif line:match("^%s*-") then
                         local bullet_text = line:match("^%s*-%s*(.*)")
                         if bullet_text then
-                            raymp:writeTextClipped(x + 1, displayY, "-", w,
+                            raymp:writeText(x + 1, displayY, "-",
                                 extColor("AccentElements", true) or api.FGColors.Brights.Red,
                                 background_color)
 
@@ -702,7 +719,7 @@ return function(x, y, xx, yy)
                                 nil)
                             local xPos = x + 2
                             for _, part in ipairs(formattedParts) do
-                                raymp:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
+                                raymp:writeText(xPos, displayY, part.text, part.fg,
                                     background_color,
                                     part.style)
                                 xPos = xPos + #part.text
@@ -713,7 +730,7 @@ return function(x, y, xx, yy)
                                 background_color, nil)
                             local xPos = x + 1
                             for _, part in ipairs(formattedParts) do
-                                raymp:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
+                                raymp:writeText(xPos, displayY, part.text, part.fg,
                                     background_color,
                                     part.style)
                                 xPos = xPos + #part.text
@@ -725,7 +742,7 @@ return function(x, y, xx, yy)
                             nil)
                         local xPos = x + 1
                         for _, part in ipairs(formattedParts) do
-                            raymp:writeTextClipped(xPos, displayY, part.text, w - (xPos - x - 1), part.fg,
+                            raymp:writeText(xPos, displayY, part.text, part.fg,
                                 background_color,
                                 part.style)
                             xPos = xPos + #part.text
