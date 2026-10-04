@@ -115,6 +115,8 @@ local FG             = api.FG
 local BG             = api.BG
 local Text           = api.Text
 local TextStyle      = api.TextStyle
+local HashMap        = utils.HashMap
+local Queue          = utils.Queue
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Engine configuration (raymp.engine)
@@ -144,12 +146,16 @@ local TextStyle      = api.TextStyle
 --     raymp.engine.builtin.themes        = true     -- builtin theme list
 --     raymp.engine.builtin.theme_manager = true     -- theme auto-selector
 --     raymp.engine.builtin.plugins = {              -- builtin window plugins
---         tutorial_rmp               = true,
---         helper_keys_tutorial       = true,
---         matrix_digital_rain_effect = true,
+--         tutorial_rmp               = true,        -- floating/split tutorial panel
+--         builtin-now-playing-rmp    = true,        -- audio panel (song + playback mode)
 --         builtin-theme-default-rmp  = true,        -- themes are real plugins too
 --         -- builtin-theme-manager-rmp, builtin-theme-desert-rmp, ...
 --     }
+--
+-- Plugins own their own configuration: every builtin reads optional values from
+-- raymp.engine (e.g. raymp.engine.audio_panel = { ... }) and falls back to the
+-- defaults declared inside the plugin, so the builtin config file only carries
+-- engine-level settings.
 -- ─────────────────────────────────────────────────────────────────────────────
 local ENGINE_KEYS    = { template = true, settings = true, soundMap = true, plugins = true, builtin = true }
 
@@ -189,8 +195,7 @@ local function build_engine_shell()
             theme_manager = true,
             plugins       = {
                 tutorial_rmp                        = true,
-                helper_keys_tutorial                = true,
-                matrix_digital_rain_effect          = true,
+                ["builtin-now-playing-rmp"]         = true,
                 ["builtin-theme-manager-rmp"]       = true,
                 ["builtin-theme-default-rmp"]       = true,
                 ["builtin-theme-blackandwhite-rmp"] = true,
@@ -315,6 +320,65 @@ do
     end
 end
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Runtime window management (raymp:createWindow / splitWindow / ...)
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Plugins build the layout at runtime with the raymp instance API:
+--
+--     raymp:floatWindow{ id = "panel", width = "w/2", height = 12 }
+--     raymp:splitWindow{ id = "side", target = "main", orientation = "vertical", ratio = 0.4 }
+--     raymp:attachPlugin("panel", "my-plugin-rmp")
+--     raymp:closeWindow("panel")
+--
+-- Every mutation is queued in window_runtime.pending and applied at the start
+-- of the next frame (never while TemplateParser walks the template), then the
+-- parser picks the new window up on its own because it re-reads the template
+-- table each frame.
+local window_runtime = {
+    parser      = nil, -- active TemplateParser (set by runRMPApplication)
+    plugManager = nil, -- active PlugManager, windowId → plugin queue
+    pending     = {},  -- queued window operations, applied at frame start
+    warn        = nil, -- logwarn, assigned once the logging helpers exist
+}
+
+--- Sends a warning to the engine log when the runtime is already available.
+--- The frame class is declared before logwarn exists, hence the indirection.
+--- @param message string
+local function runtime_warn(message)
+    if window_runtime.warn then window_runtime.warn(message) end
+end
+
+--- Renders a template layout field as a number or as an expression fragment
+--- that other expressions can reuse (numbers stay numbers, expression strings
+--- keep tracking terminal resizes).
+--- @param value number|string|nil
+--- @return string
+local function layout_source(value)
+    if type(value) == "number" then return tostring(value) end
+    return "(" .. tostring(value or 0) .. ")"
+end
+
+--- Scales a layout field by a ratio, keeping numbers numeric.
+--- @param value number|string|nil
+--- @param ratio number
+--- @return number|string|nil
+local function layout_scaled(value, ratio)
+    if type(value) == "number" then return math.floor(value * ratio) end
+    if type(value) == "string" then return layout_source(value) .. " * " .. ratio end
+    return nil
+end
+
+--- Offsets a layout field by a delta, keeping numbers numeric.
+--- @param base number|string|nil
+--- @param delta number|string
+--- @return number|string
+local function layout_offset(base, delta)
+    if type(base) == "number" and type(delta) == "number" then
+        return math.floor(base + delta)
+    end
+    return layout_source(base) .. " + " .. layout_source(delta)
+end
+
 local EngineFrame = OOP.class("EngineFrame", Frame)
 do
     function EngineFrame:constructor(width, height)
@@ -347,6 +411,340 @@ do
                 end
             end)()
         })
+    end
+
+    -- ── Runtime layout (window management) ──────────────────────────────────
+    -- The methods below let plugins compose the layout without touching the
+    -- engine: they mutate the template table the parser already walks, so the
+    -- new windows simply show up on the next frame.
+
+    --- Returns the template table the engine currently renders, or nil when
+    --- the engine loop is not running (configuration phase).
+    --- @return table|nil
+    function EngineFrame:getTemplate()
+        if window_runtime.parser then
+            return window_runtime.parser:getTemplate()
+        end
+        if type(self.engine.template) == "table" then
+            return self.engine.template
+        end
+        return nil
+    end
+
+    --- Queues an operation that mutates the template table. Operations are
+    --- applied at the start of the next frame, so they never run while the
+    --- parser iterates the template.
+    --- @param fn function
+    local function queue_window_op(fn)
+        window_runtime.pending[#window_runtime.pending + 1] = fn
+    end
+
+    --- Returns the top-level window node with this id.
+    --- @param template table|nil
+    --- @param id string
+    --- @return table|nil, integer|nil
+    function EngineFrame:findWindow(template, id)
+        if type(template) ~= "table" or type(id) ~= "string" then return nil end
+        for index, node in ipairs(template) do
+            if type(node) == "table" and node.id == id then
+                return node, index
+            end
+        end
+        return nil
+    end
+
+    --- Keeps raymp.engine.template pointing at the table the parser renders,
+    --- so configuration readers (plugins, plugin managers) see the live layout.
+    --- @param template table
+    function EngineFrame:syncEngineTemplate(template)
+        if type(self.engine.template) == "table" then
+            self.engine.template = template
+        end
+    end
+
+    --- raymp:createWindow({
+    ---     id = "panel", type = "Window", width = "w/2", height = 12,
+    ---     x = 1, y = 1, border = api.BoxDrawing.RoundedCorners,
+    ---     title = "Panel", condition = fn, content = fn, children = {...},
+    ---     plugins = { "my-plugin-rmp", fn },
+    --- })
+    ---
+    --- Creates (or replaces) a window in the running template. Every field the
+    --- template parser understands is accepted here, and `plugins` attaches
+    --- plugins to the new window slot (see :attachPlugin).
+    --- @param spec table
+    --- @return string|nil id of the created window
+    function EngineFrame:createWindow(spec)
+        if type(spec) ~= "table" or type(spec.id) ~= "string" then
+            runtime_warn("createWindow expects a table with a string 'id' field")
+            return nil
+        end
+
+        local id       = spec.id
+        local node     = {}
+        local plugins  = spec.plugins
+
+        for key, value in pairs(spec) do
+            if key ~= "plugins" and key ~= "id" then node[key] = value end
+        end
+        node.type = node.type or "Window"
+        node.id   = id
+
+        queue_window_op(function()
+            local template = self:getTemplate()
+            if not template then return end
+
+            local _, index = self:findWindow(template, id)
+            if index then
+                template[index] = node
+            else
+                table.insert(template, node)
+            end
+            self:syncEngineTemplate(template)
+
+            if type(plugins) == "table" then
+                for _, plugin in ipairs(plugins) do
+                    self:attachPlugin(id, plugin)
+                end
+            end
+        end)
+
+        return id
+    end
+
+    --- raymp:splitWindow({
+    ---     id = "side-panel", target = "main-window",
+    ---     orientation = "vertical",   -- vertical = side by side, horizontal = stacked
+    ---     ratio = 0.4,                -- share given to the new window (0.1 - 0.9)
+    ---     title = "Side", plugins = { "my-plugin-rmp" },
+    --- })
+    ---
+    --- Splits an existing window into two and returns the new window id. The
+    --- target keeps `ratio` of its size and the new window takes the rest, so
+    --- both stay correct when the terminal is resized. Optional window fields
+    --- (title, border, colors, content, ...) are inherited from the target
+    --- unless the spec overrides them.
+    --- @param spec table
+    --- @return string|nil id of the created window
+    function EngineFrame:splitWindow(spec)
+        if type(spec) ~= "table" or type(spec.id) ~= "string" or type(spec.target) ~= "string" then
+            runtime_warn("splitWindow expects a table with 'id' and 'target' fields")
+            return nil
+        end
+
+        local id          = spec.id
+        local targetId    = spec.target
+        local orientation = (spec.orientation or "vertical"):lower()
+        local vertical    = orientation ~= "horizontal"
+        local ratio       = tonumber(spec.ratio) or 0.5
+
+        if ratio < 0.1 then ratio = 0.1 elseif ratio > 0.9 then ratio = 0.9 end
+
+        local node     = { type = "Window", id = id }
+        local plugins  = spec.plugins
+
+        for key, value in pairs(spec) do
+            if key ~= "plugins" and key ~= "id" and key ~= "target"
+                and key ~= "orientation" and key ~= "ratio" then
+                node[key] = value
+            end
+        end
+
+        queue_window_op(function()
+            local template = self:getTemplate()
+            if not template then return end
+
+            local target, index = self:findWindow(template, targetId)
+            if not target then
+                runtime_warn("splitWindow target '" .. targetId .. "' not found in the template")
+                return
+            end
+
+            local sizeKey = vertical and "width" or "height"
+            local posKey  = vertical and "x"     or "y"
+
+            local size    = target[sizeKey]
+            local pos     = target[posKey]
+            local newSize = layout_scaled(size, 1 - ratio)
+
+            target[sizeKey] = layout_scaled(size, ratio)
+            node[sizeKey]   = spec[sizeKey] or newSize
+            node[posKey]    = spec[posKey] or layout_offset(pos, layout_scaled(size, ratio))
+
+            -- the untouched axis is inherited from the target
+            local otherSizeKey = vertical and "height" or "width"
+            local otherPosKey  = vertical and "y"     or "x"
+            if node[otherSizeKey] == nil then node[otherSizeKey] = target[otherSizeKey] end
+            if node[otherPosKey]  == nil then node[otherPosKey]  = target[otherPosKey] end
+
+            for _, key in ipairs({ "border", "foregroundColor", "backgroundColor" }) do
+                if node[key] == nil then node[key] = target[key] end
+            end
+
+            table.insert(template, index, node)
+            self:syncEngineTemplate(template)
+
+            if type(plugins) == "table" then
+                for _, plugin in ipairs(plugins) do
+                    self:attachPlugin(id, plugin)
+                end
+            end
+        end)
+
+        return id
+    end
+
+    --- raymp:floatWindow({
+    ---     id = "panel", width = 42, height = 14,
+    ---     anchor = "center",  -- center | top | bottom | left | right |
+    ---                         -- topleft | topright | bottomleft | bottomright
+    ---     title = "Panel", plugins = { "my-plugin-rmp" },
+    --- })
+    ---
+    --- Creates a floating window on top of the current layout. width/height may
+    --- be numbers or expressions ("w/2"); `anchor` positions the window against
+    --- the terminal size (default "center") and explicit x/y win over it.
+    --- @param spec table
+    --- @return string|nil id of the created window
+    function EngineFrame:floatWindow(spec)
+        if type(spec) ~= "table" or type(spec.id) ~= "string" then
+            runtime_warn("floatWindow expects a table with a string 'id' field")
+            return nil
+        end
+
+        local id   = spec.id
+        local node = { type = "Window", id = id }
+
+        for key, value in pairs(spec) do
+            if key ~= "plugins" and key ~= "id" and key ~= "anchor" then
+                node[key] = value
+            end
+        end
+
+        local anchor  = (spec.anchor or "center"):lower()
+        local width   = spec.width or "w*0.6"
+        local height  = spec.height or "h*0.4"
+        local centreX = "(w - (" .. layout_source(width) .. ") + 2) / 2"
+        local centreY = "(h - (" .. layout_source(height) .. ") + 2) / 2"
+
+        local anchors = {
+            top          = { x = centreX, y = 1 },
+            bottom       = { x = centreX, y = "(h - (" .. layout_source(height) .. ") + 1)" },
+            left         = { x = 1, y = centreY },
+            right        = { x = "(w - (" .. layout_source(width) .. ") + 1)", y = centreY },
+            topleft      = { x = 1, y = 1 },
+            topright     = { x = "(w - (" .. layout_source(width) .. ") + 1)", y = 1 },
+            bottomleft   = { x = 1, y = "(h - (" .. layout_source(height) .. ") + 1)" },
+            bottomright  = { x = "(w - (" .. layout_source(width) .. ") + 1)", y = "(h - (" .. layout_source(height) .. ") + 1)" },
+            center       = { x = centreX, y = centreY },
+        }
+
+        if not node.width then node.width = width end
+        if not node.height then node.height = height end
+
+        local position = anchors[anchor]
+        if position then
+            node.x = position.x
+            node.y = position.y
+        else
+            runtime_warn("floatWindow unknown anchor '" .. anchor .. "', using 'center'")
+            node.x = centreX
+            node.y = centreY
+        end
+
+        if spec.x ~= nil then node.x = spec.x end
+        if spec.y ~= nil then node.y = spec.y end
+
+        return self:createWindow(node)
+    end
+
+    --- raymp:closeWindow("panel")
+    --- Removes a runtime window from the template (its slot is dropped too).
+    --- @param id string
+    --- @return boolean removed
+    function EngineFrame:closeWindow(id)
+        if type(id) ~= "string" then return false end
+
+        queue_window_op(function()
+            local template = self:getTemplate()
+            if not template then return end
+
+            local _, index = self:findWindow(template, id)
+            if not index then return end
+
+            table.remove(template, index)
+            self:syncEngineTemplate(template)
+
+            if window_runtime.parser then
+                window_runtime.parser.pluginCache[id] = nil
+            end
+            if window_runtime.plugManager then
+                window_runtime.plugManager.cfgObj:remove(id)
+            end
+        end)
+
+        return true
+    end
+
+    --- raymp:attachPlugin("panel", "my-plugin-rmp")
+    --- raymp:attachPlugin("panel", function(x, y, xx, yy) ... end)
+    --- raymp:attachPlugin("panel", "my-plugin-rmp", { switchKey = api.KEY_TAB })
+    ---
+    --- Attaches a plugin to a window slot at runtime. The plugin is a module
+    --- name (resolved like config plugins: user space first, then builtin), a
+    --- module table ({ "name", config = {...} }) or a function. Works for slots
+    --- that already exist and for windows created by :createWindow /
+    --- :splitWindow / :floatWindow.
+    --- @param windowId string
+    --- @param plugin string|table|function
+    --- @param opts table|nil  { switchKey = number }
+    function EngineFrame:attachPlugin(windowId, plugin, opts)
+        if type(windowId) ~= "string" or plugin == nil then return false end
+
+        queue_window_op(function()
+            if not window_runtime.plugManager or not window_runtime.parser then
+                runtime_warn("attachPlugin ignored for '" .. windowId .. "': engine is not running")
+                return
+            end
+
+            local pluginName = (type(plugin) == "table") and (plugin.name or plugin[1]) or plugin
+            local mod        = plugin
+
+            if type(pluginName) == "string" then
+                local ok
+                ok, mod = pcall(require, pluginName)
+                if not ok then
+                    ok, mod = pcall(require, "rmp.builtin.plugins." .. pluginName)
+                end
+                if not ok or type(mod) ~= "function" then
+                    runtime_warn("attachPlugin could not load '" .. pluginName .. "'")
+                    return
+                end
+                if window_runtime.registry then
+                    window_runtime.registry.name_by_fn[mod] = pluginName
+                end
+            end
+
+            if type(mod) ~= "function" then
+                runtime_warn("attachPlugin expects a plugin name or a function")
+                return
+            end
+
+            local plugManager = window_runtime.plugManager
+            local slot        = plugManager.cfgObj:get(windowId)
+
+            if not slot then
+                slot = { (opts and opts.switchKey) or nil, Queue.new() }
+                plugManager.cfgObj:put(windowId, slot)
+            elseif opts and opts.switchKey then
+                slot[1] = opts.switchKey
+            end
+
+            slot[2]:push(mod)
+            window_runtime.parser.pluginCache[windowId] = nil
+        end)
+
+        return true
     end
 
     -- TODO: update my configurations and plugins that i uploaded on github
@@ -507,9 +905,6 @@ raymp                       = EngineFrame()
 local io                    = require("io")
 local os                    = require("os")
 
-local HashMap               = utils.HashMap
-local Queue                 = utils.Queue
-
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Logging
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -560,6 +955,10 @@ local function logfatal(err, skip_add)
     if not skip_add then add_log("error", err) end
     error("RMP Error: " .. tostring(err))
 end
+
+-- The frame class is declared above the logging helpers, so hand it the pieces
+-- it needs for runtime window management (see window_runtime).
+window_runtime.warn = logwarn
 
 local function drain_notifications()
     local out = {}
@@ -617,6 +1016,24 @@ end
 -- ─────────────────────────────────────────────────────────────────────────────
 
 local plugin_registry = { name_by_fn = {}, disabled = {} }
+
+window_runtime.registry = plugin_registry
+
+--- Applies the window operations queued by raymp:createWindow /
+--- raymp:splitWindow / raymp:floatWindow / raymp:closeWindow /
+--- raymp:attachPlugin. Called once per frame before the template walk, so the
+--- parser never sees a half-mutated template. Operations queued while flushing
+--- (e.g. attachPlugin from createWindow) run on the next frame.
+local function apply_pending_window_ops()
+    local pending = window_runtime.pending
+    if #pending == 0 then return end
+
+    window_runtime.pending = {}
+    for _, op in ipairs(pending) do
+        local ok, err = pcall(op)
+        if not ok then logwarn("runtime window operation failed: " .. tostring(err)) end
+    end
+end
 
 --- Extracts a plugin module name from an error message such as
 --- ".../plugins/my-plugin-rmp/init.lua:42: attempt to index a nil value".
@@ -1282,18 +1699,6 @@ do
             end
         end
     end
-
-    --- Returns true if the terminal was resized since the last call.
-    --- @return boolean
-    function TemplateParser:wasTerminalResized()
-        local h, w = api.Terminal:getSize()
-        if w ~= self.lastTerminalSize.w or h ~= self.lastTerminalSize.h then
-            self.lastTerminalSize.w = w
-            self.lastTerminalSize.h = h
-            return true
-        end
-        return false
-    end
 end
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -1725,6 +2130,12 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
     local restart       = false
     local template_copy = parser:getTemplate()
 
+    -- Runtime layout API (raymp:createWindow / splitWindow / ...) operates on
+    -- the template table the parser walks.
+    window_runtime.parser      = parser
+    window_runtime.plugManager = plugManager
+    window_runtime.pending     = {}
+
     -- ── Main loop ──────────────────────────────────────────────────────────
     while not quit do
         -- Sync configObj from plugins_configurations (plugin-manager may mutate it)
@@ -1739,10 +2150,8 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
 
         local key = api.Terminal:handleKey()
 
-        if parser:wasTerminalResized() then
-            h, w = api.Terminal:getSize()
-            raymp:resize(w, h)
-        end
+        h, w = api.Terminal:getSize()
+        raymp:resize(w, h)
 
         -- Engine-level modal input (raymp:input): activate the next queued
         -- prompt, then feed the key. While active, the engine key handler
@@ -1879,6 +2288,10 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         end)
         raymp:setTheme(sharedTheme)
 
+        -- Apply runtime window operations queued by plugins before the layout
+        -- is walked, so new/split/closed windows show up on this same frame
+        apply_pending_window_ops()
+
         -- Parse and render the layout template (plugin callbacks are isolated so a
         -- dynamic/condition/content error can't take down the engine loop)
         local ok_tpl, tpl_err = pcall(parser.parseTemplate, parser, template_copy)
@@ -1991,6 +2404,13 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
 
     sound:disableVisualization()
     sound:cleanup()
+
+    -- Drop the runtime handles so a stale plugin callback can never mutate a
+    -- finished cycle (restarts build a fresh parser/plugManager).
+    window_runtime.parser      = nil
+    window_runtime.plugManager = nil
+    window_runtime.pending     = {}
+
     return restart
 end
 

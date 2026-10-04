@@ -12,7 +12,7 @@ local api = require("rmp.rmp")
 --
 -- Helpful to get you started: 'tutorial' template renders a full RMP tour.
 
-raymp.engine.template = "tutorial"
+raymp.engine.template = "master"
 
 local settings = raymp.engine.settings
 settings.fps = 60
@@ -49,25 +49,18 @@ soundMap.change_playback_mode = api.KEY_TAB
 
 -- plugins
 raymp.engine.plugins = {
+    -- {
+    --     themeWindowId = "tutorial-window",
+    --     isActivated = true,
+    --     names = {
+    --         "tutorial_rmp"
+    --     }
+    -- },
     {
-        themeWindowId = "tutorial-window",
+        themeWindowId = "master",
         isActivated = true,
         names = {
-            "tutorial_rmp"
-        }
-    },
-    {
-        themeWindowId = "helper-window",
-        isActivated = true,
-        names = {
-            "helper_keys_tutorial"
-        }
-    },
-    {
-        themeWindowId = "animation-window",
-        isActivated = true,
-        names = {
-            "matrix_digital_rain_effect",
+            "builtin-now-playing-rmp"
         }
     },
 }

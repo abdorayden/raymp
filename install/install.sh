@@ -245,7 +245,6 @@ then
   #       cp ../src/engine/builtin/init.lua "$HOME/.rmp"
   #       cp ../src/engine/builtin/themes/tutorial.lua "$HOME/.rmp/themes"
   #       cp -r ../src/engine/builtin/plugins/tutorial_rmp/ "$HOME/.rmp/plugins"
-  #       cp -r ../src/engine/builtin/plugins/helper_keys_tutorial/ "$HOME/.rmp/plugins"
   #       cp ../src/engine/builtin/plugins/digital_clock_with_effects.lua "$HOME/.rmp/plugins"
   #   fi
 elif [[ "$1" == "clean-conf" ]]

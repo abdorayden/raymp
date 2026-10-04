@@ -2037,14 +2037,14 @@ end
 --- Override the print function to write to the virtual terminal instead of the console
 ---@param ... any
 ---@return VirtualTerminal
-print = function(...)
-    local args = { ... }
-    local text = ""
-    for _, arg in ipairs(args) do
-        text = text .. tostring(arg) .. " "
-    end
-    return RMP.VirtualTerminal():write(text)
-end
+-- print = function(...)
+--     local args = { ... }
+--     local text = ""
+--     for _, arg in ipairs(args) do
+--         text = text .. tostring(arg) .. " "
+--     end
+--     return RMP.VirtualTerminal():write(text)
+-- end
 
 RMP.VirtualTerminalEffect = OOP.class("VirtualTerminalEffect", RMP.VirtualTerminal)
 do
@@ -4408,6 +4408,25 @@ do
         if #self.playlist == 0 then return false, "empty playlist" end
         self.current_index = self.current_index - 1
         if self.current_index < 1 then self.current_index = #self.playlist end
+        local ok, err = self:_loadCurrentTrack()
+        if not ok then return false, err end
+        return self:play(), nil
+    end
+
+    --- Jumps straight to a track of the playlist and starts playing it.
+    --- @param index integer 1-based index, as shown to the user
+    --- @return boolean
+    --- @return string | nil
+    function RMP.Sound:playTrack(index)
+        index = math.floor(tonumber(index) or 0)
+        if #self.playlist == 0 then return false, "empty playlist" end
+        if index < 1 or index > #self.playlist then
+            return false, "index out of range"
+        end
+        if index == self.current_index then
+            return self:play(), nil
+        end
+        self.current_index = index
         local ok, err = self:_loadCurrentTrack()
         if not ok then return false, err end
         return self:play(), nil

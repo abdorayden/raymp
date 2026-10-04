@@ -159,7 +159,6 @@ if "%~1"=="install-conf" (
         copy "..\src\engine\builtin\init.lua" "%USERPROFILE%\.rmp"
         copy "..\src\engine\builtin\themes\tutorial.lua" "%USERPROFILE%\.rmp\themes"
         xcopy "..\src\engine\builtin\plugins\tutorial_rmp" "%USERPROFILE%\.rmp\plugins\tutorial_rmp" /E /I /Y
-        xcopy "..\src\engine\builtin\plugins\helper_keys_tutorial" "%USERPROFILE%\.rmp\plugins\helper_keys_tutorial" /E /I /Y
         copy "..\src\engine\builtin\plugins\digital_clock_with_effects.lua" "%USERPROFILE%\.rmp\plugins"
     )
     echo Install configuration completed.

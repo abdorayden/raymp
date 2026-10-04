@@ -1,5 +1,46 @@
 local api = require("rmp.rmp")
 
+-- tutorial_rmp
+--
+-- Renders the RMP tour. It can create its own window using raymp:floatWindow
+-- or split an existing window via raymp:splitWindow based on configuration.
+-- By default it operates in float mode.
+--
+-- The plugin owns its configuration. Every value is optional and read from
+-- the engine (raymp.engine.tutorial).
+
+local DEFAULTS = {
+    mode        = "float",
+    id          = "tutorial-window",
+    width       = "w*0.62",
+    height      = "h*0.7",
+    anchor      = "center",
+    target      = "tutorial-window",
+    orientation = "vertical",
+    ratio       = 0.42,
+    title       = "📖 RayMp Tutorial",
+    border      = api.BoxDrawing.RoundedCorners,
+    toggle_key  = nil,
+}
+
+--- Reads one optional tutorial value from the engine configuration.
+local function option(name)
+    local conf = raymp.engine.tutorial or raymp.engine.tutorial_rmp
+    if type(conf) ~= "table" then return DEFAULTS[name] end
+
+    local value = conf[name]
+    if value == nil then return DEFAULTS[name] end
+
+    if type(DEFAULTS[name]) == "number" and type(value) ~= "number" then
+        return DEFAULTS[name]
+    end
+    if type(DEFAULTS[name]) == "string" and type(value) ~= "string" then
+        return DEFAULTS[name]
+    end
+
+    return value
+end
+
 local tutorial = [[
 #   Welcome To RayMp
 # What is RayMp ?
