@@ -11,12 +11,15 @@ end
 local loaded = false
 local songs =  {}
 
-if raymp.nplayer.def_path ~= nil and raymp.nplayer.def_path ~= "defualt" then
-    path:setPath(raymp.nplayer.def_path)
-    loaded = true
-elseif raymp.nplayer.def_path == "default" then
-    path:setPath(path.joinPath(path:getHomePath(),"Music"))
-    loaded = true
+-- TODO: make sure that is loaded
+if raymp.nplayer.def_path ~= nil then
+    if  raymp.nplayer.def_path ~= "defualt" then
+        path:setPath(raymp.nplayer.def_path)
+        loaded = true
+    elseif raymp.nplayer.def_path == "default" then
+        path:setPath(path.joinPath(path:getHomePath(),"Music"))
+        loaded = true
+    end
 end
 
 
