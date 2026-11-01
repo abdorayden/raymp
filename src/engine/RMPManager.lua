@@ -2152,7 +2152,6 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
             if c and type(c) == "table" then configObj = c end
         end
 
-        raymp:clear()
         -- raymp.cursor.x = 1
         -- raymp.cursor.y = 1
 
@@ -2403,6 +2402,9 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
         local ok_run, run_err = pcall(raymp.run, raymp, key, nil, sound,
             plugs_cfgs, template_copy, data_freq_engine, quit)
         if not ok_run then
+            -- Frame:run normally clears after rendering; recover the buffer
+            -- here as well when an event listener aborts the frame.
+            raymp:clear()
             log_plugin_error("plugin listener", run_err)
         end
 

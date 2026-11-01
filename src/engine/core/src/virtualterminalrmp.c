@@ -108,6 +108,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <limits.h>
+#include <stdint.h>
 
 #define CH_UTF8_SIZE    64*2
 #define CH_STRYLE_AND_COLOR_SIZE    64
@@ -118,6 +119,15 @@ typedef struct {
 	char fg[CH_STRYLE_AND_COLOR_SIZE];
 	char bg[CH_STRYLE_AND_COLOR_SIZE];
 }Cell;
+
+typedef struct {
+	const char* fg;
+	const char* bg;
+	const char* style;
+	size_t fg_len;
+	size_t bg_len;
+	size_t style_len;
+} CellAttributes;
 
 typedef struct {
 	unsigned short width;
@@ -131,13 +141,47 @@ typedef struct {
 
 #define VT_MT "RMP.VirtualTerminal"
 
-static Cell* get_cell(VirtualTerminal* vt, unsigned short x, unsigned short y) {
-	// x and y is unsigned short so i don't have to worry about negative value 
-	// but whatever im gonna keep this condition
+static Cell* get_cell(VirtualTerminal* vt, int x, int y) {
 	if (x < 1 || x > vt->width || y < 1 || y > vt->height) {
 		return NULL;
 	}
-	return &(vt->buffer[(y-1) * vt->width + (x-1)]);
+	return &vt->buffer[(size_t)(y - 1) * vt->width + (size_t)(x - 1)];
+}
+
+static bool get_buffer_sizes(int width, int height, size_t* cell_count, size_t* buffer_size) {
+	if (width <= 0 || height <= 0 ||
+		(size_t)width > SIZE_MAX / (size_t)height) {
+		return false;
+	}
+
+	*cell_count = (size_t)width * (size_t)height;
+	if (*cell_count > SIZE_MAX / sizeof(Cell)) {
+		return false;
+	}
+	*buffer_size = *cell_count * sizeof(Cell);
+	return true;
+}
+
+static void copy_bounded(char* dst, size_t dst_size, const char* src, size_t src_len) {
+	if (src_len >= dst_size) src_len = dst_size - 1;
+	memcpy(dst, src, src_len);
+	dst[src_len] = '\0';
+}
+
+static void apply_cell_attributes(Cell* cell, const CellAttributes* attrs, bool preserve_empty) {
+	if (!preserve_empty || attrs->fg_len > 0) {
+		copy_bounded(cell->fg, sizeof(cell->fg), attrs->fg, attrs->fg_len);
+	}
+	if (!preserve_empty || attrs->bg_len > 0) {
+		copy_bounded(cell->bg, sizeof(cell->bg), attrs->bg, attrs->bg_len);
+	}
+	if (!preserve_empty || attrs->style_len > 0) {
+		copy_bounded(cell->style, sizeof(cell->style), attrs->style, attrs->style_len);
+	}
+}
+
+static void set_cell_text(Cell* cell, const char* text, size_t text_len) {
+	copy_bounded(cell->ch, sizeof(cell->ch), text, text_len);
 }
 
 
@@ -169,7 +213,9 @@ ALWAYS_INT lua_init(STATE) {
 		return 2;
 	}
 
-	if ((size_t)width > SIZE_MAX / height / sizeof(Cell)) {
+	size_t cell_count;
+	size_t buffer_vt_size;
+	if (!get_buffer_sizes(width, height, &cell_count, &buffer_vt_size)) {
 		lua_pushnil(L);
 		lua_pushstring(L, "Dimensions too large: potential overflow");
 		return 2;
@@ -191,7 +237,6 @@ ALWAYS_INT lua_init(STATE) {
 	vt->cursor_y = 1;
 	vt->is_dirty = true;
 
-	size_t buffer_vt_size = width*height*sizeof(Cell);
 	vt->buffer = (Cell*)malloc(buffer_vt_size);
 	if (vt->buffer == NULL) {
 		lua_pushnil(L);
@@ -202,11 +247,12 @@ ALWAYS_INT lua_init(STATE) {
 	luaL_getmetatable(L, VT_MT);
 	lua_setmetatable(L, -2);
 
-	for (int i = 0; i < width * height; i++) {
-		strcpy(vt->buffer[i].ch, " ");
-		strcpy(vt->buffer[i].fg, "");
-		strcpy(vt->buffer[i].bg, "");
-		strcpy(vt->buffer[i].style, "");
+	for (size_t i = 0; i < cell_count; i++) {
+		vt->buffer[i].ch[0] = ' ';
+		vt->buffer[i].ch[1] = '\0';
+		vt->buffer[i].fg[0] = '\0';
+		vt->buffer[i].bg[0] = '\0';
+		vt->buffer[i].style[0] = '\0';
 	}
 	return 1;
 }
@@ -229,7 +275,7 @@ ALWAYS_INT lua_clear(STATE) {
 		return 0;
 	}
 
-	size_t total_size = vt->width * vt->height;
+	size_t total_size = (size_t)vt->width * vt->height;
 
 	for (size_t i = 0; i < total_size; i++) {
 		Cell* cell = &vt->buffer[i];
@@ -366,6 +412,7 @@ ALWAYS_INT lua_writetext(STATE) {
 	const char* fg = luaL_optstring(L, 5, "");
 	const char* bg = luaL_optstring(L, 6, "");
 	const char* style = luaL_optstring(L, 7, "");
+	CellAttributes attrs = { fg, bg, style, strlen(fg), strlen(bg), strlen(style) };
 	int current_x = x;
 	const char* ptr = text;
 	const char* end = text + text_len;
@@ -393,32 +440,15 @@ ALWAYS_INT lua_writetext(STATE) {
 					memcpy(base->ch + existing, ptr, to_copy);
 					base->ch[existing + to_copy] = '\0';
 				}
-				if (fg && fg[0]) {
-					strncpy(base->fg, fg, sizeof(base->fg)-1);
-					base->fg[sizeof(base->fg)-1] = '\0';
-				}
-				if (bg && bg[0]) {
-					strncpy(base->bg, bg, sizeof(base->bg)-1);
-					base->bg[sizeof(base->bg)-1] = '\0';
-				}
-				if (style && style[0]) {
-					strncpy(base->style, style, sizeof(base->style)-1);
-					base->style[sizeof(base->style)-1] = '\0';
-				}
+				apply_cell_attributes(base, &attrs, true);
 				break;
 			}
 			if (base_x < x) {
 				Cell* cell = get_cell(vt, current_x, y);
 				if (cell) {
 					int to_copy = (byte_len < CH_UTF8_SIZE - 1) ? byte_len : (CH_UTF8_SIZE - 1);
-					memcpy(cell->ch, ptr, to_copy);
-					cell->ch[to_copy] = '\0';
-					strncpy(cell->fg, fg, sizeof(cell->fg)-1);
-					cell->fg[sizeof(cell->fg)-1] = '\0';
-					strncpy(cell->bg, bg, sizeof(cell->bg)-1);
-					cell->bg[sizeof(cell->bg)-1] = '\0';
-					strncpy(cell->style, style, sizeof(cell->style)-1);
-					cell->style[sizeof(cell->style)-1] = '\0';
+					set_cell_text(cell, ptr, (size_t)to_copy);
+					apply_cell_attributes(cell, &attrs, false);
 				}
 				current_x += 1;
 			}
@@ -430,25 +460,14 @@ ALWAYS_INT lua_writetext(STATE) {
 		Cell* cell = get_cell(vt, current_x, y);
 		if (cell) {
 			int to_copy = (byte_len < CH_UTF8_SIZE - 1) ? byte_len : (CH_UTF8_SIZE - 1);
-			memcpy(cell->ch, ptr, to_copy);
-			cell->ch[to_copy] = '\0';
-			strncpy(cell->fg, fg, sizeof(cell->fg)-1);
-			cell->fg[sizeof(cell->fg)-1] = '\0';
-			strncpy(cell->bg, bg, sizeof(cell->bg)-1);
-			cell->bg[sizeof(cell->bg)-1] = '\0';
-			strncpy(cell->style, style, sizeof(cell->style)-1);
-			cell->style[sizeof(cell->style)-1] = '\0';
+			set_cell_text(cell, ptr, (size_t)to_copy);
+			apply_cell_attributes(cell, &attrs, false);
 			if (disp_width > 1) {
 				for (int k = 1; k < disp_width; ++k) {
 					Cell* cont = get_cell(vt, current_x + k, y);
 					if (!cont) break;
 					cont->ch[0] = '\0';
-					strncpy(cont->fg, fg, sizeof(cont->fg)-1);
-					cont->fg[sizeof(cont->fg)-1] = '\0';
-					strncpy(cont->bg, bg, sizeof(cont->bg)-1);
-					cont->bg[sizeof(cont->bg)-1] = '\0';
-					strncpy(cont->style, style, sizeof(cont->style)-1);
-					cont->style[sizeof(cont->style)-1] = '\0';
+					apply_cell_attributes(cont, &attrs, false);
 				}
 			}
 		}
@@ -640,6 +659,7 @@ ALWAYS_INT lua_writetext_clipped(STATE) {
     const char* fg = luaL_optstring(L, 6, "");
     const char* bg = luaL_optstring(L, 7, "");
     const char* style = luaL_optstring(L, 8, "");
+	CellAttributes attrs = { fg, bg, style, strlen(fg), strlen(bg), strlen(style) };
 
     int start_x = x;
     int current_x = x;
@@ -668,9 +688,7 @@ ALWAYS_INT lua_writetext_clipped(STATE) {
                     memcpy(base->ch + existing, ptr, to_copy);
                     base->ch[existing + to_copy] = '\0';
                 }
-                if (fg && fg[0]) { strncpy(base->fg, fg, sizeof(base->fg)-1); base->fg[sizeof(base->fg)-1] = '\0'; }
-                if (bg && bg[0]) { strncpy(base->bg, bg, sizeof(base->bg)-1); base->bg[sizeof(base->bg)-1] = '\0'; }
-                if (style && style[0]) { strncpy(base->style, style, sizeof(base->style)-1); base->style[sizeof(base->style)-1] = '\0'; }
+				apply_cell_attributes(base, &attrs, true);
                 break;
             }
             if (base_x < start_x) {
@@ -678,11 +696,8 @@ ALWAYS_INT lua_writetext_clipped(STATE) {
                 Cell* cell = get_cell(vt, current_x, y);
                 if (cell) {
                     int to_copy = (byte_len < CH_UTF8_SIZE - 1) ? byte_len : (CH_UTF8_SIZE - 1);
-                    memcpy(cell->ch, ptr, to_copy);
-                    cell->ch[to_copy] = '\0';
-                    strncpy(cell->fg, fg, sizeof(cell->fg)-1); cell->fg[sizeof(cell->fg)-1] = '\0';
-                    strncpy(cell->bg, bg, sizeof(cell->bg)-1); cell->bg[sizeof(cell->bg)-1] = '\0';
-                    strncpy(cell->style, style, sizeof(cell->style)-1); cell->style[sizeof(cell->style)-1] = '\0';
+					set_cell_text(cell, ptr, (size_t)to_copy);
+					apply_cell_attributes(cell, &attrs, false);
                 }
                 current_x += 1;
             }
@@ -699,20 +714,15 @@ ALWAYS_INT lua_writetext_clipped(STATE) {
         Cell* cell = get_cell(vt, current_x, y);
         if (cell) {
             int to_copy = (byte_len < CH_UTF8_SIZE - 1) ? byte_len : (CH_UTF8_SIZE - 1);
-            memcpy(cell->ch, ptr, to_copy);
-            cell->ch[to_copy] = '\0';
-            strncpy(cell->fg, fg, sizeof(cell->fg)-1); cell->fg[sizeof(cell->fg)-1] = '\0';
-            strncpy(cell->bg, bg, sizeof(cell->bg)-1); cell->bg[sizeof(cell->bg)-1] = '\0';
-            strncpy(cell->style, style, sizeof(cell->style)-1); cell->style[sizeof(cell->style)-1] = '\0';
+			set_cell_text(cell, ptr, (size_t)to_copy);
+			apply_cell_attributes(cell, &attrs, false);
 
             if (disp_width > 1) {
                 for (int k = 1; k < disp_width; ++k) {
                     Cell* cont = get_cell(vt, current_x + k, y);
                     if (!cont) break;
                     cont->ch[0] = '\0';
-                    strncpy(cont->fg, fg, sizeof(cont->fg)-1); cont->fg[sizeof(cont->fg)-1] = '\0';
-                    strncpy(cont->bg, bg, sizeof(cont->bg)-1); cont->bg[sizeof(cont->bg)-1] = '\0';
-                    strncpy(cont->style, style, sizeof(cont->style)-1); cont->style[sizeof(cont->style)-1] = '\0';
+					apply_cell_attributes(cont, &attrs, false);
                 }
             }
         }
@@ -810,6 +820,7 @@ ALWAYS_INT lua_render(STATE) {
 	int saved_cursor_y = vt->cursor_y;
 
 	for (int y = 1; y <= vt->height; y++) {
+		Cell* row = &vt->buffer[(size_t)(y - 1) * vt->width];
 		snprintf(sequence_buf, sizeof(sequence_buf), "\x1b[%d;%dH", y, 1);
 		luaL_addstring(&B, sequence_buf);
 		luaL_addstring(&B, "\x1b[0m");
@@ -817,10 +828,10 @@ ALWAYS_INT lua_render(STATE) {
 		current_fg[0] = '\0';
 		current_bg[0] = '\0';
 
-		for (int x = 1; x <= vt->width; x++) {
-			Cell* cell = get_cell(vt, x, y);
+		for (int x = 0; x < vt->width; x++) {
+			Cell* cell = &row[x];
 
-			if (!cell || cell->ch[0] == '\0') {
+			if (cell->ch[0] == '\0') {
 				continue;
 			}
 
@@ -897,13 +908,14 @@ ALWAYS_INT lua_resize(STATE) {
 		return 2;
 	}
 
-	if ((size_t)new_width > SIZE_MAX / new_height / sizeof(Cell)) {
+	size_t new_cell_count;
+	size_t new_buffer_size;
+	if (!get_buffer_sizes(new_width, new_height, &new_cell_count, &new_buffer_size)) {
 		lua_pushboolean(L, 0);
 		lua_pushstring(L, "Dimensions too large: potential overflow");
 		return 2;
 	}
 
-	size_t new_buffer_size = new_width * new_height * sizeof(Cell);
 	Cell* new_buffer = (Cell*)malloc(new_buffer_size);
 	if (new_buffer == NULL) {
 		lua_pushboolean(L, 0);
@@ -911,21 +923,20 @@ ALWAYS_INT lua_resize(STATE) {
 		return 2;
 	}
 
-	for (int i = 0; i < new_width * new_height; i++) {
-		strcpy(new_buffer[i].ch, " ");
-		strcpy(new_buffer[i].fg, "");
-		strcpy(new_buffer[i].bg, "");
-		strcpy(new_buffer[i].style, "");
+	for (size_t i = 0; i < new_cell_count; i++) {
+		new_buffer[i].ch[0] = ' ';
+		new_buffer[i].ch[1] = '\0';
+		new_buffer[i].fg[0] = '\0';
+		new_buffer[i].bg[0] = '\0';
+		new_buffer[i].style[0] = '\0';
 	}
 
 	int copy_width = (new_width < vt->width) ? new_width : vt->width;
 	int copy_height = (new_height < vt->height) ? new_height : vt->height;
 	for (int y = 0; y < copy_height; y++) {
-		for (int x = 0; x < copy_width; x++) {
-			Cell* old_cell = &vt->buffer[y * vt->width + x];
-			Cell* new_cell = &new_buffer[y * new_width + x];
-			memcpy(new_cell, old_cell, sizeof(Cell));
-		}
+		const Cell* old_row = &vt->buffer[(size_t)y * vt->width];
+		Cell* new_row = &new_buffer[(size_t)y * new_width];
+		memcpy(new_row, old_row, (size_t)copy_width * sizeof(Cell));
 	}
 
 	free(vt->buffer);
