@@ -959,6 +959,8 @@ local function logfatal(err, skip_add)
     error("RMP Error: " .. tostring(err))
 end
 
+print = lognote
+
 -- The frame class is declared above the logging helpers, so hand it the pieces
 -- it needs for runtime window management (see window_runtime).
 window_runtime.warn = logwarn
