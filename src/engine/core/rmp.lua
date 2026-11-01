@@ -1682,14 +1682,6 @@ do -- VirtualTerminal
         self.style = nil
 
         self:clear()
-
-        if false then
-            local file, _ = io.open("/home/rayden/prog/github/raymp_test", "a")
-            if file then
-                file:write("initialized\n")
-            end
-        end
-
         return self
     end
 
