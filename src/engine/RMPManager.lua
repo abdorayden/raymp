@@ -102,6 +102,7 @@
 local api            = require("rmp.rmp")
 local utils          = require("rmp.util")
 local OOP            = require("rmp.oop")
+local Promise        = require("rmp.promises")
 
 -- Engine-level modal input state (raymp:input). Declared early so the
 -- EngineFrame:input() method below can capture these locals.
@@ -394,6 +395,8 @@ do
 
         -- api instans of rmp framework
         self.api = api
+
+        self.Promise = Promise
     end
 
     --- raymp:plug({
@@ -2154,6 +2157,9 @@ local function runRMPApplication(plugManager, template, settings, otherPlugs,
 
         -- raymp.cursor.x = 1
         -- raymp.cursor.y = 1
+
+        -- Pump libuv callbacks so clone/fetch operations do not block frame drawing.
+        pcall(raymp.Promise.runner)
 
         local key = api.Terminal:handleKey()
 
