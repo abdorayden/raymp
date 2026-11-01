@@ -53,7 +53,7 @@ end
 -- nothing at all. Missing values fall back to the defaults declared here.
 --
 --     raymp.engine.audio_panel = {
---         spectrum     = true,   -- frequency bars under the panels
+--         spectrum     = true,   -- compact frequency bars at the bottom of the window
 --         spectrum_rows = 6,     -- height of the spectrum in rows
 --         spectrum_gain = 2.5,   -- amplitude multiplier of the raw freq data
 --         progress     = true,   -- progress bar with the elapsed/total time
@@ -67,7 +67,7 @@ end
 
 local DEFAULTS = {
     spectrum      = true,
-    spectrum_rows = 6,
+    spectrum_rows = 4,
     spectrum_gain = 2.5,
     progress      = true,
     volume        = true,
@@ -85,11 +85,11 @@ local MODE_LABELS = {
 
 -- Playback state labels, indexed by RMP.State values
 local STATE_LABELS = {
-    [api.State.STOPPED] = "■ STOPPED",
-    [api.State.PLAYING] = "▶ PLAYING",
-    [api.State.PAUSED]  = "‖ PAUSED",
-    [api.State.LOADING] = "… LOADING",
-    [api.State.ERROR]   = "✖ ERROR",
+    [api.State.STOPPED] = "STOPPED",
+    [api.State.PLAYING] = "PLAYING",
+    [api.State.PAUSED]  = "PAUSED",
+    [api.State.LOADING] = "LOADING",
+    [api.State.ERROR]   = "ERROR",
 }
 
 local BAR_LEVELS = { " ", "▁", "▂", "▃", "▄", "▅", "▆", "▇", "█" }
@@ -192,22 +192,24 @@ end
 
 local function draw_centered(y, x, width, text, fg, bg, style)
     local offset = math.max(0, math.floor((width - display_width(text)) / 2))
-    raymp:writeTextClipped(x + offset, y, text, width - offset, fg, bg, style)
+    raymp:writeTextClipped(x + offset, y, text, math.max(1, width - offset), fg, bg, style)
 end
 
 local function draw_right(y, x, width, text, fg, bg, style)
     local offset = math.max(0, width - display_width(text))
-    raymp:writeTextClipped(x + offset, y, text, width - offset, fg, bg, style)
+    raymp:writeTextClipped(x + offset, y, text, math.max(1, width - offset), fg, bg, style)
 end
 
---- Draws "[████░░░░]" and returns the number of columns it used.
+--- Draws a compact progress or volume bar.
 local function draw_bar(y, x, width, ratio, colors)
+    if width < 3 then return end
     ratio = math.max(0, math.min(1, tonumber(ratio) or 0))
-    local filled = math.floor(width * ratio)
-    local bar    = repeat_char("█", filled) .. repeat_char("░", width - filled)
+    local barWidth = width - 2
+    local filled = math.floor(barWidth * ratio)
+    local bar = "[" .. repeat_char("━", filled)
+        .. repeat_char("─", barWidth - filled) .. "]"
 
-    raymp:writeTextClipped(x, y, "[" .. bar .. "]", width, colors.primary, colors.bg)
-    return filled
+    raymp:writeTextClipped(x, y, bar, width, colors.primary, colors.bg)
 end
 
 --- Draws the frequency bars in the given rows (bottom aligned).
@@ -242,100 +244,96 @@ end
 return function(x, y, xx, yy)
     local w = xx - x + 1
     local h = yy - y + 1
-    if w < 10 or h < 4 then return end
+    if w < 12 or h < 3 then return end
 
-    local colors   = palette()
-    local showSpectrum = option("spectrum")
-    local showProgress = option("progress")
-    local showVolume   = option("volume")
-    local showDetails  = option("details")
-
-    local title    = ""
-    local state    = api.State.STOPPED
-    local mode     = api.PlaybackMode.ONCE
-    local index    = 0
-    local total    = 0
-    local position = 0
-    local length   = 0
-    local volume   = 0
-    local speed    = 1
+    local colors = palette()
+    local title = ""
+    local state = api.State.STOPPED
+    local mode = api.PlaybackMode.ONCE
+    local index, total = 0, 0
+    local position, length = 0, 0
+    local volume, speed = 0, 1
 
     if sound then
         local okState = pcall(function()
-            state    = sound:getState() or api.State.STOPPED
-            mode     = sound:getPlayBackMode() or api.PlaybackMode.ONCE
+            state = sound:getState() or api.State.STOPPED
+            mode = sound:getPlayBackMode() or api.PlaybackMode.ONCE
             position = sound:getPosition() or 0
-            length   = sound:getLength() or 0
-            volume   = sound:getVolume() or 0
-            speed    = sound:getSpeed() or 1
-            index    = sound:getCurrentIndex() or 0
-            total    = #(sound:getPlaylist() or {})
-            title    = track_title(sound:getCurrentTrack()) or ""
+            length = sound:getLength() or 0
+            volume = sound:getVolume() or 0
+            speed = sound:getSpeed() or 1
+            index = sound:getCurrentIndex() or 0
+            total = #(sound:getPlaylist() or {})
+            title = track_title(sound:getCurrentTrack()) or ""
         end)
-        if not okState then
-            title = ""
-        end
+        if not okState then title = "" end
     end
-
-    w = w - 2
 
     if title == "" then title = option("empty_text") end
 
-    local row = y
+    local pad = w >= 24 and 2 or 1
+    local left = x + pad
+    local innerWidth = math.max(1, w - pad * 2)
+    local stateLabel = STATE_LABELS[state] or "STOPPED"
+    local modeLabel = MODE_LABELS[mode] or "ONCE"
+    local separateMode = innerWidth < display_width(stateLabel) + display_width(modeLabel) + 2
+    local hasDetails = option("details") and total > 0
+    local hasProgress = option("progress") and h >= 7
+    local hasVolume = option("volume") and h >= 9 and innerWidth >= 16
+    local spectrumRows = 0
+    if option("spectrum") and innerWidth >= 24 and h >= 12 then
+        spectrumRows = math.max(0, math.floor(math.min(
+            tonumber(option("spectrum_rows")) or 4, math.floor(h / 4))))
+    end
 
-    -- Header: playback state on the left, playback mode on the right
-    raymp:writeTextClipped(x, row, STATE_LABELS[state] or STATE_LABELS[api.State.STOPPED],
-        w, colors.highlight, colors.bg, api.TextStyle.Bold)
-    draw_right(row, x, w, MODE_LABELS[mode] or MODE_LABELS[api.PlaybackMode.ONCE],
-        colors.accent, colors.bg, api.TextStyle.Bold)
+    -- Keep the player information together in a centered block. The spectrum
+    -- uses only the spare rows at the bottom, so it never pushes controls out
+    -- of a short or narrow window.
+    local blockRows = 3 + (separateMode and 1 or 0) + (hasDetails and 1 or 0)
+        + (hasProgress and 3 or 0) + (hasVolume and 1 or 0)
+    local top = y + math.max(0, math.floor((h - blockRows - spectrumRows) / 2))
+    local row = top
+
+    raymp:writeTextClipped(left, row, stateLabel,
+        math.max(1, innerWidth), colors.highlight, colors.bg, api.TextStyle.Bold)
+    if separateMode then
+        draw_centered(row + 1, left, innerWidth, modeLabel,
+            colors.secondary, colors.bg, api.TextStyle.Bold)
+    else
+        draw_right(row, left, innerWidth, modeLabel,
+            colors.secondary, colors.bg, api.TextStyle.Bold)
+    end
     row = row + 2
 
-    -- Current song
-    if row < y + h then
-        draw_centered(row, x, w, title, colors.primary, colors.bg, api.TextStyle.Bold)
-        row = row + 1
-    end
-
-    -- Track index / playlist size
-    if showDetails and total > 0 and row < y + h then
-        draw_centered(row, x, w, string.format("%d / %d", index, total), colors.muted, colors.bg)
-        row = row + 1
-    end
-
+    draw_centered(row, left, innerWidth, title, colors.primary, colors.bg, api.TextStyle.Bold)
     row = row + 1
 
-    -- Progress bar with the elapsed / total time
-    local remaining = h - (row - y) - 1
-    if showProgress and remaining >= 2 then
-        local timeText = format_time(position) .. " / " .. format_time(length)
-        local barWidth = w - display_width(timeText) - 3
-        if barWidth >= 8 then
-            local ratio = (length > 0) and (position / length) or 0
-            draw_bar(row, x, barWidth, ratio, colors)
-            draw_right(row, x, w, timeText, colors.muted, colors.bg)
-            row = row + 2
-        end
+    if hasDetails then
+        draw_centered(row, left, innerWidth, string.format("TRACK %d OF %d", index, total),
+            colors.muted, colors.bg)
+        row = row + 1
     end
 
-    -- Volume bar and playback speed
-    remaining = h - (row - y)
-    if showVolume and remaining >= 2 then
-        local volumeText = string.format("%3d%%", math.floor((volume or 0) * 100))
-        local speedText  = string.format("%.2fx", tonumber(speed) or 1)
-        local barWidth   = w - display_width(volumeText) - display_width(speedText) - 6
-        if barWidth >= 6 then
-            raymp:writeTextClipped(x, row, "VOL", 3, colors.muted, colors.bg)
-            draw_bar(row, x + 4, barWidth, volume, colors)
-            draw_right(row, x, w, volumeText .. " " .. speedText, colors.muted, colors.bg)
-            row = row + 2
-        end
+    if hasProgress then
+        row = row + 1
+        local timeText = format_time(position) .. "  /  " .. format_time(length)
+        draw_centered(row, left, innerWidth, timeText, colors.muted, colors.bg)
+        row = row + 1
+        draw_bar(row, left, innerWidth, length > 0 and position / length or 0, colors)
+        row = row + 1
     end
 
-    -- Frequency spectrum, bottom aligned
-    remaining = h - (row - y)
-    if showSpectrum and remaining >= 2 then
-        local spectrumRows = math.min(tonumber(option("spectrum_rows")) or 6, remaining)
-        local gain         = tonumber(option("spectrum_gain")) or 2.5
-        draw_spectrum(y + h - spectrumRows, x, w, spectrumRows, gain, colors)
+    if hasVolume then
+        local volumeText = string.format("VOL %d%%", math.floor((volume or 0) * 100))
+        local speedText = string.format("%.2fx", tonumber(speed) or 1)
+        raymp:writeTextClipped(left, row, volumeText, innerWidth,
+            colors.muted, colors.bg)
+        draw_right(row, left, innerWidth, speedText, colors.accent, colors.bg)
+    end
+
+    if spectrumRows >= 2 then
+        local spectrumY = y + h - spectrumRows
+        draw_spectrum(spectrumY, left, innerWidth, spectrumRows,
+            tonumber(option("spectrum_gain")) or 2.5, colors)
     end
 end

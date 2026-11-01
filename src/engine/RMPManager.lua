@@ -391,6 +391,9 @@ do
         -- TODO: implement template_builder
         -- raymp.engine.template = rayden.template_builder:window():x():children():...:build()
         self.template_builder = TemplateBuilder()
+
+        -- api instans of rmp framework
+        self.api = api
     end
 
     --- raymp:plug({
