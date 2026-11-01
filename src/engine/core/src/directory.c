@@ -235,7 +235,7 @@ ALWAYS_INT lua_rmdir(STATE){
 	const char* const dir_path = luaL_checkstring(L , 1);
 
 #ifdef 	_WIN32
-	if(!_rmdir(dir_path) != 0){
+	if(_rmdir(dir_path) != 0){
 		lua_pushboolean(L , 0);
 		switch (errno) {
 			case EACCES: 

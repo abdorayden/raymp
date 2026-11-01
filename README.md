@@ -162,6 +162,13 @@ cd ..
 rmp.exe
 ```
 
+The Windows script requires MinGW-w64 `gcc` and `ar` on `PATH`. It builds the
+Lua runtime from the bundled Lua sources, so the Linux `liblua.a` and a separate
+Lua installation are not used. Runtime Lua files are installed under `lua\rmp`
+and native modules under `rmp`, next to `rmp.exe`. The bundled libuv archive is
+Linux-only and this checkout does not include libuv sources, so Windows builds
+currently use the promises fallback and do not provide `rmp.uv`.
+
 ### Verifying Installation
 
 Test your installation with the built-in demos:

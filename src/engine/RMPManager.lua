@@ -1718,12 +1718,15 @@ local function addNestedPaths(base_path, max_depth)
     package.path  = package.path .. ";" .. base_path .. "/?/init.lua"
     package.cpath = package.cpath .. ";" .. base_path .. "/?.so"
     package.cpath = package.cpath .. ";" .. base_path .. "/?/init.so"
+    package.cpath = package.cpath .. ";" .. base_path .. "/?.dll"
+    package.cpath = package.cpath .. ";" .. base_path .. "/?/init.dll"
 
     for depth = 1, max_depth do
         local pattern = base_path
         for _ = 1, depth do pattern = pattern .. "/?" end
         package.path  = package.path .. ";" .. pattern .. "/?.lua"
         package.cpath = package.cpath .. ";" .. pattern .. "/?.so"
+        package.cpath = package.cpath .. ";" .. pattern .. "/?.dll"
     end
 end
 
